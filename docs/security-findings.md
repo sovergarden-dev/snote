@@ -13,10 +13,10 @@ Atomic SQL `20260724000000_atomic_capability_cutover.sql` has not been
 applied. Anon still has direct table grants; `notes` still has the three
 Legacy policies. Capability SPA canary is on
 (`VITE_CAPABILITY_ROUTES_ENABLED` is true; live `version.json`
-`capabilityRoutesEnabled` is true; see §3e). Dual-mode `NotePage`
-(`legacyOnly={!canary}`): plain slug stays legacy; `#owner`/`#edit` may
-open capability polling. Home mints capabilities when canary is on
-(create → `/<slug>#owner=`; fail-closed idle; live origin `addeeb29`).
+`capabilityRoutesEnabled` is true; see §3e). Canary-on `CutoverNotePage`
+is live (Phase A): plain slug lazy-loads `LegacyNotePage`; `#owner`/`#edit`
+still render `NotePage`. Home mints capabilities when canary is on
+(create → `/<slug>#owner=`; fail-closed idle; live origin `7d00fd52`).
 Home mint before SQL 240 is accepted as
 [ADR-001](adr/001-home-capability-mint-before-sql-240.md); live mint is
 not authorization to apply 240.
@@ -75,7 +75,7 @@ the remaining export action copies the canonical public RawView URL
 `https://note.syrin.online/{slug}.md` (`/:slug.md`). `share-revoke` remains live
 and is out of scope for this containment.
 
-## 1b. Legacy `legacy-note-open` — Phase B Git source (deploy unattested)
+## 1b. Legacy `legacy-note-open` — Phase B production live
 
 Git `legacy-note-open` is the Phase B exact-match **SELECT-only** Edge Function
 for `POST { action: "exists" | "open", slug }`. It is not a 410 tombstone and not
@@ -88,11 +88,16 @@ echoing the slug. Keep the function name; the client is hard-wired in
 CF-Connecting-IP admission is omitted because this path is SELECT-only and has
 no admission window; consume RPCs would write; no Turnstile.
 
-This GitHub change does not deploy the function. Production Edge remains the
-historical 410 tombstone until a **separately attested** Lovable Cloud deploy of
-this Git source. Do not treat merge as a production LNO go. Do not POST a locator to production until that deploy is attested.
+Production Edge is this Phase B reader (Atlas A+B; independently probed
+2026-09-06 ~21:21 UTC / 2026-09-07 ~04:21 ICT, publishable-key-only, no
+locator): `OPTIONS /functions/v1/legacy-note-open` returned `200` body `ok`
+(`Cache-Control` / `CDN-Cache-Control` `no-store`); `GET` returned `405`
+`{"error":"method not allowed"}` with the same `no-store` JSON headers;
+`POST {}` returned `400` `{"error":"invalid request"}` (not `410`
+`{"found":false}`). Do not POST a locator to production. This docs PR does
+not deploy Edge.
 
-Historical production-verified 410 (still live until the attested deploy):
+Historical production-verified 410 (replaced by the Phase B Edge go):
 credential-free probes on 2026-09-02 ~04:20 ICT against production functions host
 `onfzjmfjldsbthchssfr` covered unauthenticated calls with no locator in the body:
 `OPTIONS /functions/v1/legacy-note-open` returned `200` body `ok` (`Allow-Methods`
@@ -128,9 +133,9 @@ Production Worker `syrin-prerender` was redeployed 2026-09-03 ~20:42 UTC /
 - Staging `syrin-prerender-staging` was not deployed (still G3C staging
   versions from 2026-08-24)
 
-This is not the live SPA origin. Origin is `addeeb29` (see §3e).
+This is not the live SPA origin. Origin is `7d00fd52` (see §3e).
 At this Worker deploy, origin was not redeployed (then `27da93eb`);
-origin later bumped to `e05c73ea`, then `addeeb29`. Do not claim origin is `931430c0`. Git `main`
+origin later bumped to `e05c73ea`, then `addeeb29`, then `7d00fd52`. Do not claim origin is `931430c0`. Git `main`
 includes this Worker SHA and may be ahead for later docs-only PRs; that
 does not change Worker identity.
 
@@ -523,27 +528,46 @@ Pages production deployment id `028e8199-02c8-4583-8890-bbd2f09dc8f0`
 replaced previous live origin `27da93eb` / Pages `4f5e5afc-c80b-46b8-b053-71e8339040d2`.
 PWA smoke after that ship: SUCCESS (GitHub Actions run `33849773178`).
 
-Same-canary origin SHA bump 2026-09-04 ~17:34 ICT: Pages `snote-g4-origin`
-redeployed fail-closed Home mint (#98). Home create (canary on) never
-fail-opens idle slug status to legacy `seedAndOpen`; idle submit re-checks
-`notes.select`, then on `available` persists an owner candidate, `POST
-note-session` `{action:"create"}`, and navigates `/<slug>#owner=<token>`.
+Same-canary origin SHA bump 2026-09-04 ~17:34 ICT (not current live): Pages
+`snote-g4-origin` redeployed fail-closed Home mint (#98). Home create (canary
+on) never fail-opens idle slug status to legacy `seedAndOpen`; idle submit
+re-checks `notes.select`, then on `available` persists an owner candidate,
+`POST note-session` `{action:"create"}`, and navigates `/<slug>#owner=<token>`.
 Live smoke confirmed that path lands on `/<slug>#owner=` (token in the
-fragment; not logged here). Plain slug remains the legacy write path.
-Live `version.json` (browser UA; `no-store`) on both canonical and Pages
-hosts:
+fragment; not logged here). Plain slug remained the legacy write path at
+that bump. `version.json` at that bump (browser UA; `no-store`) on both
+canonical and Pages hosts:
 `deployedSha` `addeeb29cd9a6dac73c406f251ff5305db12f8f7`,
 `capabilityRoutesEnabled` true, `builtAt` `2026-09-04T10:34:53.874Z`,
 `buildId` `1788518080553-dg3glr2m`.
 Pages production deployment id `25c47833-fd81-42b1-ba6b-39e7e8f5a5e3`
-replaces previous live origin `e05c73ea` / Pages `028e8199-02c8-4583-8890-bbd2f09dc8f0`.
-PWA smoke after this ship: SUCCESS (GitHub Actions run `33863872787`).
+replaced previous live origin `e05c73ea` / Pages `028e8199-02c8-4583-8890-bbd2f09dc8f0`.
+PWA smoke after that ship: SUCCESS (GitHub Actions run `33863872787`).
+At that bump, credential-free LNO POST {} returned 410 `{"found":false}`.
+
+Same-canary origin SHA bump 2026-09-07 ~04:11 ICT: Pages `snote-g4-origin`
+redeployed Phase A `CutoverNotePage` wire (#101) with git `7d00fd52` (#103
+Phase B LNO source). Canary-on SPA mounts `CutoverNotePage`: plain `/<slug>`
+lazy-loads `LegacyNotePage`; matching `#owner`/`#edit` still render
+`NotePage`; flag-off builds keep `NotePage` with `legacyOnly={!canary}`.
+Phase B Edge `legacy-note-open` was already live (Atlas A+B); see §1b.
+Live `version.json` (browser UA; `no-store`) on both canonical and Pages
+hosts, plus short Pages preview `https://ed0e177e.snote-g4-origin.pages.dev`:
+`deployedSha` `7d00fd52f9c01fdb954ad9e2f034c784d9311bed`,
+`capabilityRoutesEnabled` true, `builtAt` `2026-09-06T21:11:03.163Z`,
+`buildId` `1788729048596-q0bbwjr7`.
+Canonical also returned `Cache-Control: no-cache, no-store, must-revalidate`
+and `CDN-Cache-Control: no-store`. Pages `.dev` hosts returned
+`Cache-Control: no-cache, no-store, must-revalidate` (no `CDN-Cache-Control`
+on those responses).
+Pages production deployment id `ed0e177e-b127-48b2-bac1-8e2460c82b28`
+replaces previous live origin `addeeb29` / Pages `25c47833-fd81-42b1-ba6b-39e7e8f5a5e3`.
 
 Kill switch unchanged: `writes_enabled=true`,
 `private_realtime_enabled=false`, `updated_at`
 `2026-09-02 04:24:07.235188+00` (see §3d). SQL 240 still not applied
 (`capability_note_import_legacy` is absent).
-POST `/functions/v1/legacy-note-open` `{}` still 410 `{"found":false}`.
+POST `/functions/v1/legacy-note-open` `{}` 400 `{"error":"invalid request"}`.
 POST `/functions/v1/note-session` `{}` still 401 `{"error":"unauthorized"}`.
 At the 27da93eb origin bump, Worker `syrin-prerender` was still `9fcc58bc` /
 `b4d1a94e`. Later Worker redeploy 2026-09-03 ~20:42 UTC / 2026-09-04
@@ -552,9 +576,10 @@ At that Worker deploy, Origin SPA was not redeployed (then `27da93eb`).
 This origin bump does not redeploy the Worker; live Worker remains
 `931430c0` / `5f94ab6c`. SQL 240 / Worker / Realtime not changed. Canary remains on.
 
-This is dual-mode `NotePage` (`legacyOnly={!canary}`): plain slug still
-legacy; `#owner`/`#edit` may open capability polling. Home mints capabilities
-when canary is on (create → `/<slug>#owner=`; fail-closed on idle).
+This is canary-on `CutoverNotePage` (Phase A live): plain slug is
+`LegacyNotePage` via Phase B LNO; `#owner`/`#edit` may open capability
+polling. Home mints capabilities when canary is on (create →
+`/<slug>#owner=`; fail-closed on idle).
 This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
@@ -568,9 +593,9 @@ still not applied.
 `20260724000000_atomic_capability_cutover.sql` dynamically drops every policy
 on `public.notes` and revokes all direct privileges from `PUBLIC`, `anon`, and
 `authenticated` in one transaction. Capability, update, checkpoint, and share
-tables remain default-deny. The SPA uses narrow Edge APIs. Git `legacy-note-open` is the Phase B
-SELECT-only exact-match Edge (see §1b). Production Edge remains the historical
-410 tombstone until that deploy is attested separately. Do not restore a dump.
+tables remain default-deny. The SPA uses narrow Edge APIs. Production
+`legacy-note-open` is the Phase B SELECT-only exact-match Edge (see §1b).
+Do not restore a dump.
 
 Do not apply this migration until the dual-mode client and capability APIs have
 completed the required 48-hour production soak. A local migration test is not

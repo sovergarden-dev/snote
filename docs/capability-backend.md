@@ -56,10 +56,10 @@ The function never INSERT/UPDATE/DELETEs, never reads Bearer or query/path token
 and never returns capability ciphertext. HMAC CF-Connecting-IP admission is omitted
 because this path is SELECT-only and has no admission window. Consume RPCs
 would write; do not invent Turnstile. Do not restore a dump.
-Production Edge deploy is attested separately (see [security findings §1b](security-findings.md)).
+Production Edge is this Phase B reader (see [security findings §1b](security-findings.md)).
 This document does not authorize an Edge deploy, origin Pages, Worker, SQL 240, or
 Realtime flip.
-Live writes remain the legacy `NotePage` path (plain slug; dual-mode canary on, findings §3e). Home create mints when canary is on (fail-closed idle). SQL 240 is not applied.
+SPA canary-on `CutoverNotePage` is live (plain slug → `LegacyNotePage`; dual-mode canary on, findings §3e). Home create mints when canary is on (fail-closed idle). SQL 240 is not applied.
 After the atomic cutover, browser roles still have no table grants; rollback keeps
 this read-only LNO and must never restore `anon`/`authenticated` `notes` GRANTs.
 See [the cutover runbook](security/atomic-capability-cutover.md)

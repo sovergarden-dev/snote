@@ -359,7 +359,9 @@ describe("legacy-note-open docs", () => {
     expect(findings).toContain("Phase B");
     expect(findings).toContain("exact-match");
     expect(findings).toContain("SELECT-only");
-    expect(findings).toContain("attested separately");
+    expect(findings).toContain("Phase B production live");
+    expect(findings).not.toContain("deploy unattested");
+    expect(findings).not.toContain("attested separately");
     expect(findings).not.toContain(
       "committed `legacy-note-open` Edge function is a generic `410 no-store` tombstone",
     );
@@ -377,7 +379,7 @@ describe("legacy-note-open docs", () => {
     );
     expect(capability).toContain("security-findings.md");
     expect(capability).toContain("§1b");
-    expect(capability).toContain("Live writes remain the legacy `NotePage` path");
+    expect(capability).toContain("CutoverNotePage");
     expect(capability).toContain("SQL 240 is not applied");
     expect(capability).toContain("Do not restore a dump");
     expect(capability).toContain("browser roles still have no table grants");

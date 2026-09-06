@@ -9,7 +9,7 @@ Source Worker trong thư mục này khớp với Worker production `syrin-preren
 `5f94ab6c-fde5-4416-a3aa-74daaa2e6094` (PR #89, 2026-09-03).
 Committed `wrangler.toml` khớp production ở observability/logs
 (`enabled = true`, `invocation_logs = true`); traces và `workers_dev` vẫn tắt.
-Origin SPA hiện là `addeeb29` (xem §3e); không được coi origin là `931430c0`.
+Origin SPA hiện là `7d00fd52` (xem §3e); không được coi origin là `931430c0`.
 Observability và invocation logs đã live trên production, không chỉ committed.
 Việc ghi nhận identity này không cho phép một deployment mới.
 Xem `docs/security-findings.md` §1c.
