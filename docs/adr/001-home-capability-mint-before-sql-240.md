@@ -1,13 +1,13 @@
 # ADR-001: Home mints capabilities before SQL 240
 
-- Status: Accepted. Home mint fail-closed idle live on origin `addeeb29` (not a SQL 240 go)
+- Status: Accepted. Home mint fail-closed idle live on origin `7d00fd52` (not a SQL 240 go)
 - Date: 2026-09-04
 - Deciders: Aegis (architecture); Atlas (go); Syringa (named production steps)
-- Evidence cut: `Hage5hi/snote` `main` `addeeb29` (PR #98). Live origin `addeeb29`, Worker `931430c0` / `5f94ab6c` (Cloudflare Version ID `5f94ab6c-fde5-4416-a3aa-74daaa2e6094`; see findings §1c). SQL 220+270 applied; 240 not applied. `writes_enabled=true`, `private_realtime_enabled=false`. Soak started 2026-09-02 ~12:01 ICT from `c5914c8e`; not complete as of 2026-09-04 ~17:34 ICT.
+- Evidence cut: `sovergarden-dev/snote` `main` `7d00fd52` (PR #103). Live origin `7d00fd52`, Worker `931430c0` / `5f94ab6c` (Cloudflare Version ID `5f94ab6c-fde5-4416-a3aa-74daaa2e6094`; see findings §1c). SQL 220+270 applied; 240 not applied. `writes_enabled=true`, `private_realtime_enabled=false`. Soak started 2026-09-02 ~12:01 ICT from `c5914c8e`; not complete as of 2026-09-07 ~04:11 ICT.
 
 ## Context
 
-Production dual-mode canary has `capabilityRoutesEnabled=true`. Home mint is live on origin `addeeb29`: Home create fail-closes on idle (re-check; no legacy `seedAndOpen`), then on `available` calls `POST note-session` `{action:"create"}` and navigates `/<slug>#owner=<token>`. Plain `/<slug>` remains the legacy write path: `anon` RLS on `public.notes` (`NOT capability_managed`), public Realtime `note:${slug}`, `ydoc_state` upsert. `CutoverNotePage` is unmounted. `capability_note_import_legacy` (SQL 240) is absent.
+Production dual-mode canary has `capabilityRoutesEnabled=true`. Home mint is live on origin `7d00fd52`: Home create fail-closes on idle (re-check; no legacy `seedAndOpen`), then on `available` calls `POST note-session` `{action:"create"}` and navigates `/<slug>#owner=<token>`. Canary-on SPA mounts `CutoverNotePage`: plain `/<slug>` lazy-loads `LegacyNotePage` (Phase B LNO read-only). `anon` RLS on `public.notes` (`NOT capability_managed`) still exists because SQL 240 is not applied. `capability_note_import_legacy` (SQL 240) is absent.
 
 SQL 240 is irreversible: rollback never restores `notes` GRANT/policies. Kill switch is `capability_runtime_set(false, false)` → Edge 503. Tiny plan has no PITR (daily snapshot, ~24h worst-case loss). Staging `snote-g3c-staging` is inactive.
 
@@ -22,13 +22,13 @@ When the mint path is built (GitHub first; production only on a named go):
 3. Trust/identity (“quen/lạ”) stays a local label and must not become a write gate.
 
 This ADR does **not** authorize origin, Worker, Edge, SQL 240, `private_realtime_enabled`, or Home mint in production.
-A later named Pages deploy of #95 made Home mint live on canary origin `e05c73ea`; #98 made fail-closed idle mint live on `addeeb29`; this ADR still does not authorize SQL 240.
+A later named Pages deploy of #95 made Home mint live on canary origin `e05c73ea`; #98 made fail-closed idle mint live on `addeeb29`; #101+#103 made `CutoverNotePage` + Phase B LNO live on `7d00fd52`; this ADR still does not authorize SQL 240.
 
 ## Alternatives
 
 | Option | What | Why not (now) |
 |---|---|---|
-| A. SQL 240 first | Revoke anon `notes` access while Home still upserts the table | Closes the only live create/write path. Import-legacy RPC is what 240 adds; CutoverNotePage is unmounted. Tiny has no PITR. |
+| A. SQL 240 first | Revoke anon `notes` access while Home still upserts the table | Closes the only live create/write path unless Cutover+LNO are already live. Import-legacy RPC is what 240 adds. Tiny has no PITR. |
 | B. Stay dual-mode indefinitely | Canary SPA + legacy table forever | Slug remains a write credential. Additive 220/270 never become the authz model. |
 | C. Staging + PITR, then 240, mint later | Prove cutover on a clone first | Staging is inactive. Still leaves production Home unable to create after 240. Mint remains a prerequisite for a usable post-cutover product, whether done before or on a clone. |
 | D. Private Realtime before mint | Flip `private_realtime_enabled` + auth canary | `NotePage` currently **rejects** `syncTransport !== "polling"`. New client contract, Turnstile/anonymous JWT. Orthogonal to “can anyone create a capability note from Home”. |
@@ -46,7 +46,7 @@ A later named Pages deploy of #95 made Home mint live on canary origin `e05c73ea
 
 - Forge implements Home create against existing `note-session` contract (`createCapabilityApi().createNote`). No new Edge function.
 - Failures stay existing codes: `slug_unavailable` 409, admission 429/503, missing HMAC 503.
-- `legacyOnly` dual-mode remains until 240. Home existence check today is `select slug, char_count from notes` — after mint, capability-managed rows are invisible to that query; Home must not treat “not in notes” as “slug free” once create can 409 from the RPC.
+- Canary-on `CutoverNotePage` is live on origin `7d00fd52`; flag-off builds keep `legacyOnly` `NotePage`. Home existence check today is `select slug, char_count from notes` — after mint, capability-managed rows are invisible to that query; Home must not treat “not in notes” as “slug free” once create can 409 from the RPC.
 - SQL 240, private Realtime, and quen/lạ overlay stay separately named. Worker log deploy is already live (§1c).
 
 ## Open questions (do not guess)

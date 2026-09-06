@@ -88,8 +88,12 @@ SQL 240 wait on Home mint is [ADR-001](../adr/001-home-capability-mint-before-sq
    `deployedSha` `e05c73ead67a3751d07a4042ba68fe86fcb271a8`, still
    `capabilityRoutesEnabled` true. Same-canary origin SHA bump
    2026-09-04 ~17:34 ICT:
-   live `deployedSha` `addeeb29cd9a6dac73c406f251ff5305db12f8f7`, still
-   `capabilityRoutesEnabled` true. Home mint fail-closed idle is live on this canary.
+   `deployedSha` `addeeb29cd9a6dac73c406f251ff5305db12f8f7`, still
+   `capabilityRoutesEnabled` true. Same-canary origin SHA bump
+   2026-09-07 ~04:11 ICT:
+   live `deployedSha` `7d00fd52f9c01fdb954ad9e2f034c784d9311bed`, still
+   `capabilityRoutesEnabled` true. Phase A `CutoverNotePage` and Phase B
+   LNO are live on this canary. Home mint fail-closed idle remains live.
    This is not soak-complete.
    Do not treat snapshot verify as `capability_runtime_set`.
    This is not `LEGACY_SHARE_CUTOFF`, soak-complete,
@@ -98,9 +102,9 @@ SQL 240 wait on Home mint is [ADR-001](../adr/001-home-capability-mint-before-sq
    that canonical ISO timestamp as both Edge secret `LEGACY_SHARE_CUTOFF` and
    frontend build variable `VITE_LEGACY_SHARE_CUTOFF`. Missing or malformed
    values fail closed at runtime.
-3. Git `legacy-note-open` is the Phase B SELECT-only exact-match reader.
-   This GitHub PR does not deploy Edge, origin, the Worker, or share
-   compatibility. Do not restore a dump. Capability functions are SHA-pinned.
+3. Production `legacy-note-open` is the Phase B SELECT-only exact-match reader
+   (findings §1b). This docs attestation does not deploy Edge, origin, the
+   Worker, or share compatibility. Do not restore a dump. Capability functions are SHA-pinned.
    Deploy share compatibility code and the Cloudflare Worker. Do not deploy
    the migration yet.
 4. Run `bun run cutover:verify` from the exact production build artifact with
