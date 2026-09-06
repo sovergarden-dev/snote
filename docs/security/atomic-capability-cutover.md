@@ -99,8 +99,8 @@ SQL 240 wait on Home mint is [ADR-001](../adr/001-home-capability-mint-before-sq
    frontend build variable `VITE_LEGACY_SHARE_CUTOFF`. Missing or malformed
    values fail closed at runtime.
 3. Git `legacy-note-open` is the Phase B SELECT-only exact-match reader.
-   Production Edge deploy is attested separately; this GitHub PR does not
-   deploy it. Do not restore a dump. Capability functions are SHA-pinned.
+   This GitHub PR does not deploy Edge, origin, the Worker, or share
+   compatibility. Do not restore a dump. Capability functions are SHA-pinned.
    Deploy share compatibility code and the Cloudflare Worker. Do not deploy
    the migration yet.
 4. Run `bun run cutover:verify` from the exact production build artifact with

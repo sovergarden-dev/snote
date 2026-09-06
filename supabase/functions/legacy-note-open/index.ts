@@ -5,8 +5,8 @@ import {
   type LegacyNoteRow,
 } from "./handler.ts";
 
-// HMAC CF-Connecting-IP admission is omitted: capability_admission_consume
-// mutates admission tables, and this function is SELECT-only. No Turnstile.
+// HMAC CF-Connecting-IP admission is omitted: this path is SELECT-only and
+// has no admission window. Consume RPCs would write. No Turnstile.
 
 function serviceLookup(): LegacyNoteLookup | null {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -44,4 +44,7 @@ function serviceLookup(): LegacyNoteLookup | null {
   };
 }
 
-Deno.serve((req) => handleLegacyNoteOpen(req, serviceLookup()));
+Deno.serve((req) => {
+  if (req.method !== "POST") return handleLegacyNoteOpen(req, null);
+  return handleLegacyNoteOpen(req, serviceLookup());
+});

@@ -80,9 +80,25 @@ export async function handleLegacyNoteOpen(
     return jsonResponse({ error: "method not allowed" }, 405);
   }
 
+  const maxRequestBytes = 256;
+  const declaredLength = Number(req.headers.get("content-length") ?? 0);
+  if (!Number.isSafeInteger(declaredLength) || declaredLength > maxRequestBytes) {
+    return jsonResponse({ error: "invalid request" }, 400);
+  }
+
+  let raw: string;
+  try {
+    raw = await req.text();
+  } catch {
+    return jsonResponse({ error: "invalid request" }, 400);
+  }
+  if (new TextEncoder().encode(raw).byteLength > maxRequestBytes) {
+    return jsonResponse({ error: "invalid request" }, 400);
+  }
+
   let body: unknown;
   try {
-    body = await req.json();
+    body = JSON.parse(raw);
   } catch {
     return jsonResponse({ error: "invalid request" }, 400);
   }
@@ -117,6 +133,8 @@ export async function handleLegacyNoteOpen(
     }
     if (!row) return jsonResponse({ exists: false }, 200);
     const note = mapLegacyNote(row, slug);
+    // Incomplete encrypted metadata is fail-closed 503, not exists:false:
+    // the row matched the visibility predicate but cannot be mapped safely.
     if (!note) return jsonResponse({ error: "temporarily unavailable" }, 503);
     return jsonResponse({ exists: true, note }, 200);
   } catch {

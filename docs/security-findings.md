@@ -85,7 +85,8 @@ AND deleted_at IS NULL`; never INSERT/UPDATE/DELETE; never return capability
 ciphertext; invalid action/slug is `400 { "error": "invalid request" }` without
 echoing the slug. Keep the function name; the client is hard-wired in
 `src/lib/legacy/cutover.ts`. `verify_jwt = false` is unchanged. HMAC
-CF-Connecting-IP admission is omitted because consume RPCs write; no Turnstile.
+CF-Connecting-IP admission is omitted because this path is SELECT-only and has
+no admission window; consume RPCs would write; no Turnstile.
 
 This GitHub change does not deploy the function. Production Edge remains the
 historical 410 tombstone until a **separately attested** Lovable Cloud deploy of

@@ -54,7 +54,8 @@ Capability-managed, non-legacy, and deleted rows are `exists: false`. Invalid
 action/slug is `400 { "error": "invalid request" }` without echoing the slug.
 The function never INSERT/UPDATE/DELETEs, never reads Bearer or query/path tokens,
 and never returns capability ciphertext. HMAC CF-Connecting-IP admission is omitted
-because consume RPCs write; do not invent Turnstile. Do not restore a dump.
+because this path is SELECT-only and has no admission window. Consume RPCs
+would write; do not invent Turnstile. Do not restore a dump.
 Production Edge deploy is attested separately (see [security findings §1b](security-findings.md)).
 This document does not authorize an Edge deploy, origin Pages, Worker, SQL 240, or
 Realtime flip.

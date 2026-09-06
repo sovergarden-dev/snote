@@ -166,6 +166,84 @@ describe("legacy-note-open HTTP contract", () => {
     expect(result.json).toEqual({ exists: false });
   });
 
+  it("opens an encrypted legacy row when salt, check, and iterations are present", async () => {
+    const result = await read(await handleLegacyNoteOpen(
+      request("POST", { action: "open", slug: "locked" }),
+      memoryLookup({
+        locked: {
+          slug: "locked",
+          content: "",
+          ydoc_state: "cipher",
+          is_encrypted: true,
+          enc_salt: "s".repeat(16),
+          enc_check: "c".repeat(16),
+          enc_iterations: 600000,
+        },
+      }),
+    ));
+    expect(result.status).toBe(200);
+    expect(result.json).toEqual({
+      exists: true,
+      note: {
+        slug: "locked",
+        content: "",
+        ydocState: "cipher",
+        isEncrypted: true,
+        salt: "s".repeat(16),
+        check: "c".repeat(16),
+        iterations: 600000,
+      },
+    });
+  });
+
+  it("rejects oversized POST bodies before lookup", async () => {
+    const lookup: LegacyNoteLookup = {
+      exists: async () => {
+        throw new Error("lookup must not run");
+      },
+      open: async () => {
+        throw new Error("lookup must not run");
+      },
+    };
+    const declared = await read(await handleLegacyNoteOpen(new Request(endpoint, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "content-length": "999",
+      },
+      body: JSON.stringify({ action: "exists", slug: "daily" }),
+    }), lookup));
+    const actual = await read(await handleLegacyNoteOpen(new Request(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: `{"action":"exists","slug":"daily","pad":"${"x".repeat(300)}"}`,
+    }), lookup));
+    expect(declared.status).toBe(400);
+    expect(actual.status).toBe(400);
+    expect(declared.json).toEqual({ error: "invalid request" });
+    expect(actual.json).toEqual({ error: "invalid request" });
+  });
+
+  it("satisfies createLegacyNoteApi exists and open", async () => {
+    const { createLegacyNoteApi } = await import("../../src/lib/legacy/cutover.ts");
+    const lookup = memoryLookup({ daily: plaintext });
+    const api = createLegacyNoteApi({
+      baseUrl: "https://db.example",
+      fetcher: (input, init) => handleLegacyNoteOpen(new Request(input, init), lookup),
+    });
+    await expect(api.exists("daily")).resolves.toBe(true);
+    await expect(api.open("missing")).resolves.toBeNull();
+    await expect(api.open("daily")).resolves.toEqual({
+      slug: "daily",
+      content: "hello",
+      ydocState: "YQ",
+      isEncrypted: false,
+      salt: null,
+      check: null,
+      iterations: 100000,
+    });
+  });
+
   it("requires encrypted salt, check, and iterations", async () => {
     const result = await read(await handleLegacyNoteOpen(
       request("POST", { action: "open", slug: "locked" }),
@@ -239,6 +317,14 @@ describe("legacy-note-open source pin", () => {
     expect(index).toContain('.eq("capability_managed", false)');
     expect(index).toContain('.eq("sync_status", "legacy")');
     expect(index).toContain('.is("deleted_at", null)');
+    expect(index.match(/visible\(/g)?.length).toBe(2);
+    expect(index).toContain('visible("slug", slug)');
+    expect(index).toContain(
+      "slug, content, ydoc_state, is_encrypted, enc_salt, enc_check, enc_iterations",
+    );
+    expect(index).toMatch(/async exists\(slug\) \{\s*const \{ data, error \} = await visible\("slug", slug\)/);
+    expect(index).toMatch(/async open\(slug\) \{\s*const \{ data, error \} = await visible\(/);
+    expect(index).toMatch(/req\.method !== "POST"[\s\S]*serviceLookup\(\)/);
     expect(index).not.toMatch(/\.insert\s*\(/);
     expect(index).not.toMatch(/\.update\s*\(/);
     expect(index).not.toMatch(/\.delete\s*\(/);
@@ -252,6 +338,8 @@ describe("legacy-note-open source pin", () => {
     expect(`${index}\n${handler}`).not.toMatch(/status:\s*410/);
     expect(handler).toContain("isUsableSlug");
     expect(handler).toContain("../_shared/slug.ts");
+    expect(handler).toContain("maxRequestBytes = 256");
+    expect(handler).toContain('req.headers.get("content-length")');
   });
 
   it("does not restore a locator dump or query-token reader", () => {
