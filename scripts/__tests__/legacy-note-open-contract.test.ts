@@ -90,15 +90,15 @@ describe("legacy-note-open HTTP contract", () => {
   );
 
   it.each([
-    [{}, "missing action"],
-    [{ action: "open" }, "missing slug"],
-    [{ action: "dump", slug: "daily" }, "unknown action"],
-    [{ action: "open", slug: "echo-this-slug!" }, "invalid charset"],
-    [{ action: "exists", slug: "note" }, "reserved note"],
-    [{ action: "exists", slug: "privacy" }, "reserved privacy"],
-    [{ action: "exists", slug: "s" }, "reserved s"],
-    [{ action: "exists", slug: "Privacy" }, "reserved Privacy"],
-  ])("returns 400 invalid request without echoing the slug for %s", async (body) => {
+    ["missing action", {}],
+    ["missing slug", { action: "open" }],
+    ["unknown action", { action: "dump", slug: "daily" }],
+    ["invalid charset", { action: "open", slug: "echo-this-slug!" }],
+    ["reserved note", { action: "exists", slug: "note" }],
+    ["reserved privacy", { action: "exists", slug: "privacy" }],
+    ["reserved s", { action: "exists", slug: "s" }],
+    ["reserved Privacy", { action: "exists", slug: "Privacy" }],
+  ] as const)("returns 400 invalid request without echoing the slug for %s", async (_label, body) => {
     const result = await read(
       await handleLegacyNoteOpen(request("POST", body), memoryLookup({ daily: plaintext })),
     );
