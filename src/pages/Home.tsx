@@ -28,10 +28,12 @@ const HomeLibraryPanel = lazy(() => import("@/components/home/HomeLibraryPanel")
 
 type SlugStatus = "idle" | "checking" | "available" | "taken" | "invalid";
 
-const loadSupabase = async () => (await import("@/integrations/supabase/client")).supabase;
-
 const loadCapabilityApi = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
   ? async () => (await import("@/lib/capability/client")).createCapabilityApi()
+  : null;
+
+const loadLegacyNoteApi = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
+  ? async () => (await import("@/lib/legacy/cutover")).createLegacyNoteApi()
   : null;
 
 function mintErrorKey(kind: ReturnType<typeof mapMintFailure>["kind"]): TKey {
@@ -137,7 +139,9 @@ export default function Home() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // Debounced availability check.
+  // Debounced availability check. Canary-on uses LNO exists (no char_count:
+  // exists:true includes empty legacy rows and is treated as taken). Canary-off
+  // skips the lookup; Open still seedAndOpen.
   useEffect(() => {
     const trimmed = slug.trim();
     if (!trimmed) {
@@ -148,28 +152,21 @@ export default function Home() {
       setSlugStatus("invalid");
       return;
     }
+    const canaryOn = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true";
+    if (!canaryOn || !loadLegacyNoteApi) {
+      setSlugStatus("idle");
+      return;
+    }
     setSlugStatus("checking");
     const ctrl = new AbortController();
     const delay = pendingCreateRef.current === trimmed ? 0 : 350;
     const t = window.setTimeout(async () => {
       try {
-        const supabase = await loadSupabase();
+        const api = await loadLegacyNoteApi();
         if (ctrl.signal.aborted) return;
-        const { data, error } = await supabase
-          .from("notes")
-          .select("slug, char_count")
-          .eq("slug", trimmed)
-          .abortSignal(ctrl.signal)
-          .maybeSingle();
+        const exists = await api.exists(trimmed, ctrl.signal);
         if (ctrl.signal.aborted) return;
-        if (error) {
-          setSlugStatus("idle");
-          return;
-        }
-        // Treat empty notes as still available — common case is auto-created
-        // from a typo or prefetch path.
-        if (!data || (data.char_count ?? 0) === 0) setSlugStatus("available");
-        else setSlugStatus("taken");
+        setSlugStatus(exists ? "taken" : "available");
       } catch {
         if (ctrl.signal.aborted) return;
         setSlugStatus("idle");

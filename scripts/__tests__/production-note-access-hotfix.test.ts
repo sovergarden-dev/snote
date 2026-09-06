@@ -64,7 +64,7 @@ describe("production note access hotfix", () => {
     expect(defaultSource).toContain('import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"');
   });
 
-  it("keeps SplitView and RawView on the legacy backend and canary-gates Home mint", () => {
+  it("keeps SplitView on the legacy editor path and canary-gates Home mint plus LNO", () => {
     const split = source("src/pages/SplitView.tsx");
     const home = source("src/pages/Home.tsx");
     const raw = source("src/pages/RawView.tsx");
@@ -77,17 +77,18 @@ describe("production note access hotfix", () => {
     );
     expect(split).toContain("<CutoverNotePage");
     expect(split).toContain("embedSlug={slug}");
-    expect(home).toContain('import("@/integrations/supabase/client")');
+    expect(home).not.toContain('import("@/integrations/supabase/client")');
     expect(home).not.toContain('import { supabase } from "@/integrations/supabase/client";');
     expect(home).not.toMatch(
       /import\s*\{[^}]*createCapabilityApi[^}]*\}\s*from\s*["']@\/lib\/capability\/client["']/,
     );
     expect(withoutTypeImports(home)).toContain('import("@/lib/capability/client")');
     expectValueImportBehindRoutesGuard(home, "@/lib/capability/client");
-    expect(home).not.toContain("createLegacyNoteApi");
+    expectValueImportBehindRoutesGuard(home, "@/lib/legacy/cutover");
     expect(home).not.toContain("note-snapshot:");
-    expect(raw).toContain('import { supabase } from "@/integrations/supabase/client";');
-    expect(raw).not.toContain("createLegacyNoteApi");
+    expect(raw).not.toContain('import { supabase } from "@/integrations/supabase/client";');
+    expect(raw).not.toContain("integrations/supabase/client");
+    expectValueImportBehindRoutesGuard(raw, "@/lib/legacy/cutover");
   });
 
   it("keeps Home's initial route off the knowledge-index graph", () => {
@@ -215,6 +216,8 @@ describe("production note access hotfix", () => {
       /import\s+NotePage\s+from\s+["']@\/pages\/NotePage["']/,
     );
     expectValueImportBehindRoutesGuard(legacyNotePage, "@/lib/legacy/cutover");
+    expectValueImportBehindRoutesGuard(source("src/pages/RawView.tsx"), "@/lib/legacy/cutover");
+    expectValueImportBehindRoutesGuard(source("src/pages/Home.tsx"), "@/lib/legacy/cutover");
   });
 
   it("fail-closes the admin SPA unless VITE_ADMIN_PANEL_ENABLED is true", () => {
