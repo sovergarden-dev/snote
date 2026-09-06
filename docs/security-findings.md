@@ -75,21 +75,32 @@ the remaining export action copies the canonical public RawView URL
 `https://note.syrin.online/{slug}.md` (`/:slug.md`). `share-revoke` remains live
 and is out of scope for this containment.
 
-## 1b. Legacy `legacy-note-open` dump — production verified
+## 1b. Legacy `legacy-note-open` — Phase B Git source (deploy unattested)
 
-The committed `legacy-note-open` Edge function is a generic `410 no-store` tombstone
-matching `raw`/`note-meta`. It does not parse a locator, initialize a database
-client, or return note bytes. Keep the name deployed as this handler; deleting it
-would 404, which is weaker if something still calls the path. The deployed `legacy-note-open` endpoint is production-verified.
-Credential-free probes on 2026-09-02 ~04:20 ICT against production functions host
+Git `legacy-note-open` is the Phase B exact-match **SELECT-only** Edge Function
+for `POST { action: "exists" | "open", slug }`. It is not a 410 tombstone and not
+a dump: service-role `SELECT` with
+`notes.slug = $slug AND capability_managed = false AND sync_status = 'legacy'
+AND deleted_at IS NULL`; never INSERT/UPDATE/DELETE; never return capability
+ciphertext; invalid action/slug is `400 { "error": "invalid request" }` without
+echoing the slug. Keep the function name; the client is hard-wired in
+`src/lib/legacy/cutover.ts`. `verify_jwt = false` is unchanged. HMAC
+CF-Connecting-IP admission is omitted because consume RPCs write; no Turnstile.
+
+This GitHub change does not deploy the function. Production Edge remains the
+historical 410 tombstone until a **separately attested** Lovable Cloud deploy of
+this Git source. Do not treat merge as a production LNO go. Do not POST a locator to production until that deploy is attested.
+
+Historical production-verified 410 (still live until the attested deploy):
+credential-free probes on 2026-09-02 ~04:20 ICT against production functions host
 `onfzjmfjldsbthchssfr` covered unauthenticated calls with no locator in the body:
 `OPTIONS /functions/v1/legacy-note-open` returned `200` body `ok` (`Allow-Methods`
 POST, OPTIONS); `GET` returned `405` `{"found":false}`, `content-type:
 application/json`, `Cache-Control: no-store`, and `CDN-Cache-Control: no-store`;
 `POST {}` returned `410` with the same JSON `no-store` body. This is not gateway
-`NOT_FOUND` / 404. Do not POST a locator to it. The tombstone was deployed
+`NOT_FOUND` / 404. The tombstone was deployed
 2026-09-02 via Lovable Cloud Edge function `legacy-note-open` only. Git source
-of the live 410 tombstone includes PR #56 (`eab48218`); the Edge function comment
+of that live 410 tombstone includes PR #56 (`eab48218`); the Edge function comment
 no longer claims gateway 404. Hosted function was re-pinned 2026-09-02 ~06:20 ICT from
 that git; HTTP contract unchanged from the earlier 2026-09-02 ~04:20
 production-verified 410. Default production SPA no longer contains quoted
@@ -556,9 +567,9 @@ still not applied.
 `20260724000000_atomic_capability_cutover.sql` dynamically drops every policy
 on `public.notes` and revokes all direct privileges from `PUBLIC`, `anon`, and
 `authenticated` in one transaction. Capability, update, checkpoint, and share
-tables remain default-deny. The SPA uses narrow Edge APIs. Git and production
-`legacy-note-open` are a generic `410 no-store` tombstone rather than a notes
-dump (see §1b).
+tables remain default-deny. The SPA uses narrow Edge APIs. Git `legacy-note-open` is the Phase B
+SELECT-only exact-match Edge (see §1b). Production Edge remains the historical
+410 tombstone until that deploy is attested separately. Do not restore a dump.
 
 Do not apply this migration until the dual-mode client and capability APIs have
 completed the required 48-hour production soak. A local migration test is not

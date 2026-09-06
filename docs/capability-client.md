@@ -25,8 +25,9 @@ This branch compiles `SlugDispatcher` and SplitView pane embeds to mount
 fragment then lazy-loads `LegacyNotePage` instead of dual-mode `NotePage`
 `notes` upsert; matching owner/edit fragments still render `NotePage`.
 Flag-off builds keep `NotePage` with `legacyOnly` and do not import
-`CutoverNotePage`. Production `legacy-note-open` remains the 410 tombstone,
-so this wire is not an origin go.
+`CutoverNotePage`. Git `legacy-note-open` is the Phase B read-only exact-match
+Edge; production Edge remains the 410 tombstone until a separately attested
+deploy, so this wire is not an origin go.
 
 When that canary is on, Home create waits until the `notes.select` availability
 hint is `available` (it does not mint while `idle` or `checking`, and

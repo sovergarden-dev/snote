@@ -98,8 +98,9 @@ SQL 240 wait on Home mint is [ADR-001](../adr/001-home-capability-mint-before-sq
    that canonical ISO timestamp as both Edge secret `LEGACY_SHARE_CUTOFF` and
    frontend build variable `VITE_LEGACY_SHARE_CUTOFF`. Missing or malformed
    values fail closed at runtime.
-3. Production `legacy-note-open` is already the generic `410 no-store` tombstone;
-   do not restore a dump. Capability functions are SHA-pinned.
+3. Git `legacy-note-open` is the Phase B SELECT-only exact-match reader.
+   Production Edge deploy is attested separately; this GitHub PR does not
+   deploy it. Do not restore a dump. Capability functions are SHA-pinned.
    Deploy share compatibility code and the Cloudflare Worker. Do not deploy
    the migration yet.
 4. Run `bun run cutover:verify` from the exact production build artifact with
@@ -158,8 +159,9 @@ it never forwards them to origin even after compatibility expires. Capability
    `realtime_capability_allows` denies private Realtime send and receive.
 2. Keep the cutover migration applied. Never recreate a permissive policy or
    grant `notes` privileges to `PUBLIC`, `anon`, or `authenticated`.
-3. Keep `legacy-note-open` as the generic `410 no-store` tombstone.
-   Do not restore a dump. Keep all private routes `no-store`.
+3. Keep `legacy-note-open` exact-match/read-only. Do not restore a dump.
+   Never restore `PUBLIC`/`anon`/`authenticated` grants on `notes` after
+   SQL 240. Keep all private routes `no-store`.
 4. Roll back the SPA/Worker/API bundle only to a revision that understands
    read-only legacy access. Do not roll back to a direct-table client.
 5. Diagnose and repair the capability API, then re-enable writes only after
