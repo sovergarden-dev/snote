@@ -86,6 +86,16 @@ async function enterValidSlug(slug = "daily") {
   });
 }
 
+function mockExists(
+  impl: boolean | ((slug: string, signal?: AbortSignal) => Promise<boolean>),
+) {
+  const exists = typeof impl === "function"
+    ? vi.fn(impl)
+    : vi.fn(async () => impl);
+  harness.createLegacyNoteApi.mockReturnValue({ exists, open: vi.fn() });
+  return exists;
+}
+
 const env = import.meta.env as Record<string, unknown>;
 
 describe("Home legacy note navigation", () => {
@@ -109,25 +119,17 @@ describe("Home legacy note navigation", () => {
     vi.useRealTimers();
   });
 
-  it.each([
-    ["available", null, "home.status.available"],
-    ["taken", { slug: "daily", char_count: 12 }, "home.status.taken"],
-  ])("marks an exact legacy lookup as %s", async (_label, data, statusKey) => {
-    harness.maybeSingle.mockResolvedValue({ data, error: null });
+  it("does not query public.notes or LNO for availability when the canary is off", async () => {
     renderHome();
-
     await enterValidSlug();
 
-    expect(harness.from).toHaveBeenCalledWith("notes");
-    expect(harness.select).toHaveBeenCalledWith("slug, char_count");
-    expect(harness.eq).toHaveBeenCalledWith("slug", "daily");
-    expect(harness.abortSignal).toHaveBeenCalledWith(expect.any(AbortSignal));
-    expect(harness.maybeSingle).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(statusKey)).toBeInTheDocument();
+    expect(harness.from).not.toHaveBeenCalled();
+    expect(harness.createLegacyNoteApi).not.toHaveBeenCalled();
+    expect(screen.queryByText("home.status.available")).not.toBeInTheDocument();
+    expect(screen.queryByText("home.status.taken")).not.toBeInTheDocument();
   });
 
   it("submits a valid slug directly through softNavigate without Edge APIs", async () => {
-    harness.maybeSingle.mockResolvedValue({ data: null, error: null });
     renderHome();
     await enterValidSlug();
 
@@ -136,13 +138,10 @@ describe("Home legacy note navigation", () => {
     expect(harness.softNavigate).toHaveBeenCalledWith(expect.any(Function), "/daily");
     expect(harness.createCapabilityApi).not.toHaveBeenCalled();
     expect(harness.createLegacyNoteApi).not.toHaveBeenCalled();
+    expect(harness.from).not.toHaveBeenCalled();
   });
 
-  it("keeps direct navigation available when the optional lookup fails", async () => {
-    harness.maybeSingle.mockResolvedValue({
-      data: null,
-      error: { message: "network unavailable" },
-    });
+  it("keeps direct navigation available without an availability lookup", async () => {
     renderHome();
     await enterValidSlug();
 
@@ -167,6 +166,7 @@ describe("Home legacy note navigation", () => {
 
       expect(screen.getByText("home.status.invalid")).toBeInTheDocument();
       expect(harness.from).not.toHaveBeenCalled();
+      expect(harness.createLegacyNoteApi).not.toHaveBeenCalled();
 
       fireEvent.click(screen.getByRole("button", { name: "home.btn.open" }));
 
@@ -176,10 +176,6 @@ describe("Home legacy note navigation", () => {
   );
 
   it("does not fetch or cache plaintext snapshots when a recent note is hovered", async () => {
-    harness.maybeSingle.mockResolvedValue({
-      data: { ydoc_state: "plaintext-snapshot", is_encrypted: false },
-      error: null,
-    });
     const setItem = vi.spyOn(Storage.prototype, "setItem");
     renderHome();
 
@@ -230,8 +226,38 @@ describe("Home capability mint navigation", () => {
     vi.useRealTimers();
   });
 
+  it("marks LNO exists:false as available and exists:true as taken", async () => {
+    const exists = mockExists(false);
+    renderHome();
+    await enterValidSlug();
+
+    expect(exists).toHaveBeenCalledWith("daily", expect.any(AbortSignal));
+    expect(harness.from).not.toHaveBeenCalled();
+    expect(screen.getByText("home.status.available")).toBeInTheDocument();
+
+    exists.mockResolvedValue(true);
+    fireEvent.change(screen.getByLabelText("home.placeholder"), {
+      target: { value: "taken-note" },
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(350);
+    });
+
+    expect(exists).toHaveBeenCalledWith("taken-note", expect.any(AbortSignal));
+    expect(screen.getByText("home.status.taken")).toBeInTheDocument();
+  });
+
+  it("treats an empty legacy row as taken when LNO exists is true (no char_count)", async () => {
+    mockExists(true);
+    renderHome();
+    await enterValidSlug();
+
+    expect(screen.getByText("home.status.taken")).toBeInTheDocument();
+    expect(harness.from).not.toHaveBeenCalled();
+  });
+
   it("mints a free slug via note-session create and navigates to the owner fragment", async () => {
-    harness.maybeSingle.mockResolvedValue({ data: null, error: null });
+    mockExists(false);
     const createNote = mockCreateNote();
     renderHome();
     await enterValidSlug();
@@ -255,14 +281,11 @@ describe("Home capability mint navigation", () => {
     expect(harness.softNavigate.mock.calls[0][1].split("#")[0]).not.toContain(owner);
     expect(sessionStorage.getItem("snote:pending-owner:daily")).toBeNull();
     expect(JSON.stringify(localStorage.getItem("note.recents"))).not.toContain(owner);
-    expect(harness.createLegacyNoteApi).not.toHaveBeenCalled();
+    expect(harness.from).not.toHaveBeenCalled();
   });
 
   it("opens a legacy taken note without minting or an owner fragment", async () => {
-    harness.maybeSingle.mockResolvedValue({
-      data: { slug: "daily", char_count: 12 },
-      error: null,
-    });
+    mockExists(true);
     mockCreateNote();
     renderHome();
     await enterValidSlug();
@@ -273,11 +296,12 @@ describe("Home capability mint navigation", () => {
     expect(harness.softNavigate).toHaveBeenCalledWith(expect.any(Function), "/daily");
     expect(harness.softNavigate.mock.calls[0][1]).not.toMatch(/#(?:owner|edit|view)=/);
     expect(harness.createCapabilityApi).not.toHaveBeenCalled();
+    expect(harness.from).not.toHaveBeenCalled();
   });
 
   it("does not legacy-navigate when Open is clicked before availability settles", async () => {
-    let resolveLookup!: (value: { data: null; error: null }) => void;
-    harness.maybeSingle.mockImplementation(
+    let resolveLookup!: (value: boolean) => void;
+    mockExists(
       () =>
         new Promise((resolve) => {
           resolveLookup = resolve;
@@ -302,7 +326,7 @@ describe("Home capability mint navigation", () => {
 
     vi.useRealTimers();
     await act(async () => {
-      resolveLookup({ data: null, error: null });
+      resolveLookup(false);
       await Promise.resolve();
     });
 
@@ -318,15 +342,12 @@ describe("Home capability mint navigation", () => {
     });
   });
 
-  it("does not seedAndOpen when a pending Open settles to idle after a select error", async () => {
-    let resolveLookup!: (value: {
-      data: null;
-      error: { message: string };
-    }) => void;
-    harness.maybeSingle.mockImplementation(
+  it("does not seedAndOpen when a pending Open settles to idle after an exists error", async () => {
+    let rejectLookup!: (reason: Error) => void;
+    mockExists(
       () =>
-        new Promise((resolve) => {
-          resolveLookup = resolve;
+        new Promise((_, reject) => {
+          rejectLookup = reject;
         }),
     );
     const createNote = mockCreateNote();
@@ -343,7 +364,7 @@ describe("Home capability mint navigation", () => {
       await vi.advanceTimersByTimeAsync(350);
     });
     await act(async () => {
-      resolveLookup({ data: null, error: { message: "network unavailable" } });
+      rejectLookup(new Error("network unavailable"));
       await Promise.resolve();
     });
 
@@ -352,10 +373,9 @@ describe("Home capability mint navigation", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("home.error.create_unavailable");
   });
 
-  it("does not seedAndOpen when Open is clicked after a select error leaves idle", async () => {
-    harness.maybeSingle.mockResolvedValue({
-      data: null,
-      error: { message: "network unavailable" },
+  it("does not seedAndOpen when Open is clicked after an exists error leaves idle", async () => {
+    const exists = mockExists(async () => {
+      throw new Error("network unavailable");
     });
     const createNote = mockCreateNote();
     renderHome();
@@ -376,16 +396,15 @@ describe("Home capability mint navigation", () => {
     expect(createNote).not.toHaveBeenCalled();
     expect(harness.softNavigate).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent("home.error.create_unavailable");
-    expect(harness.maybeSingle.mock.calls.length).toBeGreaterThan(1);
+    expect(exists.mock.calls.length).toBeGreaterThan(1);
   });
 
   it("retries an idle lookup on Open and mints when the slug is available", async () => {
-    harness.maybeSingle
-      .mockResolvedValueOnce({
-        data: null,
-        error: { message: "network unavailable" },
-      })
-      .mockResolvedValueOnce({ data: null, error: null });
+    const exists = mockExists(async () => {
+      throw new Error("network unavailable");
+    });
+    exists.mockRejectedValueOnce(new Error("network unavailable"));
+    exists.mockResolvedValueOnce(false);
     const createNote = mockCreateNote();
     renderHome();
     await enterValidSlug();
@@ -411,15 +430,11 @@ describe("Home capability mint navigation", () => {
   });
 
   it("retries an idle lookup on Open and opens a taken slug without an owner fragment", async () => {
-    harness.maybeSingle
-      .mockResolvedValueOnce({
-        data: null,
-        error: { message: "network unavailable" },
-      })
-      .mockResolvedValueOnce({
-        data: { slug: "daily", char_count: 12 },
-        error: null,
-      });
+    const exists = mockExists(async () => {
+      throw new Error("network unavailable");
+    });
+    exists.mockRejectedValueOnce(new Error("network unavailable"));
+    exists.mockResolvedValueOnce(true);
     const createNote = mockCreateNote();
     renderHome();
     await enterValidSlug();
@@ -438,11 +453,8 @@ describe("Home capability mint navigation", () => {
   });
 
   it("does not mint when Open is clicked while a taken slug is still checking", async () => {
-    let resolveLookup!: (value: {
-      data: { slug: string; char_count: number };
-      error: null;
-    }) => void;
-    harness.maybeSingle.mockImplementation(
+    let resolveLookup!: (value: boolean) => void;
+    mockExists(
       () =>
         new Promise((resolve) => {
           resolveLookup = resolve;
@@ -467,7 +479,7 @@ describe("Home capability mint navigation", () => {
     expect(harness.softNavigate).not.toHaveBeenCalled();
 
     await act(async () => {
-      resolveLookup({ data: { slug: "daily", char_count: 12 }, error: null });
+      resolveLookup(true);
       await Promise.resolve();
     });
 
@@ -478,7 +490,7 @@ describe("Home capability mint navigation", () => {
   });
 
   it("mints a random slug without waiting for availability", async () => {
-    harness.maybeSingle.mockImplementation(() => new Promise(() => {}));
+    mockExists(() => new Promise(() => {}));
     const createNote = mockCreateNote();
     renderHome();
     vi.useRealTimers();
@@ -500,7 +512,7 @@ describe("Home capability mint navigation", () => {
   });
 
   it("surfaces slug_unavailable without falling back to a legacy create", async () => {
-    harness.maybeSingle.mockResolvedValue({ data: null, error: null });
+    mockExists(false);
     const createNote = mockCreateNote();
     createNote.mockRejectedValue({
       status: 409,
@@ -519,11 +531,11 @@ describe("Home capability mint navigation", () => {
     });
     expect(harness.softNavigate).not.toHaveBeenCalled();
     expect(sessionStorage.getItem("snote:pending-owner:daily")).toBeNull();
-    expect(harness.createLegacyNoteApi).not.toHaveBeenCalled();
+    expect(harness.from).not.toHaveBeenCalled();
   });
 
   it("keeps the pending owner and stays on Home for 503 and 429", async () => {
-    harness.maybeSingle.mockResolvedValue({ data: null, error: null });
+    mockExists(false);
     const createNote = mockCreateNote();
     createNote.mockRejectedValue({
       status: 503,
@@ -562,7 +574,7 @@ describe("Home capability mint navigation", () => {
   });
 
   it("retries a lost create with the same persisted owner fragment", async () => {
-    harness.maybeSingle.mockResolvedValue({ data: null, error: null });
+    mockExists(false);
     const createNote = mockCreateNote();
     createNote.mockRejectedValueOnce({ message: "network lost after commit" });
     renderHome();
@@ -588,7 +600,7 @@ describe("Home capability mint navigation", () => {
   });
 
   it("queues a template seed for the minted slug", async () => {
-    harness.maybeSingle.mockResolvedValue({ data: null, error: null });
+    mockExists(false);
     const createNote = mockCreateNote();
     const { consumeTemplateSeed } = await import("@/lib/note-templates");
     renderHome();
@@ -615,7 +627,7 @@ describe("Home capability mint navigation", () => {
   });
 
   it("does not leave a template seed when mint fails with 503", async () => {
-    harness.maybeSingle.mockResolvedValue({ data: null, error: null });
+    mockExists(false);
     const createNote = mockCreateNote();
     createNote.mockRejectedValue({
       status: 503,
@@ -659,7 +671,7 @@ describe("Home capability mint navigation", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent("home.error.invalid_slug");
     expect(harness.createCapabilityApi).not.toHaveBeenCalled();
+    expect(harness.createLegacyNoteApi).not.toHaveBeenCalled();
     expect(sessionStorage.getItem("snote:pending-owner:note")).toBeNull();
   });
 });
-

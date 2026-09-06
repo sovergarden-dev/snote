@@ -2,37 +2,21 @@ import { useLayoutEffect } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter, Route, Routes, useLocation, useNavigate } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { LegacyNote } from "@/lib/legacy/cutover";
 import RawView from "../RawView";
 
-type NoteRow = {
-  content: string | null;
-  ydoc_state: string | null;
-  is_encrypted: boolean;
-  enc_salt: string | null;
-  enc_check: string | null;
-  enc_iterations: number | null;
-};
-
-type QueryResult = { data: NoteRow | null; error: { message: string } | null };
+type OpenResult = LegacyNote | null;
 
 const harness = vi.hoisted(() => ({
-  query: vi.fn<(slug: string) => Promise<QueryResult>>(),
+  open: vi.fn<(slug: string, signal?: AbortSignal) => Promise<OpenResult>>(),
   deriveKey: vi.fn(),
   verifyCheck: vi.fn(),
   decryptBytes: vi.fn(),
   routeCommit: vi.fn(),
 }));
 
-vi.mock("@/integrations/supabase/client", () => ({
-  supabase: {
-    from: () => ({
-      select: () => ({
-        eq: (_column: string, slug: string) => ({
-          maybeSingle: () => harness.query(slug),
-        }),
-      }),
-    }),
-  },
+vi.mock("@/lib/legacy/cutover", () => ({
+  createLegacyNoteApi: () => ({ open: harness.open }),
 }));
 
 vi.mock("@/lib/crypto", () => ({
@@ -74,31 +58,27 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-function plaintext(content: string): QueryResult {
+function plaintext(slug: string, content: string, ydocState = ""): LegacyNote {
   return {
-    data: {
-      content,
-      ydoc_state: null,
-      is_encrypted: false,
-      enc_salt: null,
-      enc_check: null,
-      enc_iterations: null,
-    },
-    error: null,
+    slug,
+    content,
+    ydocState,
+    isEncrypted: false,
+    salt: null,
+    check: null,
+    iterations: null,
   };
 }
 
-function encrypted(label: string): QueryResult {
+function encrypted(slug: string, label: string): LegacyNote {
   return {
-    data: {
-      content: "",
-      ydoc_state: `ciphertext-${label}`,
-      is_encrypted: true,
-      enc_salt: `salt-${label}`,
-      enc_check: `check-${label}`,
-      enc_iterations: 1,
-    },
-    error: null,
+    slug,
+    content: "",
+    ydocState: `ciphertext-${label}`,
+    isEncrypted: true,
+    salt: `salt-${label}`,
+    check: `check-${label}`,
+    iterations: 1,
   };
 }
 
@@ -131,9 +111,97 @@ function renderAt(path: string, state: unknown = null) {
   );
 }
 
+describe("RawView LNO open", () => {
+  beforeEach(() => {
+    harness.open.mockReset();
+    harness.deriveKey.mockReset();
+    harness.verifyCheck.mockReset();
+    harness.decryptBytes.mockReset();
+    harness.routeCommit.mockReset();
+    harness.deriveKey.mockResolvedValue({});
+    harness.verifyCheck.mockResolvedValue(true);
+    harness.decryptBytes.mockResolvedValue(new TextEncoder().encode("decrypted"));
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("renders unencrypted legacy plaintext from LNO open", async () => {
+    harness.open.mockResolvedValue(plaintext("a", "hello from lno"));
+
+    renderAt("/a.md");
+
+    expect(await screen.findByText("hello from lno")).toBeInTheDocument();
+    expect(harness.open).toHaveBeenCalledWith("a", expect.any(AbortSignal));
+  });
+
+  it("hydrates unencrypted plaintext from ydocState when content is empty", async () => {
+    harness.open.mockResolvedValue(plaintext("a", "", "from-ydoc"));
+
+    renderAt("/a.md");
+
+    expect(await screen.findByText("from-ydoc")).toBeInTheDocument();
+  });
+
+  it("shows a stable not-found markdown for missing or non-legacy slugs", async () => {
+    harness.open.mockResolvedValue(null);
+
+    renderAt("/missing.md#owner=capability-token");
+
+    expect(await screen.findByText("# Note not found.")).toBeInTheDocument();
+    expect(screen.queryByText("# loading…")).not.toBeInTheDocument();
+    expect(harness.open).toHaveBeenCalledWith("missing", expect.any(AbortSignal));
+    expect(harness.deriveKey).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid slug without calling LNO", async () => {
+    renderAt("/bad!.md");
+
+    expect(await screen.findByText("# Invalid slug.")).toBeInTheDocument();
+    expect(harness.open).not.toHaveBeenCalled();
+  });
+
+  it.each(["note", "Privacy", "s"])(
+    "rejects reserved slug %s without calling LNO",
+    async (slug) => {
+      renderAt(`/${slug}.md`);
+
+      expect(await screen.findByText("# Invalid slug.")).toBeInTheDocument();
+      expect(harness.open).not.toHaveBeenCalled();
+    },
+  );
+
+  it("requires a fragment key for encrypted legacy notes", async () => {
+    harness.open.mockResolvedValue(encrypted("a", "a"));
+
+    renderAt("/a.md");
+
+    expect(await screen.findByText(/This note is encrypted/)).toBeInTheDocument();
+    expect(harness.decryptBytes).not.toHaveBeenCalled();
+  });
+
+  it("decrypts encrypted legacy notes with the fragment key", async () => {
+    harness.open.mockResolvedValue(encrypted("a", "a"));
+    harness.decryptBytes.mockResolvedValue(new TextEncoder().encode("decrypted-a"));
+
+    renderAt("/a.md#key-a");
+
+    expect(await screen.findByText("decrypted-a")).toBeInTheDocument();
+    expect(window.location.search).toBe("");
+  });
+
+  it("shows Wrong key when the fragment key does not verify", async () => {
+    harness.open.mockResolvedValue(encrypted("a", "a"));
+    harness.verifyCheck.mockResolvedValue(false);
+
+    renderAt("/a.md#wrong");
+
+    expect(await screen.findByText("# Wrong key.")).toBeInTheDocument();
+    expect(harness.decryptBytes).not.toHaveBeenCalled();
+  });
+});
+
 describe("RawView route-state isolation", () => {
   beforeEach(() => {
-    harness.query.mockReset();
+    harness.open.mockReset();
     harness.deriveKey.mockReset();
     harness.verifyCheck.mockReset();
     harness.decryptBytes.mockReset();
@@ -145,9 +213,9 @@ describe("RawView route-state isolation", () => {
   });
 
   it("clears rendered text immediately when the slug changes", async () => {
-    const bResult = deferred<QueryResult>();
-    harness.query.mockImplementation((slug) => {
-      if (slug === "a") return Promise.resolve(plaintext("content-a"));
+    const bResult = deferred<OpenResult>();
+    harness.open.mockImplementation((slug) => {
+      if (slug === "a") return Promise.resolve(plaintext("a", "content-a"));
       return bResult.promise;
     });
 
@@ -163,12 +231,12 @@ describe("RawView route-state isolation", () => {
       expect.stringMatching(/^# loading/),
     );
 
-    await act(async () => bResult.resolve(plaintext("content-b")));
+    await act(async () => bResult.resolve(plaintext("b", "content-b")));
     expect(await screen.findByText("content-b")).toBeInTheDocument();
   });
 
   it("clears the prior key error and reloads when the fragment key changes", async () => {
-    harness.query.mockResolvedValue(encrypted("a"));
+    harness.open.mockResolvedValue(encrypted("a", "a"));
     harness.decryptBytes.mockResolvedValue(new TextEncoder().encode("decrypted-a"));
 
     renderAt("/a.md");
@@ -182,8 +250,8 @@ describe("RawView route-state isolation", () => {
 
   it("does not let deferred crypto from route A overwrite route B", async () => {
     const aDecryption = deferred<Uint8Array>();
-    harness.query.mockImplementation((slug) =>
-      Promise.resolve(slug === "a" ? encrypted("a") : plaintext("content-b")),
+    harness.open.mockImplementation((slug) =>
+      Promise.resolve(slug === "a" ? encrypted("a", "a") : plaintext("b", "content-b")),
     );
     harness.decryptBytes.mockImplementation(() => aDecryption.promise);
 
@@ -204,7 +272,7 @@ describe("RawView route-state isolation", () => {
 
   it("rejects route A plaintext when browser history changes before Router commits", async () => {
     const aDecryption = deferred<Uint8Array>();
-    harness.query.mockResolvedValue(encrypted("a"));
+    harness.open.mockResolvedValue(encrypted("a", "a"));
     harness.decryptBytes.mockImplementation(() => aDecryption.promise);
 
     renderAt("/a.md#key-a");
@@ -225,7 +293,7 @@ describe("RawView route-state isolation", () => {
 
   it("preserves history state while migrating a query key into the fragment", async () => {
     const originalState = { navigationId: 17, retained: "yes" };
-    harness.query.mockResolvedValue(encrypted("a"));
+    harness.open.mockResolvedValue(encrypted("a", "a"));
     harness.decryptBytes.mockResolvedValue(new TextEncoder().encode("decrypted-a"));
 
     renderAt("/a.md?key=secret", originalState);
