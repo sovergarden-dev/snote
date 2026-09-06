@@ -46,7 +46,7 @@ A later named Pages deploy of #95 made Home mint live on canary origin `e05c73ea
 
 - Forge implements Home create against existing `note-session` contract (`createCapabilityApi().createNote`). No new Edge function.
 - Failures stay existing codes: `slug_unavailable` 409, admission 429/503, missing HMAC 503.
-- `legacyOnly` dual-mode remains until 240. Home existence check today is `select slug, char_count from notes` — after mint, capability-managed rows are invisible to that query; Home must not treat “not in notes” as “slug free” once create can 409 from the RPC.
+- Canary-on `CutoverNotePage` is live on origin `7d00fd52`; flag-off builds keep `legacyOnly` `NotePage`. Home existence check today is `select slug, char_count from notes` — after mint, capability-managed rows are invisible to that query; Home must not treat “not in notes” as “slug free” once create can 409 from the RPC.
 - SQL 240, private Realtime, and quen/lạ overlay stay separately named. Worker log deploy is already live (§1c).
 
 ## Open questions (do not guess)

@@ -19,7 +19,7 @@ minting stays off. Ordinary Vite builds follow `.env.example`
 Origin `7d00fd52` mounts `CutoverNotePage` when that canary is on (Phase A
 wire live).
 
-This branch compiles `SlugDispatcher` and SplitView pane embeds to mount
+This origin compiles `SlugDispatcher` and SplitView pane embeds to mount
 `CutoverNotePage` when that canary is on (lazy; `SlugDispatcher` keeps the
 `EditorSkeleton` fallback). A plain `/<slug>` with no matching `#owner`/`#edit`
 fragment then lazy-loads `LegacyNotePage` instead of dual-mode `NotePage`

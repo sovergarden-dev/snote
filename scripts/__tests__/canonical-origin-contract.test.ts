@@ -62,6 +62,9 @@ describe("canonical production origin", () => {
       /The capability model below is the target post-cutover architecture, not the\s+authorization model currently active in production\./,
     );
     expect(findings).toContain(
+      "Production `anon` can still write `public.notes` (SQL 240 not applied;",
+    );
+    expect(findings).not.toContain(
       "Production legacy write path is still live (`NotePage` `legacyOnly`,",
     );
     expect(findings).toMatch(

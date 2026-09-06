@@ -1,7 +1,7 @@
 # Security findings — repository and rollout status
 
-Production legacy write path is still live (`NotePage` `legacyOnly`,
-`public.notes`). Additive SQL `20260722000000_capability_backend.sql` is
+Production `anon` can still write `public.notes` (SQL 240 not applied;
+three Legacy policies remain). Additive SQL `20260722000000_capability_backend.sql` is
 applied on production: columns, legacy-only RLS, capability tables, and
 `writes_enabled=true`, `private_realtime_enabled=false` (see §3d).
 Additive SQL `20260727000000_capability_sync_conflict_codes.sql` is also
@@ -518,7 +518,8 @@ Same-canary origin SHA bump 2026-09-04 ~14:39 ICT (not current live): Pages
 Pages Git Provider is No, so origin stayed at `27da93eb` after that merge
 until that production deploy. Home create (canary on) persists an owner
 candidate, `POST note-session` `{action:"create"}`, then navigates
-`/<slug>#owner=<token>`. Plain slug remains the legacy write path.
+`/<slug>#owner=<token>`. Plain slug remained the legacy write path at
+that bump.
 `version.json` at that bump (browser UA; `no-store`) on both canonical and
 Pages hosts:
 `deployedSha` `e05c73ead67a3751d07a4042ba68fe86fcb271a8`,
