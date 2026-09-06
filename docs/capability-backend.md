@@ -47,13 +47,22 @@ mode and never receive an owner capability automatically.
 All responses carry `Cache-Control: no-store` and `CDN-Cache-Control: no-store`.
 The legacy credential-free `raw` Edge dump is a permanent `410` tombstone
 (`{"found":false}`, `no-store`) and must not select or echo note bytes.
-Production `legacy-note-open` is the same generic uncacheable `410` tombstone:
-leftover callers of that name get `410`, not note bytes. Do not restore a dump.
-See [security findings §1b](security-findings.md).
+Git `legacy-note-open` is the Phase B exact-match `legacy-note-open` Edge Function:
+service-role SELECT-only `{ action: "exists" | "open", slug }` with
+`capability_managed = false AND sync_status = 'legacy' AND deleted_at IS NULL`.
+Capability-managed, non-legacy, and deleted rows are `exists: false`. Invalid
+action/slug is `400 { "error": "invalid request" }` without echoing the slug.
+The function never INSERT/UPDATE/DELETEs, never reads Bearer or query/path tokens,
+and never returns capability ciphertext. HMAC CF-Connecting-IP admission is omitted
+because this path is SELECT-only and has no admission window. Consume RPCs
+would write; do not invent Turnstile. Do not restore a dump.
+Production Edge deploy is attested separately (see [security findings §1b](security-findings.md)).
+This document does not authorize an Edge deploy, origin Pages, Worker, SQL 240, or
+Realtime flip.
 Live writes remain the legacy `NotePage` path (plain slug; dual-mode canary on, findings §3e). Home create mints when canary is on (fail-closed idle). SQL 240 is not applied.
-After the atomic cutover, browser roles still have no table grants; this
-document does not add a replacement content Edge path. See
-[the cutover runbook](security/atomic-capability-cutover.md)
+After the atomic cutover, browser roles still have no table grants; rollback keeps
+this read-only LNO and must never restore `anon`/`authenticated` `notes` GRANTs.
+See [the cutover runbook](security/atomic-capability-cutover.md)
 for the mandatory 48-hour soak, migration order, compatibility deadline, and
 read-only rollback procedure.
 Malformed credentials return a generic `401`; storage/configuration failures

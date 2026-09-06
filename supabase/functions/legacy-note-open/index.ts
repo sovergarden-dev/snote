@@ -1,30 +1,50 @@
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.104.1";
+import {
+  handleLegacyNoteOpen,
+  type LegacyNoteLookup,
+  type LegacyNoteRow,
+} from "./handler.ts";
 
-function jsonResponse(body: unknown, status: number) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      ...corsHeaders,
-      "content-type": "application/json",
-      "cache-control": "no-store",
-      "cdn-cache-control": "no-store",
-    },
+// HMAC CF-Connecting-IP admission is omitted: this path is SELECT-only and
+// has no admission window. Consume RPCs would write. No Turnstile.
+
+function serviceLookup(): LegacyNoteLookup | null {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!supabaseUrl || !serviceRoleKey) return null;
+
+  const client = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  const visible = (columns: string, slug: string) =>
+    client
+      .from("notes")
+      .select(columns)
+      .eq("slug", slug)
+      .eq("capability_managed", false)
+      .eq("sync_status", "legacy")
+      .is("deleted_at", null)
+      .maybeSingle();
+
+  return {
+    async exists(slug) {
+      const { data, error } = await visible("slug", slug);
+      if (error) return "unavailable";
+      return !!data;
+    },
+    async open(slug) {
+      const { data, error } = await visible(
+        "slug, content, ydoc_state, is_encrypted, enc_salt, enc_check, enc_iterations",
+        slug,
+      );
+      if (error) return "unavailable";
+      return (data as LegacyNoteRow | null) ?? null;
+    },
+  };
 }
 
-// Retired: this name used to be an unauthenticated service-role dump of note
-// bytes. Keep the function name as a generic uncacheable 410 so leftover
-// callers cannot recover note bytes. Production serves this 410 tombstone
-// (verified 2026-09-02). Do not restore a dump.
 Deno.serve((req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") {
-    return jsonResponse({ found: false }, 405);
-  }
-  return jsonResponse({ found: false }, 410);
+  if (req.method !== "POST") return handleLegacyNoteOpen(req, null);
+  return handleLegacyNoteOpen(req, serviceLookup());
 });
