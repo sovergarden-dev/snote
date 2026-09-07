@@ -30,7 +30,7 @@ vi.mock("@/components/app/AppShell", () => ({
 }));
 vi.mock("@/i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock("react-helmet-async", () => ({ Helmet: () => null }));
-vi.mock("lucide-react", () => ({ ArrowLeft: () => null, CopyPlus: () => null, Eye: () => null, Loader2: () => null }));
+vi.mock("lucide-react", () => ({ ArrowLeft: () => null, Eye: () => null, Loader2: () => null }));
 
 describe("LegacyNotePage cutover mode", () => {
   beforeEach(() => {

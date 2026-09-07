@@ -88,7 +88,7 @@ describe("production note access hotfix", () => {
     expect(defaultSource).toContain('import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"');
   });
 
-  it("keeps SplitView on the legacy editor path and canary-gates Home mint plus LNO", () => {
+  it("keeps SplitView on Choice A editable NotePage and canary-gates Home mint plus LNO", () => {
     const split = source("src/pages/SplitView.tsx");
     const home = source("src/pages/Home.tsx");
     const raw = source("src/pages/RawView.tsx");
