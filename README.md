@@ -4,14 +4,19 @@ Offline-first realtime Markdown notes with a separately gated capability model.
 
 Production: [note.syrin.online](https://note.syrin.online/)
 
-**Current status:** Production currently runs canary-on `CutoverNotePage`
-(Phase A and Phase C live; Pixel HIGH UX H1–H6 still on this line; H2 opaque
+**Current status:** Production currently runs Choice A canary-on editable `NotePage`
+(Phase C still live; Pixel HIGH UX H1–H6 still on this line; H2 opaque
 Mode/Export still on this line; Ko-fi + New Version FAB still on this line;
-FAB-primary + Sonner suppress (#113/#116) live on origin `5c33ac24`; Pixel IDLE+UPDATE PASS (no Sonner on home); findings §3e):
-`capabilityRoutesEnabled` true. Plain slug URLs lazy-load `LegacyNotePage`
-(Phase B `legacy-note-open` read-only); `#owner`/`#edit` still render
-`NotePage`. RawView `/:slug.md` loads via LNO `open`; Home availability uses
-LNO `exists` (empty legacy rows are taken). Home mints capabilities when canary is on (fail-closed on idle). Additive SQL 220 and 270
+FAB-primary + Sonner suppress (#113/#116) still on this line; Choice A (#118)
+live on origin `9dc0240e`; Pixel visual PASS (/hage editable + Duplicate hidden);
+Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e):
+`capabilityRoutesEnabled` true. Plain slug URLs and SplitView panes mount
+editable `NotePage` (not `CutoverNotePage` → `LegacyNotePage` default);
+`#owner`/`#edit` still render `NotePage`. Optional `?legacyRo=1` opt-in
+lazy-loads `CutoverNotePage` → `LegacyNotePage` (Phase B `legacy-note-open`
+read-only). RawView `/:slug.md` loads via LNO `open`; Home availability uses
+LNO `exists` (empty legacy rows are taken). Duplicate securely is hidden with
+honest unavailable copy. Home mints capabilities when canary is on (fail-closed on idle). Additive SQL 220 and 270
 are applied on production; `writes_enabled=true` and
 `private_realtime_enabled=false` (findings §3d). SQL 240 is not applied;
 soak ≥48h started from the first canary (not soak-complete) — see
