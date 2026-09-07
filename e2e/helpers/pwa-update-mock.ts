@@ -68,6 +68,19 @@ export async function getHardReloadCount(page: Page): Promise<number> {
 }
 
 /**
+ * Visible PWA-update Sonner toast. Substring `getByText("New version available")`
+ * also matches the Ko-fi FAB's sr-only `role="status"` live region
+ * ("New version available. Reload to update."), which fails Playwright strict
+ * mode. Scope to the toast host and match the title exactly.
+ */
+export function pwaUpdateToast(page: Page, state: "available" | "pending" = "available") {
+  const title = state === "pending" ? "Update pending" : "New version available";
+  return page.locator("[data-sonner-toast]").filter({
+    has: page.getByText(title, { exact: true }),
+  });
+}
+
+/**
  * Wait for the version poller to have fetched at least once and populated
  * window.__SNOTE_PWA_UPDATE_STATE__. Fails fast with an attached diagnostic
  * (state snapshot, console log) if the poller stalls, so CI failures point
