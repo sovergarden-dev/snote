@@ -111,6 +111,7 @@ const zh: Dictionary = {
     "legacy.read_only": "旧版笔记 · 只读",
     "legacy.new_slug": "新安全笔记标识",
     "legacy.duplicate_securely": "安全复制",
+    "legacy.duplicate_unavailable": "此源站无法安全复制。所需的服务端导入尚未部署。",
     "legacy.not_found": "此旧版笔记不存在。",
     "legacy.unavailable": "此旧版笔记暂时不可用。",
     "share.back_home_aria": "返回首页",

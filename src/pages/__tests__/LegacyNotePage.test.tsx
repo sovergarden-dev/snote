@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import LegacyNotePage from "../LegacyNotePage";
@@ -72,28 +72,22 @@ describe("LegacyNotePage cutover mode", () => {
     expect(harness.previewText).not.toHaveBeenCalled();
   });
 
-  it.each(["note", "Privacy", "S"])(
-    "disables secure duplication for router-owned target %s",
-    async (targetSlug) => {
-      harness.open.mockResolvedValue({
-        slug: "daily",
-        content: "legacy text",
-        ydocState: "",
-        isEncrypted: false,
-        salt: null,
-        check: null,
-        iterations: null,
-      });
+  it("does not offer Duplicate securely (import-legacy is not on this origin)", async () => {
+    harness.open.mockResolvedValue({
+      slug: "daily",
+      content: "legacy text",
+      ydocState: "",
+      isEncrypted: false,
+      salt: null,
+      check: null,
+      iterations: null,
+    });
 
-      render(<MemoryRouter><LegacyNotePage slug="daily" /></MemoryRouter>);
+    render(<MemoryRouter><LegacyNotePage slug="daily" /></MemoryRouter>);
 
-      await waitFor(() => expect(screen.getByText("legacy.read_only")).toBeInTheDocument());
-      fireEvent.change(screen.getByLabelText("legacy.new_slug"), {
-        target: { value: targetSlug },
-      });
-
-      expect(screen.getByLabelText("legacy.new_slug")).toHaveAttribute("aria-invalid", "true");
-      expect(screen.getByRole("button", { name: "legacy.duplicate_securely" })).toBeDisabled();
-    },
-  );
+    await waitFor(() => expect(screen.getByText("legacy.read_only")).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: "legacy.duplicate_securely" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("legacy.new_slug")).not.toBeInTheDocument();
+    expect(screen.getByText("legacy.duplicate_unavailable")).toBeInTheDocument();
+  });
 });

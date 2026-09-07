@@ -8,7 +8,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router";
 import { Helmet } from "react-helmet-async";
 import { ArrowLeft, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -318,6 +318,8 @@ function SplitPane({
   registerScroller: SplitScrollerRegistration;
   onActivate: () => void;
 }) {
+  const { search } = useLocation();
+  const legacyRo = new URLSearchParams(search).get("legacyRo") === "1";
   const [paneRef, paneNarrow] = useElementNarrow<HTMLDivElement>(900);
   const onPrimaryScroller = useCallback(
     (element: HTMLElement | null) => registerScroller(index, element),
@@ -349,7 +351,7 @@ function SplitPane({
           </div>
         }
       >
-        {capabilityRoutesEnabled && CutoverNotePage ? (
+        {legacyRo && capabilityRoutesEnabled && CutoverNotePage ? (
           <CutoverNotePage
             embedSlug={slug}
             embedNarrow={paneNarrow}
@@ -357,7 +359,7 @@ function SplitPane({
           />
         ) : (
           <NotePage
-            legacyOnly
+            legacyOnly={!capabilityRoutesEnabled}
             embedSlug={slug}
             embedNarrow={paneNarrow}
             onPrimaryScroller={onPrimaryScroller}

@@ -110,6 +110,7 @@ const fr: Dictionary = {
     "legacy.read_only": "Note héritée · lecture seule",
     "legacy.new_slug": "Slug de la nouvelle note sécurisée",
     "legacy.duplicate_securely": "Dupliquer en sécurité",
+    "legacy.duplicate_unavailable": "La duplication sécurisée n’est pas disponible sur cette origine. L’import serveur requis n’est pas déployé.",
     "legacy.not_found": "Cette note héritée n’existe pas.",
     "legacy.unavailable": "Cette note héritée est temporairement indisponible.",
     "share.back_home_aria": "Retour à l'accueil",

@@ -110,6 +110,7 @@ const ko: Dictionary = {
     "legacy.read_only": "레거시 노트 · 읽기 전용",
     "legacy.new_slug": "새 보안 노트 슬러그",
     "legacy.duplicate_securely": "안전하게 복제",
+    "legacy.duplicate_unavailable": "이 오리진에서는 안전하게 복제할 수 없습니다. 필요한 서버 가져오기가 배포되어 있지 않습니다.",
     "legacy.not_found": "이 레거시 노트가 없습니다.",
     "legacy.unavailable": "이 레거시 노트를 일시적으로 사용할 수 없습니다.",
     "share.back_home_aria": "홈으로",

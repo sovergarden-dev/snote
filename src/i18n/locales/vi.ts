@@ -113,6 +113,7 @@ const vi: Dictionary = {
     "legacy.read_only": "Ghi chú cũ · chỉ đọc",
     "legacy.new_slug": "Slug mới an toàn",
     "legacy.duplicate_securely": "Nhân bản an toàn",
+    "legacy.duplicate_unavailable": "Không thể nhân bản an toàn trên origin này. Import phía máy chủ cần thiết chưa được triển khai.",
     "legacy.not_found": "Ghi chú cũ này không tồn tại.",
     "legacy.unavailable": "Ghi chú cũ này tạm thời không khả dụng.",
     "share.back_home_aria": "Về trang chủ",

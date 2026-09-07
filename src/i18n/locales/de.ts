@@ -110,6 +110,7 @@ const de: Dictionary = {
     "legacy.read_only": "Legacy-Notiz · schreibgeschützt",
     "legacy.new_slug": "Slug der neuen sicheren Notiz",
     "legacy.duplicate_securely": "Sicher duplizieren",
+    "legacy.duplicate_unavailable": "Sicheres Duplizieren ist auf diesem Origin nicht verfügbar. Der dafür nötige Server-Import ist nicht bereitgestellt.",
     "legacy.not_found": "Diese Legacy-Notiz existiert nicht.",
     "legacy.unavailable": "Diese Legacy-Notiz ist vorübergehend nicht verfügbar.",
     "share.back_home_aria": "Zurück zur Startseite",
