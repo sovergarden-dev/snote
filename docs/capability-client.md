@@ -34,8 +34,7 @@ Edge.
 When that canary is on, Home create waits until LNO `exists` is false
 (`available`; it does not mint while `idle` or `checking`, and
 legacy-`taken` still opens `/<slug>` with no `#owner`). Idle submit re-checks
-via LNO `exists`;
-it does not fail-open to legacy `seedAndOpen`. Then it persists an
+via LNO `exists`; it does not fail-open to legacy `seedAndOpen`. Then it persists an
 owner candidate in `sessionStorage`, calls `createCapabilityApi().createNote`
 (`POST note-session` `{action:"create"}`), queues any template seed only after
 that create succeeds, and navigates to `/<slug>#owner=<token>`. Random-note
@@ -46,7 +45,7 @@ It is not SQL 240. Recents and
 pins store only the slug, never the owner token. Losing the fragment
 without another copy of the owner capability locks the note out. An
 LNO `exists: false` miss is only a legacy hint: capability-managed slugs are
-invisible to that query, and create may still return `slug_unavailable`.
+invisible to LNO `exists`, and create may still return `slug_unavailable`.
 Do not fall back to a legacy upsert from the create button.
 
 An optional encryption secret is a separate `key` fragment field. Capability tokens are exchanged for a short-lived `NoteSession` and are sent to Edge APIs only as an exact `Authorization: Bearer` header. They are never placed in a request path, query, JSON body, recent-note entry, telemetry event, or log.
