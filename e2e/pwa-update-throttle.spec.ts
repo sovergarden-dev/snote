@@ -110,3 +110,28 @@ test("FAB-hidden /note keeps the Sonner toast fallback", async ({ page }, testIn
   await expectPwaUpdatePrompt(page);
   await expect(page.getByRole("button", { name: /^Update$/ })).toBeVisible();
 });
+
+test("FAB-hidden raw .md keeps the Sonner toast fallback", async ({ page }, testInfo) => {
+  currentPageForHook = page;
+  await installPwaUpdateMock(page, {
+    fromBuildId: "build-md-v1",
+    toBuildId: "build-md-v2",
+  });
+  await page.goto("/daily.md");
+  await waitForPwaUpdaterReady(page, testInfo);
+  await expectPwaUpdatePrompt(page);
+  await expect(pwaUpdateToast(page)).toBeVisible();
+  await expect(pwaUpdateFab(page)).toHaveCount(0);
+});
+
+test("FAB-eligible /privacy suppresses the Sonner toast", async ({ page }, testInfo) => {
+  currentPageForHook = page;
+  await installPwaUpdateMock(page, {
+    fromBuildId: "build-privacy-v1",
+    toBuildId: "build-privacy-v2",
+  });
+  await page.goto("/privacy");
+  await waitForPwaUpdaterReady(page, testInfo);
+  await expectPwaUpdatePrompt(page);
+  await expect(pwaUpdateToast(page)).toHaveCount(0);
+});

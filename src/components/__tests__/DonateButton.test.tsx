@@ -73,8 +73,16 @@ describe("DonateButton — idle Ko-fi FAB", () => {
     const { unmount } = renderFab("/note");
     expect(screen.queryByRole("link")).toBeNull();
     unmount();
+    const slash = renderFab("/note/");
+    expect(screen.queryByRole("link")).toBeNull();
+    slash.unmount();
     renderFab("/daily.md");
     expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("marks the idle FAB with data-donate-fab so the PWA presenter can suppress Sonner", () => {
+    renderFab();
+    expect(screen.getByRole("link", { name: dict.en["fab.donate.aria"] })).toHaveAttribute("data-donate-fab");
   });
 });
 
@@ -123,6 +131,7 @@ describe("DonateButton — update available", () => {
     expect(status).toHaveAttribute("aria-live", "polite");
     expect(status).toHaveTextContent(dict.en["fab.update.aria"]);
     expect(document.querySelector("[data-sonner-toast]")).toBeNull();
+    expect(document.querySelector("[data-donate-fab]")).not.toBeNull();
   });
 
   it("drops the decorative ring, pulses stronger, and scales with transform only (no layout push)", () => {

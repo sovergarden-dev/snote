@@ -21,9 +21,9 @@ createRoot(document.getElementById("root")!).render(
 // the extension.
 queueMicrotask(postExtensionReady);
 
-// Register the PWA service worker and show a persistent toast when a new
-// version is available. Loaded lazily so the SW + workbox-window glue stay
-// out of the eager entry chunk (keeps the bundle-size gate happy and
+// Register the PWA service worker. FAB-eligible routes suppress Sonner; the
+// toast is the fallback on /note and *.md. Loaded lazily so SW + workbox glue
+// stay out of the eager entry chunk (keeps the bundle-size gate happy and
 // doesn't block first paint). See src/lib/pwa-update.ts for the rationale.
 void import("./lib/pwa-update").then((m) => m.registerAppUpdater());
 
