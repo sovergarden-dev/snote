@@ -383,6 +383,9 @@ describe("legacy-note-open docs", () => {
     expect(capability).toContain("Phase C");
     expect(capability).toContain("Pixel HIGH UX");
     expect(capability).toContain("H1–H6");
+    expect(capability).toContain("H2");
+    expect(capability).toContain("opaque");
+    expect(capability).toContain("Mode/Export");
     expect(capability).toContain("SQL 240 is not applied");
     expect(capability).toContain("Do not restore a dump");
     expect(capability).toContain("browser roles still have no table grants");
