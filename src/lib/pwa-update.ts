@@ -230,7 +230,7 @@ function consumeHardReload(targetBuildId: string | null): boolean {
 
 function signalE2EReload(targetBuildId: string | null): boolean {
   if (isE2EUpdateEnabled() && targetBuildId) {
-    if (!consumeHardReload(targetBuildId)) return true;
+    if (!consumeHardReload(targetBuildId)) return true; // already signaled; still E2E-handled
     window.__SNOTE_E2E_BUILD_ID__ = targetBuildId;
     window.dispatchEvent(new CustomEvent("snote:e2e-pwa-hard-reload", { detail: { targetBuildId } }));
     return true;

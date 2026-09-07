@@ -259,54 +259,64 @@ describe("registerAppUpdater", () => {
     // snote:e2e-pwa-hard-reload (post-deploy multi-click smoke: expected 1 got 2).
     respondVersion("build-b");
     const targets: string[] = [];
-    window.addEventListener("snote:e2e-pwa-hard-reload", (e: Event) => {
+    const onReload = (e: Event) => {
       targets.push((e as CustomEvent<{ targetBuildId: string }>).detail.targetBuildId);
-    });
-    const mod = await fresh();
-    mod.registerAppUpdater();
-    await flush(80);
+    };
+    window.addEventListener("snote:e2e-pwa-hard-reload", onReload);
+    try {
+      const mod = await fresh();
+      mod.registerAppUpdater();
+      await flush(80);
 
-    window.__SNOTE_PWA_APPLY_UPDATE__?.();
-    expect(targets).toEqual(["build-b"]);
-    expect(pwaState()?.reloadAttemptCount).toBe(1);
+      window.__SNOTE_PWA_APPLY_UPDATE__?.();
+      expect(targets).toEqual(["build-b"]);
+      expect(pwaState()?.reloadAttemptCount).toBe(1);
 
-    (window as unknown as { __SNOTE_E2E_BUILD_ID__?: string }).__SNOTE_E2E_BUILD_ID__ = "build-b";
-    await flush(80);
+      (window as unknown as { __SNOTE_E2E_BUILD_ID__?: string }).__SNOTE_E2E_BUILD_ID__ = "build-b";
+      await flush(80);
 
-    expect(pwaState()?.updateInProgress).toBe(false);
-    expect(pwaState()?.updateAvailable).toBe(false);
+      expect(pwaState()?.updateInProgress).toBe(false);
+      expect(pwaState()?.updateAvailable).toBe(false);
 
-    window.__SNOTE_PWA_APPLY_UPDATE__?.();
-    window.__SNOTE_PWA_APPLY_UPDATE__?.();
+      window.__SNOTE_PWA_APPLY_UPDATE__?.();
+      window.__SNOTE_PWA_APPLY_UPDATE__?.();
 
-    expect(targets).toEqual(["build-b"]);
-    expect(pwaState()?.reloadAttemptCount).toBe(1);
+      expect(targets).toEqual(["build-b"]);
+      expect(pwaState()?.reloadAttemptCount).toBe(1);
+    } finally {
+      window.removeEventListener("snote:e2e-pwa-hard-reload", onReload);
+    }
   });
 
   it("allows a later apply when version.json advances to a new buildId", async () => {
     const fetchMock = respondVersion("build-b");
     const targets: string[] = [];
-    window.addEventListener("snote:e2e-pwa-hard-reload", (e: Event) => {
+    const onReload = (e: Event) => {
       targets.push((e as CustomEvent<{ targetBuildId: string }>).detail.targetBuildId);
-    });
-    const mod = await fresh();
-    mod.registerAppUpdater();
-    await flush(80);
+    };
+    window.addEventListener("snote:e2e-pwa-hard-reload", onReload);
+    try {
+      const mod = await fresh();
+      mod.registerAppUpdater();
+      await flush(80);
 
-    window.__SNOTE_PWA_APPLY_UPDATE__?.();
-    (window as unknown as { __SNOTE_E2E_BUILD_ID__?: string }).__SNOTE_E2E_BUILD_ID__ = "build-b";
-    await flush(80);
+      window.__SNOTE_PWA_APPLY_UPDATE__?.();
+      (window as unknown as { __SNOTE_E2E_BUILD_ID__?: string }).__SNOTE_E2E_BUILD_ID__ = "build-b";
+      await flush(80);
 
-    fetchMock.mockImplementation(async () => ({
-      ok: true,
-      json: async () => ({ buildId: "build-c" }),
-    }));
-    await flush(80);
+      fetchMock.mockImplementation(async () => ({
+        ok: true,
+        json: async () => ({ buildId: "build-c" }),
+      }));
+      await flush(80);
 
-    expect(pwaState()?.updateAvailable).toBe(true);
-    window.__SNOTE_PWA_APPLY_UPDATE__?.();
-    expect(targets).toEqual(["build-b", "build-c"]);
-    expect(pwaState()?.reloadAttemptCount).toBe(2);
+      expect(pwaState()?.updateAvailable).toBe(true);
+      window.__SNOTE_PWA_APPLY_UPDATE__?.();
+      expect(targets).toEqual(["build-b", "build-c"]);
+      expect(pwaState()?.reloadAttemptCount).toBe(2);
+    } finally {
+      window.removeEventListener("snote:e2e-pwa-hard-reload", onReload);
+    }
   });
 
   it("waiting-sw fallback and a late controllerchange only hard-reload once", async () => {
