@@ -117,6 +117,7 @@ describe("DonateButton — update available", () => {
     const status = screen.getByRole("status");
     expect(status).toHaveAttribute("aria-live", "polite");
     expect(status).toHaveTextContent(dict.en["fab.update.aria"]);
+    expect(document.querySelector("[data-sonner-toast]")).toBeNull();
   });
 
   it("drops the decorative ring, pulses stronger, and scales with transform only (no layout push)", () => {
@@ -230,7 +231,7 @@ describe("DonateButton — Pixel contracts", () => {
     }
   });
 
-  it("places the PWA sonner toaster at top-right so it does not cover the FAB", () => {
+  it("keeps the fallback toaster at top-right for FAB-hidden routes", () => {
     const src = readFileSync(resolve(__dirname, "../ui/sonner.tsx"), "utf8");
     expect(src).toMatch(/position="top-right"/);
   });

@@ -1,9 +1,9 @@
 // PWA update flow.
 //
-// The toast stays visible until the tab is actually running the deployed
-// buildId from /version.json. Clicking Update only marks that build as
-// pending and starts one reload path; repeated clicks are ignored while that
-// path is in progress.
+// When the Ko-fi FAB is eligible it is the primary update UI: no Sonner toast.
+// `/note` and `*.md` hide the FAB, so the toast is the fallback. Clicking
+// Update / the FAB primary control only marks that build as pending and starts
+// one reload path; repeated clicks are ignored while that path is in progress.
 
 import { createElement, type MouseEvent, type ReactNode } from "react";
 import { registerSW } from "virtual:pwa-register";
@@ -20,6 +20,7 @@ import {
   type PwaReloadStrategy,
   type PwaUpdateReadinessState,
 } from "@/lib/pwa-update-readiness";
+import { shouldHideDonateFab } from "@/lib/donate-fab-visibility";
 
 declare const __BUILD_ID__: string;
 const STAMPED_BUILD_ID: string = typeof __BUILD_ID__ === "string" ? __BUILD_ID__ : "dev";
@@ -60,6 +61,7 @@ declare global {
     __SNOTE_PWA_UPDATE_STATE__?: PwaUpdateDebugState;
     __SNOTE_PWA_UPDATE_CLEANUP__?: () => void;
     __SNOTE_PWA_APPLY_UPDATE__?: () => void;
+    __SNOTE_PWA_SYNC_UPDATE_UI__?: () => void;
   }
 }
 
@@ -369,6 +371,7 @@ export function registerAppUpdater(): void {
   let reloadInProgress = false;
   let reloadAttemptCount = 0;
   let reloadStrategy: ReloadStrategy = null;
+  let waitingNeedRefreshBuildId: string | null = null;
   const cleanupTasks: Array<() => void> = [];
   window.__SNOTE_PWA_UPDATE_CLEANUP__ = () => {
     while (cleanupTasks.length) {
@@ -376,12 +379,7 @@ export function registerAppUpdater(): void {
     }
   };
 
-  const renderToast = () => {
-    showUpdateToast({
-      updateInProgress: reloadInProgress,
-      onReload: reloadNow,
-    });
-  };
+  const isFabEligible = () => !shouldHideDonateFab(window.location.pathname);
 
   const syncDebugState = () => {
     writeDebugState({
@@ -406,7 +404,7 @@ export function registerAppUpdater(): void {
     }
     syncDebugState();
     writeDebugState({ pendingBuildId, lastAcceptedAt: Date.now() });
-    renderToast();
+    syncPresentation();
     // Lifecycle log happens after strategy is chosen below.
 
     if (waitingRegistration?.waiting && updateSWFn) {
@@ -462,6 +460,32 @@ export function registerAppUpdater(): void {
     };
     console.info("[pwa-update:lifecycle]", payload);
   };
+
+  const syncPresentation = () => {
+    if (updateAvailable && !isFabEligible()) {
+      showUpdateToast({
+        updateInProgress: reloadInProgress,
+        onReload: reloadNow,
+      });
+      return;
+    }
+    sonnerToast.dismiss(TOAST_ID);
+  };
+
+  const presentUpdate = () => {
+    updateAvailable = true;
+    syncDebugState();
+    syncPresentation();
+    logLifecycle(isFabEligible() ? "fab-update-shown" : "toast-shown");
+  };
+
+  window.__SNOTE_PWA_SYNC_UPDATE_UI__ = syncPresentation;
+  cleanupTasks.push(() => {
+    if (window.__SNOTE_PWA_SYNC_UPDATE_UI__ === syncPresentation) {
+      delete window.__SNOTE_PWA_SYNC_UPDATE_UI__;
+    }
+  });
+
   // On-demand debug dump for humans (paste `__SNOTE_PWA_UPDATE_DEBUG__()`
   // into the devtools console to see current vs pending buildId + strategy).
   (window as unknown as { __SNOTE_PWA_UPDATE_DEBUG__?: () => PwaUpdateDebugState | undefined }).__SNOTE_PWA_UPDATE_DEBUG__ =
@@ -470,22 +494,24 @@ export function registerAppUpdater(): void {
       return window.__SNOTE_PWA_UPDATE_STATE__;
     };
 
-  const triggerToast = () => {
-    updateAvailable = true;
-    syncDebugState();
-    renderToast();
-    logLifecycle("toast-shown");
-  };
-
   syncDebugState();
   cleanupTasks.push(startVersionPoller(
     (remoteBuildId) => {
       latestRemoteBuildId = remoteBuildId;
       pendingBuildFromPreviousLoad = remoteBuildId;
-      triggerToast();
+      presentUpdate();
     },
     (remoteBuildId) => {
       if (remoteBuildId !== getCurrentBuildId()) return;
+      // Waiting SW said refresh is needed, but this tab is still on the same
+      // build. version.json matching the running app is not "transition complete".
+      if (
+        waitingNeedRefreshBuildId !== null &&
+        getCurrentBuildId() === waitingNeedRefreshBuildId
+      ) {
+        return;
+      }
+      waitingNeedRefreshBuildId = null;
       updateAvailable = false;
       latestRemoteBuildId = remoteBuildId;
       reloadInProgress = false;
@@ -535,22 +561,27 @@ export function registerAppUpdater(): void {
         window.removeEventListener("focus", onFocus);
       });
     },
-    async onNeedRefresh() {
-      try {
-        const remote = await readRemoteVersion();
-        if (remote?.buildId) latestRemoteBuildId = remote.buildId;
-      } catch {
-        /* keep previous poller value */
-      }
-      triggerToast();
+    onNeedRefresh() {
+      waitingNeedRefreshBuildId = getCurrentBuildId();
+      presentUpdate();
+      void readRemoteVersion()
+        .then((remote) => {
+          if (remote?.buildId) {
+            latestRemoteBuildId = remote.buildId;
+            syncDebugState();
+          }
+        })
+        .catch(() => {
+          /* keep previous poller value */
+        });
     },
   });
 
   const onStorage = (e: StorageEvent) => {
-    if (e.key === STORAGE_KEY && updateAvailable) triggerToast();
+    if (e.key === STORAGE_KEY && updateAvailable) syncPresentation();
   };
   const onLangChanged = () => {
-    if (updateAvailable) triggerToast();
+    if (updateAvailable) syncPresentation();
   };
   window.addEventListener("storage", onStorage);
   window.addEventListener("i18n:lang-changed", onLangChanged);

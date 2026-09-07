@@ -2,22 +2,12 @@ import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router";
 import { useI18n } from "@/i18n";
+import { shouldHideDonateFab } from "@/lib/donate-fab-visibility";
 import { PWA_UPDATE_STATE_EVENT } from "@/lib/pwa-update-readiness";
 import { cn } from "@/lib/utils";
 
 const KOFI_HREF = "https://ko-fi.com/sovergarden";
 const SNOOZE_KEY = "pwa-fab-snooze";
-
-/**
- * Routes where the floating donate button is intentionally suppressed:
- *  - `/note` — admin panel (ops context, no place for a tip jar).
- *  - `*.md`  — raw plaintext view served for wget/curl/etc.
- */
-function shouldHide(pathname: string) {
-  if (pathname === "/note") return true;
-  if (/\.md$/i.test(pathname)) return true;
-  return false;
-}
 
 function readSnooze(): string | null {
   try {
@@ -68,7 +58,11 @@ export function DonateButton() {
     return () => window.removeEventListener(PWA_UPDATE_STATE_EVENT, sync);
   }, []);
 
-  if (shouldHide(pathname)) return null;
+  useEffect(() => {
+    window.__SNOTE_PWA_SYNC_UPDATE_UI__?.();
+  }, [pathname]);
+
+  if (shouldHideDonateFab(pathname)) return null;
 
   const showUpdate = pwa.updateAvailable && pwa.occurrenceId !== snoozedBuildId;
   const donateAria = t("fab.donate.aria");
