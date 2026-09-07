@@ -97,10 +97,17 @@ SQL 240 wait on Home mint is [ADR-001](../adr/001-home-capability-mint-before-sq
    `deployedSha` `77d791af89696877f1f794a94270395902285c56`, still
    `capabilityRoutesEnabled` true. Same-canary origin SHA bump
    2026-09-07 ~09:51 ICT:
-   live `deployedSha` `9df65d53b5ca38fbd48db4c9fe0fb57a950192f8`, still
+   `deployedSha` `9df65d53b5ca38fbd48db4c9fe0fb57a950192f8`, still
+   `capabilityRoutesEnabled` true. Same-canary origin SHA bump
+   2026-09-07 ~11:17 ICT:
+   `deployedSha` `9bf5e92bf07cd82ff1775bc3d4a369b330de6a42`, still
+   `capabilityRoutesEnabled` true. Same-canary origin SHA bump
+   2026-09-07 ~11:36 ICT:
+   live `deployedSha` `b68245410d64aac8ac44c4f9a831e859a343cf00`, still
    `capabilityRoutesEnabled` true. Phase A `CutoverNotePage`, Phase B
    LNO, and Phase C RawView+Home via LNO remain live on this canary.
-   Pixel HIGH UX H1–H6 is live. Home mint fail-closed idle remains live.
+   Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi +
+   New Version FAB is live. Home mint fail-closed idle remains live.
    This is not soak-complete.
    Do not treat snapshot verify as `capability_runtime_set`.
    This is not `LEGACY_SHARE_CUTOFF`, soak-complete,
