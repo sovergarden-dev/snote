@@ -464,6 +464,9 @@ describe("canonical production origin", () => {
     expect(findings).toContain("opaque");
     expect(findings).toContain("Mode/Export");
     expect(findings).toContain("34082660457");
+    expect(findings).toContain("ac63e32bbaf2471d09129469427409db");
+    expect(findings).toContain("checkout ref only");
+    expect(findings).toContain("does not fold #110");
     expect(findings).toMatch(
       /not independently observed|not an invented UUID/,
     );
@@ -718,6 +721,8 @@ describe("canonical production origin", () => {
     expect(adr).toContain("`invocation_logs` are **live**");
     expect(adr).toContain("Live origin `9bf5e92b`");
     expect(adr).toContain("Home mint fail-closed idle live on origin `9bf5e92b`");
+    expect(adr).toContain("#110");
+    expect(adr).toMatch(/that SHA is not live origin/);
     expect(adr).toMatch(/LNO `exists`/);
     expect(adr).not.toContain(
       "Home existence check today is `select slug, char_count from notes`",

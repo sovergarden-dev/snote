@@ -650,9 +650,8 @@ the verified production alias `snote-g4-origin.pages.dev` plus canonical
 PWA smoke after that ship: SUCCESS (GitHub Actions `workflow_dispatch` run
 `34082660457`; `EXPECTED_DEPLOYED_SHA` `9bf5e92b…`;
 `EXPECTED_CAPABILITY_ROUTES_ENABLED` true; Playwright 2 passed). GitHub
-`headSha` for that dispatch is `b6824541` (#110 on `main`); that is checkout
-ref only. Live origin is `9bf5e92b`. This attest does not fold #110 into
-live origin.
+`headSha` for that dispatch is `b6824541` (#110 on `main`); that is checkout ref only.
+Live origin is `9bf5e92b`. This attest does not fold #110 into live origin.
 
 Kill switch unchanged: `writes_enabled=true`,
 `private_realtime_enabled=false`, `updated_at`

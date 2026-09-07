@@ -3,7 +3,7 @@
 - Status: Accepted. Home mint fail-closed idle live on origin `9bf5e92b` (not a SQL 240 go)
 - Date: 2026-09-04
 - Deciders: Aegis (architecture); Atlas (go); Syringa (named production steps)
-- Evidence cut: `sovergarden-dev/snote` `main` `9bf5e92b` (PR #109). Live origin `9bf5e92b`, Worker `931430c0` / `5f94ab6c` (Cloudflare Version ID `5f94ab6c-fde5-4416-a3aa-74daaa2e6094`; see findings §1c). SQL 220+270 applied; 240 not applied. `writes_enabled=true`, `private_realtime_enabled=false`. Soak started 2026-09-02 ~12:01 ICT from `c5914c8e`; not complete as of 2026-09-07 ~11:17 ICT.
+- Evidence cut: Live origin `9bf5e92b` (PR #109). Git `main` tip includes #110 (`b6824541`); that SHA is not live origin. Worker `931430c0` / `5f94ab6c` (Cloudflare Version ID `5f94ab6c-fde5-4416-a3aa-74daaa2e6094`; see findings §1c). SQL 220+270 applied; 240 not applied. `writes_enabled=true`, `private_realtime_enabled=false`. Soak started 2026-09-02 ~12:01 ICT from `c5914c8e`; not complete as of 2026-09-07 ~11:17 ICT.
 
 ## Context
 
