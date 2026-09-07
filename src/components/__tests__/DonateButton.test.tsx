@@ -1,5 +1,7 @@
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router";
 import { DonateButton } from "@/components/DonateButton";
@@ -7,10 +9,11 @@ import { I18nProvider } from "@/i18n/provider";
 import { STORAGE_KEY } from "@/i18n";
 import { dict } from "@/i18n/catalog";
 import { PWA_UPDATE_STATE_EVENT } from "@/lib/pwa-update-readiness";
-import type { PwaUpdateReadinessState } from "@/lib/pwa-update-readiness";
 import tailwindConfig from "../../../tailwind.config";
 
 const KOFI = "https://ko-fi.com/sovergarden";
+
+type PwaWindowState = NonNullable<Window["__SNOTE_PWA_UPDATE_STATE__"]>;
 
 function renderFab(path = "/") {
   return render(
@@ -22,7 +25,7 @@ function renderFab(path = "/") {
   );
 }
 
-function setPwaState(partial: Partial<PwaUpdateReadinessState>): void {
+function setPwaState(partial: Partial<PwaWindowState>): void {
   window.__SNOTE_PWA_UPDATE_STATE__ = {
     currentBuildId: "build-a",
     pendingBuildId: null,
@@ -30,6 +33,8 @@ function setPwaState(partial: Partial<PwaUpdateReadinessState>): void {
     updateInProgress: false,
     reloadAttemptCount: 0,
     reloadStrategy: null,
+    lastRemoteBuildId: null,
+    lastAcceptedAt: null,
     ...partial,
   };
   window.dispatchEvent(new Event(PWA_UPDATE_STATE_EVENT));
@@ -147,6 +152,25 @@ describe("DonateButton — update available", () => {
     expect(apply).not.toHaveBeenCalled();
   });
 
+  it("still shows update chrome when updateAvailable has no pendingBuildId", () => {
+    renderFab();
+    act(() => {
+      setPwaState({ updateAvailable: true, pendingBuildId: null });
+    });
+    expect(screen.getByRole("button", { name: dict.en["fab.update.aria"] })).toBeInTheDocument();
+  });
+
+  it("keeps a 44px hit on a visually smaller secondary heart", () => {
+    renderFab();
+    act(() => {
+      setPwaState({ updateAvailable: true, pendingBuildId: "build-b" });
+    });
+    const kofi = screen.getByRole("link", { name: dict.en["fab.donate.aria"] });
+    expect(kofi.className).toMatch(/h-11/);
+    expect(kofi.className).toMatch(/w-11/);
+    expect(kofi.querySelector(".h-7.w-7")).not.toBeNull();
+  });
+
   it("snoozes this occurrence so the FAB returns to idle Ko-fi", async () => {
     const apply = vi.fn();
     window.__SNOTE_PWA_APPLY_UPDATE__ = apply;
@@ -157,6 +181,7 @@ describe("DonateButton — update available", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: dict.en["fab.update.snooze_aria"] }));
 
+    expect(sessionStorage.getItem("pwa-fab-snooze")).toBe("build-b");
     expect(screen.queryByRole("button", { name: dict.en["fab.update.aria"] })).toBeNull();
     expect(screen.getByRole("link", { name: dict.en["fab.donate.aria"] })).toHaveAttribute("href", KOFI);
     expect(screen.queryByRole("status")).toBeNull();
@@ -203,6 +228,11 @@ describe("DonateButton — Pixel contracts", () => {
       expect(badge.length, lang).toBeLessThanOrEqual(4);
       expect(badge.toLowerCase(), lang).not.toContain("version");
     }
+  });
+
+  it("places the PWA sonner toaster at top-right so it does not cover the FAB", () => {
+    const src = readFileSync(resolve(__dirname, "../ui/sonner.tsx"), "utf8");
+    expect(src).toMatch(/position="top-right"/);
   });
 });
 

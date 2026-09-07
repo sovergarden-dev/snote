@@ -35,6 +35,17 @@ function writeSnooze(buildId: string): void {
   }
 }
 
+function readPwaFabState(): { updateAvailable: boolean; occurrenceId: string } {
+  if (typeof window === "undefined") {
+    return { updateAvailable: false, occurrenceId: "available" };
+  }
+  const state = window.__SNOTE_PWA_UPDATE_STATE__;
+  return {
+    updateAvailable: !!state?.updateAvailable,
+    occurrenceId: state?.pendingBuildId ?? state?.currentBuildId ?? "available",
+  };
+}
+
 const FAB_DISK =
   "flex h-11 w-11 items-center justify-center rounded-full bg-background/80 text-primary shadow-sm backdrop-blur-md";
 
@@ -47,16 +58,11 @@ const FAB_DISK =
 export function DonateButton() {
   const { pathname } = useLocation();
   const { t } = useI18n();
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [pendingBuildId, setPendingBuildId] = useState<string | null>(null);
+  const [pwa, setPwa] = useState(readPwaFabState);
   const [snoozedBuildId, setSnoozedBuildId] = useState<string | null>(readSnooze);
 
   useEffect(() => {
-    const sync = () => {
-      const state = window.__SNOTE_PWA_UPDATE_STATE__;
-      setUpdateAvailable(!!state?.updateAvailable);
-      setPendingBuildId(state?.pendingBuildId ?? null);
-    };
+    const sync = () => setPwa(readPwaFabState());
     sync();
     window.addEventListener(PWA_UPDATE_STATE_EVENT, sync);
     return () => window.removeEventListener(PWA_UPDATE_STATE_EVENT, sync);
@@ -64,9 +70,7 @@ export function DonateButton() {
 
   if (shouldHide(pathname)) return null;
 
-  const showUpdate = Boolean(
-    updateAvailable && pendingBuildId && pendingBuildId !== snoozedBuildId,
-  );
+  const showUpdate = pwa.updateAvailable && pwa.occurrenceId !== snoozedBuildId;
   const donateAria = t("fab.donate.aria");
 
   if (!showUpdate) {
@@ -92,31 +96,6 @@ export function DonateButton() {
       <div role="status" aria-live="polite" className="sr-only">
         {t("fab.update.aria")}
       </div>
-      <a
-        href={KOFI_HREF}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={donateAria}
-        className={cn(
-          "pointer-events-auto absolute right-full top-1/2 mr-2 -translate-y-1/2",
-          FAB_DISK,
-          "border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        )}
-      >
-        <Heart className="h-4 w-4 fill-current" />
-      </a>
-      <button
-        type="button"
-        aria-label={t("fab.update.snooze_aria")}
-        onClick={() => {
-          if (!pendingBuildId) return;
-          writeSnooze(pendingBuildId);
-          setSnoozedBuildId(pendingBuildId);
-        }}
-        className="pointer-events-auto absolute bottom-full right-0 mb-2 min-h-11 rounded-full border border-border bg-background/90 px-3 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-md hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {t("fab.update.snooze")}
-      </button>
       <button
         type="button"
         aria-label={t("fab.update.aria")}
@@ -135,6 +114,28 @@ export function DonateButton() {
           {t("fab.update.badge")}
         </span>
       </button>
+      <button
+        type="button"
+        aria-label={t("fab.update.snooze_aria")}
+        onClick={() => {
+          writeSnooze(pwa.occurrenceId);
+          setSnoozedBuildId(pwa.occurrenceId);
+        }}
+        className="pointer-events-auto absolute bottom-full right-0 mb-2 min-h-11 rounded-full border border-border bg-background/90 px-3 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-md hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {t("fab.update.snooze")}
+      </button>
+      <a
+        href={KOFI_HREF}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={donateAria}
+        className="pointer-events-auto absolute right-full top-1/2 mr-1 flex h-11 w-11 -translate-y-1/2 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background/80 text-primary shadow-sm backdrop-blur-md">
+          <Heart className="h-3.5 w-3.5 fill-current" />
+        </span>
+      </a>
     </div>
   );
 }
