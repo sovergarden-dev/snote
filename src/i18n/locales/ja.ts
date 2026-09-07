@@ -111,6 +111,7 @@ const ja: Dictionary = {
     "legacy.read_only": "旧形式のノート · 読み取り専用",
     "legacy.new_slug": "新しい安全なスラッグ",
     "legacy.duplicate_securely": "安全に複製",
+    "legacy.duplicate_unavailable": "このオリジンでは安全な複製はできません。必要なサーバー側インポートが未デプロイです。",
     "legacy.not_found": "この旧形式のノートは存在しません。",
     "legacy.unavailable": "この旧形式のノートは一時的に利用できません。",
     "share.back_home_aria": "ホームに戻る",

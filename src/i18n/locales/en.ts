@@ -114,6 +114,7 @@ const en = {
     "legacy.read_only": "Legacy note · read-only",
     "legacy.new_slug": "New secure note slug",
     "legacy.duplicate_securely": "Duplicate securely",
+    "legacy.duplicate_unavailable": "Secure duplicate isn't available on this origin. The server import it needs is not deployed.",
     "legacy.not_found": "This legacy note does not exist.",
     "legacy.unavailable": "This legacy note is temporarily unavailable.",
     "share.back_home_aria": "Back to home",

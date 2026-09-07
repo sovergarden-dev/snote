@@ -36,8 +36,12 @@ describe("production note access hotfix", () => {
     expect(app).toContain("<NotePage legacyOnly={!capabilityRoutesEnabled} />");
     expect(app).not.toContain("<NotePage legacyOnly />");
     expectValueImportBehindRoutesGuard(app, "./pages/CutoverNotePage");
+    // Choice A: canary-on default is editable NotePage, not CutoverNotePage→LNO.
+    expect(app).not.toMatch(
+      /\{capabilityRoutesEnabled\s*&&\s*CutoverNotePage\s*\?/,
+    );
     expect(app).toMatch(
-      /capabilityRoutesEnabled\s*&&\s*CutoverNotePage\s*\?\s*\(\s*<CutoverNotePage\s*\/>/,
+      /legacyRo && capabilityRoutesEnabled && CutoverNotePage \?/,
     );
     expect(app.match(/<SharePage legacyOnly=\{!capabilityRoutesEnabled\} \/>/g)).toHaveLength(2);
     expect(app).not.toMatch(/<SharePage\s*\/>/);
@@ -45,6 +49,26 @@ describe("production note access hotfix", () => {
     expect(envTypes).toContain("readonly VITE_CAPABILITY_AUTH_ENABLED?: string;");
     expect(envExample).toMatch(/^VITE_CAPABILITY_ROUTES_ENABLED=false$/m);
     expect(envExample).toMatch(/^VITE_CAPABILITY_AUTH_ENABLED=false$/m);
+
+    const dispatcher = app.slice(app.indexOf("function SlugDispatcher"));
+    const mdArm = dispatcher.indexOf("/\\.md$/i.test(slug)");
+    const splitArm = dispatcher.indexOf('slug.includes("+")');
+    const defaultReturn = dispatcher.lastIndexOf("return (");
+    expect(mdArm).toBeGreaterThan(0);
+    expect(splitArm).toBeGreaterThan(mdArm);
+    expect(defaultReturn).toBeGreaterThan(splitArm);
+    expect(dispatcher).toContain('get("legacyRo") === "1"');
+    const defaultArm = dispatcher.slice(defaultReturn);
+    expect(defaultArm).toContain("<NotePage legacyOnly={!capabilityRoutesEnabled} />");
+    expect(defaultArm).not.toMatch(
+      /\{capabilityRoutesEnabled\s*&&\s*CutoverNotePage\s*\?/,
+    );
+    expect(defaultArm).toMatch(
+      /legacyRo && capabilityRoutesEnabled && CutoverNotePage \?/,
+    );
+    expect(defaultArm).toContain("<CutoverNotePage />");
+    expect(dispatcher.slice(mdArm, splitArm)).toContain("<RawView");
+    expect(dispatcher.slice(splitArm, defaultReturn)).toContain("<SplitView");
 
     const client = source("src/lib/capability/client.ts");
     const postAt = client.indexOf("const post = async");
@@ -64,16 +88,19 @@ describe("production note access hotfix", () => {
     expect(defaultSource).toContain('import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"');
   });
 
-  it("keeps SplitView on the legacy editor path and canary-gates Home mint plus LNO", () => {
+  it("keeps SplitView on Choice A editable NotePage and canary-gates Home mint plus LNO", () => {
     const split = source("src/pages/SplitView.tsx");
     const home = source("src/pages/Home.tsx");
     const raw = source("src/pages/RawView.tsx");
 
     expect(split).toContain("const NotePage = lazy(() => loadNotePage());");
-    expect(split).toContain("legacyOnly");
+    expect(split).toContain("legacyOnly={!capabilityRoutesEnabled}");
     expectValueImportBehindRoutesGuard(split, "./CutoverNotePage");
+    expect(split).not.toMatch(
+      /\{capabilityRoutesEnabled\s*&&\s*CutoverNotePage\s*\?/,
+    );
     expect(split).toMatch(
-      /capabilityRoutesEnabled\s*&&\s*CutoverNotePage\s*\?/,
+      /legacyRo && capabilityRoutesEnabled && CutoverNotePage \?/,
     );
     expect(split).toContain("<CutoverNotePage");
     expect(split).toContain("embedSlug={slug}");
@@ -128,10 +155,10 @@ describe("production note access hotfix", () => {
     expect(legacyNotePage).not.toMatch(staticCreateApi);
     expect(shareDialog).toContain('import("@/lib/capability/client")');
     expect(lockButton).toContain('import("@/lib/capability/client")');
-    expect(legacyNotePage).toContain('import("@/lib/capability/client")');
+    expect(legacyNotePage).not.toContain('import("@/lib/capability/client")');
+    expect(legacyNotePage).not.toContain("loadCapabilityApi");
     expectValueImportBehindRoutesGuard(shareDialog, "@/lib/capability/client");
     expectValueImportBehindRoutesGuard(lockButton, "@/lib/capability/client");
-    expectValueImportBehindRoutesGuard(legacyNotePage, "@/lib/capability/client");
 
     const revokeLink = shareDialog.slice(shareDialog.indexOf("const revokeLink"));
     const capabilityGuardAt = revokeLink.indexOf("if (capabilityAccess)");

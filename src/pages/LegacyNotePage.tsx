@@ -1,13 +1,11 @@
-import { FormEvent, useEffect, useState } from "react";
-import { ArrowLeft, CopyPlus, Eye, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Eye, Loader2 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
-import { Link, Navigate, useNavigate } from "react-router";
+import { Link, Navigate } from "react-router";
 import * as Y from "yjs";
 import { AppShell } from "@/components/app/AppShell";
 import { Preview } from "@/components/note/Preview";
 import { UnlockForm } from "@/components/note/UnlockForm";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { deriveKey, decryptBytes, encryptBytes, iterationsFor, verifyCheck } from "@/lib/crypto";
 import type { LegacyNote } from "@/lib/legacy/cutover";
 import { isUsableSlug } from "@/lib/slug";
@@ -16,12 +14,6 @@ import type { Encryption } from "@/lib/yjs/provider";
 import { useI18n } from "@/i18n";
 
 const PRIVATE_PAGE_ROBOTS = "noindex,nofollow,noarchive,nosnippet";
-
-const loadCapabilityApi = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
-  ? async () => (await import("@/lib/capability/client")).createCapabilityApi()
-  : async () => {
-      throw new Error("capability API unavailable");
-    };
 
 const loadLegacyCutover = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
   ? () => import("@/lib/legacy/cutover")
@@ -43,11 +35,6 @@ type State =
   | { kind: "error"; message: string }
   | { kind: "needs-key"; note: LegacyNote }
   | ReadyState;
-
-function defaultDuplicateSlug(slug: string) {
-  const suffix = "-secure";
-  return `${slug.slice(0, 64 - suffix.length)}${suffix}`;
-}
 
 function hydratePlaintext(note: LegacyNote) {
   const doc = new Y.Doc();
@@ -90,11 +77,7 @@ export default function LegacyNotePage({
   onPrimaryScroller?: (element: HTMLElement | null) => void;
 }) {
   const { t } = useI18n();
-  const navigate = useNavigate();
   const [state, setState] = useState<State>({ kind: "loading" });
-  const [targetSlug, setTargetSlug] = useState(() => defaultDuplicateSlug(slug));
-  const [duplicating, setDuplicating] = useState(false);
-  const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const valid = isUsableSlug(slug);
 
   useEffect(() => {
@@ -102,8 +85,6 @@ export default function LegacyNotePage({
     const controller = new AbortController();
     let ownedDoc: Y.Doc | null = null;
     setState({ kind: "loading" });
-    setTargetSlug(defaultDuplicateSlug(slug));
-    setDuplicateError(null);
     void loadLegacyCutover().then(({ createLegacyNoteApi }) => {
       if (controller.signal.aborted) return;
       return createLegacyNoteApi().open(slug, controller.signal);
@@ -196,27 +177,6 @@ export default function LegacyNotePage({
     );
   }
 
-  const onDuplicate = async (event: FormEvent) => {
-    event.preventDefault();
-    setDuplicateError(null);
-    setDuplicating(true);
-    try {
-      const { duplicateLegacyNote } = await loadLegacyCutover();
-      const url = new URL(await duplicateLegacyNote({
-        api: await loadCapabilityApi(),
-        source: state.note,
-        doc: state.doc,
-        targetSlug: targetSlug.trim(),
-        encryption: state.encryption,
-        encryptionSecret: state.encryptionSecret,
-      }));
-      navigate(`${url.pathname}${url.hash}`, { replace: true });
-    } catch (cause) {
-      setDuplicateError(cause instanceof Error ? cause.message : String(cause));
-      setDuplicating(false);
-    }
-  };
-
   const content = (
     <>
       {head}
@@ -224,30 +184,9 @@ export default function LegacyNotePage({
         {!embed && <Link to="/" aria-label={t("share.back_home_aria")}><ArrowLeft className="h-4 w-4" /></Link>}
         <Eye className="h-4 w-4 text-muted-foreground" />
         <span className="mr-auto text-xs font-medium text-muted-foreground">{t("legacy.read_only")}</span>
-        <form className="flex min-w-0 items-center gap-2" onSubmit={onDuplicate}>
-          <label htmlFor={`duplicate-${slug}`} className="sr-only">{t("legacy.new_slug")}</label>
-          <Input
-            id={`duplicate-${slug}`}
-            value={targetSlug}
-            onChange={(event) => setTargetSlug(event.target.value)}
-            pattern="[A-Za-z0-9_-]{1,64}"
-            maxLength={64}
-            className="h-8 w-36 font-mono text-xs sm:w-48"
-            aria-invalid={
-              !!duplicateError || (targetSlug.trim() !== "" && !isUsableSlug(targetSlug.trim()))
-            }
-          />
-          <Button
-            type="submit"
-            size="sm"
-            disabled={duplicating || !isUsableSlug(targetSlug.trim())}
-            aria-label={t("legacy.duplicate_securely")}
-          >
-            {duplicating ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" /> : <CopyPlus className="h-4 w-4" />}
-            <span className="hidden sm:inline">{t("legacy.duplicate_securely")}</span>
-          </Button>
-        </form>
-        {duplicateError && <p className="basis-full text-right text-xs text-destructive" role="alert">{duplicateError}</p>}
+        <p className="basis-full text-xs text-muted-foreground sm:basis-auto sm:text-right">
+          {t("legacy.duplicate_unavailable")}
+        </p>
       </header>
       <main
         ref={onPrimaryScroller}

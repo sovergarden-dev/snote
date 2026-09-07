@@ -110,6 +110,7 @@ const es: Dictionary = {
     "legacy.read_only": "Nota heredada · solo lectura",
     "legacy.new_slug": "Slug de la nueva nota segura",
     "legacy.duplicate_securely": "Duplicar de forma segura",
+    "legacy.duplicate_unavailable": "La duplicación segura no está disponible en este origen. El import de servidor que necesita no está desplegado.",
     "legacy.not_found": "Esta nota heredada no existe.",
     "legacy.unavailable": "Esta nota heredada no está disponible temporalmente.",
     "share.back_home_aria": "Volver al inicio",
