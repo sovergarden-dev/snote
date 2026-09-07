@@ -134,6 +134,7 @@ describe("registerAppUpdater", () => {
     Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
     document.querySelector("[data-donate-fab]")?.remove();
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -249,6 +250,106 @@ describe("registerAppUpdater", () => {
     window.__SNOTE_PWA_APPLY_UPDATE__?.();
 
     expect(pwaState()?.reloadAttemptCount).toBe(1);
+  });
+
+  it("does not emit a second E2E hard-reload after the in-document buildId transition", async () => {
+    // Choice A + FAB: E2E apply flips __SNOTE_E2E_BUILD_ID__ without navigating.
+    // The version poller then treats that as transition-complete and used to
+    // clear reloadInProgress, so a still-mounted FAB click fired a second
+    // snote:e2e-pwa-hard-reload (post-deploy multi-click smoke: expected 1 got 2).
+    respondVersion("build-b");
+    const targets: string[] = [];
+    window.addEventListener("snote:e2e-pwa-hard-reload", (e: Event) => {
+      targets.push((e as CustomEvent<{ targetBuildId: string }>).detail.targetBuildId);
+    });
+    const mod = await fresh();
+    mod.registerAppUpdater();
+    await flush(80);
+
+    window.__SNOTE_PWA_APPLY_UPDATE__?.();
+    expect(targets).toEqual(["build-b"]);
+    expect(pwaState()?.reloadAttemptCount).toBe(1);
+
+    (window as unknown as { __SNOTE_E2E_BUILD_ID__?: string }).__SNOTE_E2E_BUILD_ID__ = "build-b";
+    await flush(80);
+
+    expect(pwaState()?.updateInProgress).toBe(false);
+    expect(pwaState()?.updateAvailable).toBe(false);
+
+    window.__SNOTE_PWA_APPLY_UPDATE__?.();
+    window.__SNOTE_PWA_APPLY_UPDATE__?.();
+
+    expect(targets).toEqual(["build-b"]);
+    expect(pwaState()?.reloadAttemptCount).toBe(1);
+  });
+
+  it("allows a later apply when version.json advances to a new buildId", async () => {
+    const fetchMock = respondVersion("build-b");
+    const targets: string[] = [];
+    window.addEventListener("snote:e2e-pwa-hard-reload", (e: Event) => {
+      targets.push((e as CustomEvent<{ targetBuildId: string }>).detail.targetBuildId);
+    });
+    const mod = await fresh();
+    mod.registerAppUpdater();
+    await flush(80);
+
+    window.__SNOTE_PWA_APPLY_UPDATE__?.();
+    (window as unknown as { __SNOTE_E2E_BUILD_ID__?: string }).__SNOTE_E2E_BUILD_ID__ = "build-b";
+    await flush(80);
+
+    fetchMock.mockImplementation(async () => ({
+      ok: true,
+      json: async () => ({ buildId: "build-c" }),
+    }));
+    await flush(80);
+
+    expect(pwaState()?.updateAvailable).toBe(true);
+    window.__SNOTE_PWA_APPLY_UPDATE__?.();
+    expect(targets).toEqual(["build-b", "build-c"]);
+    expect(pwaState()?.reloadAttemptCount).toBe(2);
+  });
+
+  it("waiting-sw fallback and a late controllerchange only hard-reload once", async () => {
+    const navigationWarning = silenceJsdomReloadWarning();
+    vi.useFakeTimers();
+    vi.stubEnv("DEV", false);
+    vi.stubEnv("VITE_PWA_RELOAD_FALLBACK_MS", "25");
+    (window as unknown as { __SNOTE_E2E_ENABLE_PWA_UPDATE__?: boolean }).__SNOTE_E2E_ENABLE_PWA_UPDATE__ = false;
+    respondVersion("build-b");
+    const updateSW = vi.fn(() => new Promise<void>(() => {}));
+    const { registration } = installServiceWorkerHarness(updateSW);
+    const navigations: string[] = [];
+    const locationStub = {
+      href: "https://note.syrin.online/my-note?foo=bar",
+      pathname: "/my-note",
+      search: "?foo=bar",
+      hash: "",
+      hostname: "note.syrin.online",
+      reload: () => {
+        navigations.push("reload");
+      },
+      replace: (url: string) => {
+        navigations.push(`replace:${url}`);
+      },
+    };
+    vi.stubGlobal("location", locationStub);
+
+    const mod = await fresh();
+    mod.registerAppUpdater();
+    const opts = registerSWMock.mock.calls[0][0];
+    opts.onRegisteredSW?.("/sw.js", registration);
+    await opts.onNeedRefresh?.();
+
+    window.__SNOTE_PWA_APPLY_UPDATE__?.();
+    await vi.advanceTimersByTimeAsync(25);
+
+    const onCtrl = vi.mocked(navigator.serviceWorker.addEventListener).mock.calls.find(
+      (call) => call[0] === "controllerchange",
+    )?.[1] as (() => void) | undefined;
+    onCtrl?.();
+
+    expect(navigations).toHaveLength(1);
+    navigationWarning.mockRestore();
   });
 
   it("clears the pwa-update-pending-build sessionStorage entry after the buildId transitions", async () => {
