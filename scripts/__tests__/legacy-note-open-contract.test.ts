@@ -388,6 +388,10 @@ describe("legacy-note-open docs", () => {
     expect(capability).toContain("Mode/Export");
     expect(capability).toContain("Ko-fi");
     expect(capability).toContain("New Version");
+    expect(capability).toContain("#113");
+    expect(capability).toContain("#116");
+    expect(capability).toContain("Sonner");
+    expect(capability).toContain("FAB-primary");
     expect(capability).toContain("SQL 240 is not applied");
     expect(capability).toContain("Do not restore a dump");
     expect(capability).toContain("browser roles still have no table grants");

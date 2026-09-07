@@ -16,8 +16,8 @@ Legacy policies. Capability SPA canary is on
 `capabilityRoutesEnabled` is true; see §3e). Canary-on `CutoverNotePage`
 is live (Phase A): plain slug lazy-loads `LegacyNotePage`; `#owner`/`#edit`
 still render `NotePage`. Phase C is live: RawView `/:slug.md` loads via LNO `open`;
-Home availability uses LNO `exists` (empty legacy rows are taken). Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is live. Home mints capabilities when canary is on
-(create → `/<slug>#owner=`; fail-closed idle; live origin `b6824541`).
+Home availability uses LNO `exists` (empty legacy rows are taken). Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress (#113/#116) is live. Home mints capabilities when canary is on
+(create → `/<slug>#owner=`; fail-closed idle; live origin `5c33ac24`).
 Home mint before SQL 240 is accepted as
 [ADR-001](adr/001-home-capability-mint-before-sql-240.md); live mint is
 not authorization to apply 240.
@@ -134,9 +134,9 @@ Production Worker `syrin-prerender` was redeployed 2026-09-03 ~20:42 UTC /
 - Staging `syrin-prerender-staging` was not deployed (still G3C staging
   versions from 2026-08-24)
 
-This is not the live SPA origin. Origin is `b6824541` (see §3e).
+This is not the live SPA origin. Origin is `5c33ac24` (see §3e).
 At this Worker deploy, origin was not redeployed (then `27da93eb`);
-origin later bumped to `e05c73ea`, then `addeeb29`, then `7d00fd52`, then `77d791af`, then `9df65d53`, then `9bf5e92b`, then `b6824541`. Do not claim origin is `931430c0`. Git `main`
+origin later bumped to `e05c73ea`, then `addeeb29`, then `7d00fd52`, then `77d791af`, then `9df65d53`, then `9bf5e92b`, then `b6824541`, then `a8f7eeb8`, then `5c33ac24`. Do not claim origin is `931430c0`. Git `main`
 includes this Worker SHA and may be ahead of live origin for later docs-only PRs; that
 does not change Worker identity or treat later main commits as live origin.
 
@@ -652,7 +652,7 @@ PWA smoke after that ship: SUCCESS (GitHub Actions `workflow_dispatch` run
 `headSha` for that dispatch was `b6824541` (#110 already on `main`); that was
 checkout ref only at the H2 origin bump.
 
-Same-canary origin SHA bump 2026-09-07 ~11:36 ICT: Pages `snote-g4-origin`
+Same-canary origin SHA bump 2026-09-07 ~11:36 ICT (not current live): Pages `snote-g4-origin`
 redeployed Ko-fi + New Version FAB (#110) with git `b6824541`. Canary-on SPA
 still mounts `CutoverNotePage` (Phase A): plain `/<slug>` lazy-loads
 `LegacyNotePage`; matching `#owner`/`#edit` still render `NotePage`; flag-off
@@ -663,8 +663,7 @@ is treated as taken). Home mint fail-closed idle remains live. Pixel HIGH UX
 H1–H6 remains on this line. H2 opaque Mode/Export remains on this line.
 Phase B Edge `legacy-note-open` remains live (see §1b). This origin attest
 does not deploy Edge.
-Live `version.json` (browser UA; `no-store`; independently fetched
-2026-09-07 ~04:38 UTC / ~11:38 ICT) on canonical
+`version.json` at that bump (browser UA; `no-store`) on canonical
 `https://note.syrin.online/version.json`, Pages
 `https://snote-g4-origin.pages.dev/version.json`, and short Pages preview
 `https://10bf76eb.snote-g4-origin.pages.dev/version.json`:
@@ -678,14 +677,82 @@ on those responses). All three hosts returned the same body and etag
 `"88c32aa9e1feb672d1f059db9d6a33ca"`.
 Pages production deployment id `10bf76eb` (short preview
 `https://10bf76eb.snote-g4-origin.pages.dev`; full UUID not supplied in this
-attest) replaces previous live origin `9bf5e92b`. This attest pins the
+attest) replaced previous live origin `9bf5e92b`. This attest pins the
 independently verified short id, not an invented UUID.
 PWA smoke after that ship is not PASS. `workflow_dispatch` run `34083747425`
 (`EXPECTED_DEPLOYED_SHA` `b6824541…`, canary true) verified live release
 identity then was cancelled. Replacement `workflow_dispatch` run
 `34083766569` verified live release `b6824541…` `capabilityRoutesEnabled=true`
 then Playwright 2 failed (strict mode: `getByText('New version available')`
-resolved to 2 elements). This origin attest does not claim PWA smoke PASS.
+resolved to 2 elements). That bump does not claim PWA smoke PASS.
+
+Same-canary origin SHA bump 2026-09-07 ~12:28 ICT (not current live): Pages
+`snote-g4-origin` redeployed PWA toast suppress when Ko-fi FAB handles update
+(#113) with git `a8f7eeb8`. Canary-on SPA still mounts `CutoverNotePage`
+(Phase A): plain `/<slug>` lazy-loads `LegacyNotePage`; matching `#owner`/`#edit`
+still render `NotePage`; flag-off builds keep `NotePage` with
+`legacyOnly={!canary}`. Phase C remains live on this origin: RawView
+`/:slug.md` loads via LNO `open`; Home availability uses LNO `exists` (no
+`char_count`; `exists: true` includes empty legacy rows and is treated as
+taken). Home mint fail-closed idle remains live. Pixel HIGH UX H1–H6 remains
+on this line. H2 opaque Mode/Export remains on this line. Ko-fi + New Version
+FAB remains on this line. Phase B Edge `legacy-note-open` remains live (see
+§1b). This origin attest does not deploy Edge.
+`version.json` at that bump (browser UA; `no-store`; historical short preview
+independently re-checked 2026-09-07 ~06:35 UTC / ~13:35 ICT) on
+`https://bfb19758.snote-g4-origin.pages.dev/version.json`:
+`deployedSha` `a8f7eeb830b8440b899a6ccf0f8018f1a4fe8805`,
+`capabilityRoutesEnabled` true, `builtAt` `2026-09-07T05:27:50.152Z`,
+`buildId` `1788758854729-717yxima`.
+That host returned `Cache-Control: no-cache, no-store, must-revalidate` (no
+`CDN-Cache-Control` on that response) and etag `"434d4e14c59cc74bbd4c3dac0e73af8c"`.
+Pages production deployment id `bfb19758` (short preview
+`https://bfb19758.snote-g4-origin.pages.dev`; full UUID not supplied in this
+attest) replaced previous live origin `b6824541`. This attest pins the
+independently verified short id, not an invented UUID.
+That bump's origin attest did not claim PWA smoke PASS. That short preview
+still served historical `a8f7eeb8` when re-checked 2026-09-07 ~06:35 UTC; it
+is not current live.
+
+Same-canary origin SHA bump 2026-09-07 ~13:31 ICT: Pages `snote-g4-origin`
+redeployed FAB-primary + full PWA Sonner suppress while Ko-fi FAB is mounted
+(#116; #113 remains on this line) with git `5c33ac24`. Canary-on SPA still
+mounts `CutoverNotePage` (Phase A): plain `/<slug>` lazy-loads
+`LegacyNotePage`; matching `#owner`/`#edit` still render `NotePage`; flag-off
+builds keep `NotePage` with `legacyOnly={!canary}`. Phase C remains live on
+this origin: RawView `/:slug.md` loads via LNO `open`; Home availability uses
+LNO `exists` (no `char_count`; `exists: true` includes empty legacy rows and
+is treated as taken). Home mint fail-closed idle remains live. Pixel HIGH UX
+H1–H6 remains on this line. H2 opaque Mode/Export remains on this line.
+Ko-fi + New Version FAB remains on this line. #113 PWA toast suppress when
+Ko-fi FAB handles update remains on this line. Phase B Edge
+`legacy-note-open` remains live (see §1b). This origin attest does not deploy
+Edge.
+Live `version.json` (browser UA; `no-store`; independently fetched
+2026-09-07 ~06:35 UTC / ~13:35 ICT) on canonical
+`https://note.syrin.online/version.json`, Pages
+`https://snote-g4-origin.pages.dev/version.json`, and short Pages preview
+`https://6e6cdcc3.snote-g4-origin.pages.dev/version.json`:
+`deployedSha` `5c33ac241d6f6b4548ea290c299e15e4be799921`,
+`capabilityRoutesEnabled` true, `builtAt` `2026-09-07T06:31:21.575Z`,
+`buildId` `1788762666457-xzjqm3pq`.
+Canonical also returned `Cache-Control: no-cache, no-store, must-revalidate`
+and `CDN-Cache-Control: no-store`. Pages `.dev` hosts returned
+`Cache-Control: no-cache, no-store, must-revalidate` (no `CDN-Cache-Control`
+on those responses). All three hosts returned the same body and etag
+`"d5edc17cf89dc508ed7a134bb2dfe78e"`.
+Pages production deployment id `6e6cdcc3` (short preview
+`https://6e6cdcc3.snote-g4-origin.pages.dev`; full UUID not supplied in this
+attest) replaces previous live origin `a8f7eeb8` / Pages `bfb19758` (last
+merged origin attest was `b6824541` / `10bf76eb`). This attest pins the
+independently verified short id, not an invented UUID.
+PWA smoke after that ship: SUCCESS (GitHub Actions `workflow_dispatch` run
+`34091257777`; `EXPECTED_DEPLOYED_SHA` `5c33ac24…`;
+`EXPECTED_CAPABILITY_ROUTES_ENABLED` true; Playwright 2 passed). GitHub
+`headSha` for that dispatch was `5c33ac241d6f6b4548ea290c299e15e4be799921`.
+Identity verify logged `Verified live release 5c33ac241d6f6b4548ea290c299e15e4be799921 capabilityRoutesEnabled=true`.
+Pulse confirmed live pin: `5c33ac24` / Pages `6e6cdcc3`; PWA smoke `34091257777` PASS.
+Pixel IDLE+UPDATE PASS (no Sonner on home).
 
 Kill switch unchanged: `writes_enabled=true`,
 `private_realtime_enabled=false`, `updated_at`
@@ -702,11 +769,15 @@ This origin bump does not redeploy the Worker; live Worker remains
 
 This is canary-on `CutoverNotePage` (Phase A live) plus Phase C
 RawView+Home via LNO plus Pixel HIGH UX H1–H6 plus H2 opaque Mode/Export plus
-Ko-fi + New Version FAB: plain slug is `LegacyNotePage` via Phase B LNO;
+Ko-fi + New Version FAB plus FAB-primary + Sonner suppress (#113/#116):
+plain slug is `LegacyNotePage` via Phase B LNO;
 `#owner`/`#edit` may open capability polling. RawView `/:slug.md` loads via
 LNO `open`; Home availability uses LNO `exists`. Home mints capabilities when
 canary is on (create → `/<slug>#owner=`; fail-closed on idle). Phase C is
 still on this origin. H1–H6 is still on this line. H2 is still on this line.
+Ko-fi FAB / New Version remains on this line. #113 is still on this line.
+#116 is still on this line. FAB is the primary update UX; Sonner is
+suppressed while Ko-fi FAB is mounted.
 This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
