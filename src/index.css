@@ -189,16 +189,6 @@
   }
 }
 
-@layer components {
-  /* Opaque floating chrome (Mode / Export / Shortcuts) so editor text cannot
-     show through. Color tokens stay the existing popover pair. */
-  .chrome-menu-surface {
-    background-color: hsl(var(--popover) / 1);
-    color: hsl(var(--popover-foreground) / 1);
-    opacity: 1;
-  }
-}
-
 @layer utilities {
   /* Editor + preview text rendering: smart wrapping for mixed scripts */
   .cm-content,
@@ -913,3 +903,14 @@ html.dark .markdown-preview .md-alert-tip { --md-alert-accent: #3fb950; }
 html.dark .markdown-preview .md-alert-important { --md-alert-accent: #a371f7; }
 html.dark .markdown-preview .md-alert-warning { --md-alert-accent: #d29922; }
 html.dark .markdown-preview .md-alert-caution { --md-alert-accent: #f85149; }
+
+/* Unlayered on purpose. #107 put this in @layer components; Tailwind's
+   production flatten emits utilities (bg-popover, fade-in-0) later, so the
+   opaque fill never won on live and Mode/Export stayed see-through. */
+.chrome-menu-surface {
+  background-color: hsl(var(--popover) / 1);
+  color: hsl(var(--popover-foreground) / 1);
+  opacity: 1;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}

@@ -22,4 +22,9 @@ describe("shortcut-hint", () => {
     expect(formatModShortcut(["\\"], { platform: "Win32" })).toBe("Ctrl+\\");
     expect(formatModShortcut(["\\"], { platform: "MacIntel" })).toBe("⌘\\");
   });
+
+  it("uses Ctrl+\\ on Android/Pixel-style Linux platforms", () => {
+    expect(formatModShortcut(["\\"], { platform: "Linux armv8l" })).toBe("Ctrl+\\");
+    expect(formatModShortcut(["\\"], { platform: "Linux aarch64" })).toBe("Ctrl+\\");
+  });
 });
