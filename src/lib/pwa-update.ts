@@ -3,7 +3,7 @@
 // When the Ko-fi FAB is eligible it is the primary update UI: no Sonner toast.
 // `/note` and `*.md` hide the FAB, so the toast is the fallback. Clicking
 // Update / the FAB primary control only marks that build as pending and starts
-// one reload path; repeated clicks are ignored while that path is in progress.
+// one reload path; repeated clicks for the same target are ignored.
 
 import { createElement, type MouseEvent, type ReactNode } from "react";
 import { registerSW } from "virtual:pwa-register";
@@ -207,8 +207,30 @@ function scrubLegacyVersionParamFromVisibleUrl(): void {
   }
 }
 
+// One hard-reload (or E2E hard-reload event) per target per updater generation.
+// E2E apply flips __SNOTE_E2E_BUILD_ID__ without navigating; the poller then
+// clears reloadInProgress. Without this consume, a still-mounted FAB/Update
+// click starts a second apply for the same build.
+let issuedHardReloadKey: string | null = null;
+
+function hardReloadKey(targetBuildId: string | null): string {
+  return targetBuildId ?? "";
+}
+
+function hardReloadAlreadyIssued(targetBuildId: string | null): boolean {
+  return issuedHardReloadKey === hardReloadKey(targetBuildId);
+}
+
+function consumeHardReload(targetBuildId: string | null): boolean {
+  const key = hardReloadKey(targetBuildId);
+  if (issuedHardReloadKey === key) return false;
+  issuedHardReloadKey = key;
+  return true;
+}
+
 function signalE2EReload(targetBuildId: string | null): boolean {
   if (isE2EUpdateEnabled() && targetBuildId) {
+    if (!consumeHardReload(targetBuildId)) return true; // already signaled; still E2E-handled
     window.__SNOTE_E2E_BUILD_ID__ = targetBuildId;
     window.dispatchEvent(new CustomEvent("snote:e2e-pwa-hard-reload", { detail: { targetBuildId } }));
     return true;
@@ -219,6 +241,7 @@ function signalE2EReload(targetBuildId: string | null): boolean {
 function reloadCleanUrl(targetBuildId: string | null): void {
   scrubLegacyVersionParamFromVisibleUrl();
   if (signalE2EReload(targetBuildId)) return;
+  if (!consumeHardReload(targetBuildId)) return;
   try {
     const cleanUrl = cleanCurrentAppUrl();
     const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
@@ -348,6 +371,7 @@ export function registerAppUpdater(): void {
   if (typeof window === "undefined") return;
   window.__SNOTE_PWA_UPDATE_CLEANUP__?.();
   window.__SNOTE_PWA_UPDATE_CLEANUP__ = undefined;
+  issuedHardReloadKey = null;
   scrubLegacyVersionParamFromVisibleUrl();
 
   if (import.meta.env.DEV && !isE2EUpdateEnabled()) return;
@@ -405,9 +429,10 @@ export function registerAppUpdater(): void {
 
   const reloadNow = () => {
     if (reloadInProgress) return;
+    const pendingBuildId = latestRemoteBuildId ?? pendingBuildFromPreviousLoad;
+    if (hardReloadAlreadyIssued(pendingBuildId ?? getCurrentBuildId())) return;
     reloadInProgress = true;
     reloadAttemptCount += 1;
-    const pendingBuildId = latestRemoteBuildId ?? pendingBuildFromPreviousLoad;
     if (pendingBuildId) {
       try {
         sessionStorage.setItem(PENDING_BUILD_KEY, pendingBuildId);
@@ -426,11 +451,13 @@ export function registerAppUpdater(): void {
       syncDebugState();
       console.log("[pwa-update] reload strategy=waiting-sw", { currentBuildId: getCurrentBuildId(), pendingBuildId: reloadTarget });
       logLifecycle("reload-start");
+      let done = false;
       const fallback = window.setTimeout(() => {
+        if (done) return;
+        done = true;
         console.log("[pwa-update] waiting-sw fallback → hard reload", { currentBuildId: getCurrentBuildId(), pendingBuildId: reloadTarget });
         recoverAndReloadCleanUrl(reloadTarget);
       }, RELOAD_FALLBACK_MS);
-      let done = false;
       const onCtrl = () => {
         if (done) return;
         done = true;
@@ -441,6 +468,8 @@ export function registerAppUpdater(): void {
       cleanupTasks.push(() => navigator.serviceWorker?.removeEventListener("controllerchange", onCtrl));
       scrubLegacyVersionParamFromVisibleUrl();
       void updateSWFn(false).catch(() => {
+        if (done) return;
+        done = true;
         window.clearTimeout(fallback);
         recoverAndReloadCleanUrl(reloadTarget);
       });
