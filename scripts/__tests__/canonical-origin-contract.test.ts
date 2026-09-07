@@ -38,6 +38,9 @@ describe("canonical production origin", () => {
     expect(readme).toContain("#119");
     expect(readme).toContain("PWA latch");
     expect(readme).toContain("hard-reload");
+    expect(readme).toContain("Pixel visual latch PASS");
+    expect(readme).toContain("latch-15ec8285/");
+    expect(readme).toContain("FAB Update = 1 reload");
     expect(readme).toContain("legacyRo");
     expect(readme).toContain("findings §3e");
     expect(readme).toContain("Phase C");
@@ -572,6 +575,14 @@ describe("canonical production origin", () => {
     expect(findings).toContain("34119265815");
     expect(findings).toMatch(/PWA smoke after this ship: SUCCESS/);
     expect(findings).toContain("Playwright 2 passed");
+    expect(findings).toContain("2/2");
+    expect(findings).toContain("Sentinel");
+    expect(findings).toContain("khớp");
+    expect(findings).toContain("multi-click residual cleared");
+    expect(findings).toContain("240 HOLD");
+    expect(findings).toContain("Pixel visual latch PASS");
+    expect(findings).toContain("FAB Update = 1 reload");
+    expect(findings).toContain("latch-15ec8285/");
     expect(findings).not.toContain("Origin is `9bf5e92b`");
     expect(findings).not.toContain("Origin is `b6824541`");
     expect(findings).not.toContain("Origin is `a8f7eeb8`");

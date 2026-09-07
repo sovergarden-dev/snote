@@ -9,8 +9,9 @@ Production: [note.syrin.online](https://note.syrin.online/)
 Mode/Export still on this line; Ko-fi + New Version FAB still on this line;
 FAB-primary + Sonner suppress (#113/#116) still on this line; Choice A (#118)
 still on this line; PWA latch (#119) one hard-reload per Update apply live
-on origin `15ec8285`; Pixel visual PASS (/hage editable + Duplicate hidden);
-Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e):
+on origin `15ec8285`; Pixel visual latch PASS (/hage editable; FAB Update = 1
+reload; evidence latch-15ec8285/); Duplicate hidden remains on this Choice A
+line; Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e):
 `capabilityRoutesEnabled` true. Plain slug URLs and SplitView panes mount
 editable `NotePage` (not `CutoverNotePage` → `LegacyNotePage` default);
 `#owner`/`#edit` still render `NotePage`. Optional `?legacyRo=1` opt-in
