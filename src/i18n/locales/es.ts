@@ -7,6 +7,7 @@ const es: Dictionary = {
     "home.intro_prefix": "Abre cualquier nota por URL — p. ej. ",
     "home.intro_suffix": ". Autoguardado, sync en tiempo real entre dispositivos, funciona offline.",
     "home.placeholder": "mi-nota",
+    "home.skip_to_slug": "Saltar al nombre de la nota",
     "home.status.checking": "Comprobando…",
     "home.status.available": "Disponible",
     "home.status.taken": "Ya existe",

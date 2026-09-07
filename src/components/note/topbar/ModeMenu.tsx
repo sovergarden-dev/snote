@@ -22,6 +22,7 @@ import {
 import { useEink } from "@/hooks/use-eink";
 import { useVimMode } from "@/hooks/use-vim-mode";
 import { useI18n } from "@/i18n";
+import { formatModShortcut } from "@/lib/shortcut-hint";
 
 interface ModeMenuProps {
   zen: boolean;
@@ -61,7 +62,7 @@ export function ModeMenu({
           <Maximize2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <div className="flex min-w-0 flex-1 flex-col">
             <span>{zen ? t("mode.zen.exit") : t("mode.zen.enter")}</span>
-            <span className="text-[11px] text-muted-foreground">{t("mode.zen.desc")}</span>
+            <span className="text-[11px] text-foreground/80">{t("mode.zen.desc")}</span>
           </div>
           <span className="ml-auto self-start text-[10px] text-muted-foreground">F11</span>
         </DropdownMenuItem>
@@ -69,7 +70,7 @@ export function ModeMenu({
           <AlignVerticalJustifyCenter className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <div className="flex min-w-0 flex-1 flex-col">
             <span>{typewriter ? t("mode.typewriter.exit") : t("mode.typewriter.enter")}</span>
-            <span className="text-[11px] text-muted-foreground">{t("mode.typewriter.desc")}</span>
+            <span className="text-[11px] text-foreground/80">{t("mode.typewriter.desc")}</span>
           </div>
           <span className="ml-auto self-start text-[10px] text-muted-foreground">F9</span>
         </DropdownMenuItem>
@@ -77,22 +78,22 @@ export function ModeMenu({
           <Highlighter className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <div className="flex min-w-0 flex-1 flex-col">
             <span>{focusLine ? t("mode.focus.disable") : t("mode.focus.enable")}</span>
-            <span className="text-[11px] text-muted-foreground">{t("mode.focus.desc")}</span>
+            <span className="text-[11px] text-foreground/80">{t("mode.focus.desc")}</span>
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onTogglePagination} className="items-start py-2">
           <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <div className="flex min-w-0 flex-1 flex-col">
             <span>{paginated ? t("mode.page.disable") : t("mode.page.enable")}</span>
-            <span className="text-[11px] text-muted-foreground">{t("mode.page.desc")}</span>
+            <span className="text-[11px] text-foreground/80">{t("mode.page.desc")}</span>
           </div>
-          <span className="ml-auto self-start text-[10px] text-muted-foreground">⌘⇧P</span>
+          <span className="ml-auto self-start text-[10px] text-muted-foreground">{formatModShortcut(["Shift", "P"])}</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={toggleVim} className="items-start py-2">
           <Terminal className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <div className="flex min-w-0 flex-1 flex-col">
             <span>{vim ? t("mode.vim.disable") : t("mode.vim.enable")}</span>
-            <span className="text-[11px] text-muted-foreground">{t("mode.vim.desc")}</span>
+            <span className="text-[11px] text-foreground/80">{t("mode.vim.desc")}</span>
           </div>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -101,7 +102,7 @@ export function ModeMenu({
             <MonitorSmartphone className="h-3.5 w-3.5" />
             {t("mode.eink.label")}
           </span>
-          <span className="pl-5 text-[11px] font-normal text-muted-foreground">{t("mode.eink.desc")}</span>
+          <span className="pl-5 text-[11px] font-normal text-foreground/80">{t("mode.eink.desc")}</span>
         </DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={einkPref}

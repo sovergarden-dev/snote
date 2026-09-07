@@ -7,6 +7,7 @@ const de: Dictionary = {
     "home.intro_prefix": "Öffne Notizen per URL – z. B. ",
     "home.intro_suffix": ". Speichert automatisch, synchronisiert in Echtzeit und funktioniert offline.",
     "home.placeholder": "meine-notiz",
+    "home.skip_to_slug": "Weiter zum Notiznamen",
     "home.status.checking": "Prüfe…",
     "home.status.available": "Slug verfügbar",
     "home.status.taken": "Bereits vergeben",

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNarrowViewport } from "@/hooks/use-narrow-viewport";
 import { useI18n } from "@/i18n/index";
+import { formatModShortcut } from "@/lib/shortcut-hint";
 
 interface ViewControlsProps {
   showPreview: boolean;
@@ -72,7 +73,7 @@ export function ViewControls({
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">
-          {tooltipLabel} (⌘⇧V)
+          {tooltipLabel} ({formatModShortcut(["Shift", "V"])})
         </TooltipContent>
       </Tooltip>
 

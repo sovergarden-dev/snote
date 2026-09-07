@@ -7,6 +7,7 @@ const vi: Dictionary = {
     "home.intro_prefix": "Mở bất kỳ note nào bằng URL — ví dụ ",
     "home.intro_suffix": ". Tự động lưu, đồng bộ realtime giữa các thiết bị, hoạt động cả khi offline.",
     "home.placeholder": "ten-note-cua-toi",
+    "home.skip_to_slug": "Bỏ qua tới tên note",
     "home.status.checking": "Đang kiểm tra…",
     "home.status.available": "Slug trống",
     "home.status.taken": "Đã có note",

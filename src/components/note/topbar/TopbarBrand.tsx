@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { YjsProviderLike } from "@/lib/yjs/provider";
 import { toast } from "@/hooks/use-toast";
 import { useI18n } from "@/i18n";
+import { formatModShortcut } from "@/lib/shortcut-hint";
 
 interface TopbarBrandProps {
   slug: string;
@@ -158,7 +159,7 @@ export function TopbarBrand({
               <List className="h-3.5 w-3.5" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">{t("brand.outline")} (⌘\)</TooltipContent>
+          <TooltipContent side="bottom">{t("brand.outline")} ({formatModShortcut(["\\"])})</TooltipContent>
         </Tooltip>
       )}
 

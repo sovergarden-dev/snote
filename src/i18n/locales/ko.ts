@@ -7,6 +7,7 @@ const ko: Dictionary = {
     "home.intro_prefix": "URL로 어떤 노트든 열기 — 예: ",
     "home.intro_suffix": ". 자동 저장, 기기 간 실시간 동기화, 오프라인에서도 동작.",
     "home.placeholder": "my-note",
+    "home.skip_to_slug": "노트 이름으로 건너뛰기",
     "home.status.checking": "확인 중…",
     "home.status.available": "사용 가능",
     "home.status.taken": "이미 존재",

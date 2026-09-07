@@ -7,15 +7,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useI18n } from "@/i18n/index";
+import { modKeyLabel } from "@/lib/shortcut-hint";
 
 interface ShortcutHelpProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const isMac =
-  typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-const Mod = isMac ? "⌘" : "Ctrl";
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
@@ -27,6 +24,7 @@ function Kbd({ children }: { children: React.ReactNode }) {
 
 export function ShortcutHelp({ open, onOpenChange }: ShortcutHelpProps) {
   const { t } = useI18n();
+  const Mod = modKeyLabel();
   const sections: { title: string; items: { keys: string[]; label: string }[] }[] = [
     {
       title: t("shortcuts.section.nav"),
@@ -69,7 +67,7 @@ export function ShortcutHelp({ open, onOpenChange }: ShortcutHelpProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-md overflow-y-auto">
+      <DialogContent className="chrome-menu-surface max-h-[85vh] max-w-md overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("shortcuts.title")}</DialogTitle>
           <DialogDescription>

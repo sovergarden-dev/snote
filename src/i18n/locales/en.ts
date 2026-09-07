@@ -5,6 +5,7 @@ const en = {
     "home.intro_prefix": "Open any note by URL — e.g. ",
     "home.intro_suffix": ". Autosaves, syncs in realtime across devices, and works offline.",
     "home.placeholder": "my-note",
+    "home.skip_to_slug": "Skip to note name",
     "home.status.checking": "Checking…",
     "home.status.available": "Slug available",
     "home.status.taken": "Already exists",
