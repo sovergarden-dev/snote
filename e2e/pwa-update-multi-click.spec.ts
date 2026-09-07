@@ -1,7 +1,14 @@
 // E2E: clicking Update multiple times only triggers one reload path and the
 // note URL never gains a ?v= cache-buster, even under rapid repeated clicks.
 import { expect, test } from "@playwright/test";
-import { getHardReloadCount, installPwaUpdateMock, pwaUpdateToast, waitForPwaUpdaterReady } from "./helpers/pwa-update-mock";
+import {
+  expectPwaUpdatePrompt,
+  getHardReloadCount,
+  installPwaUpdateMock,
+  pwaUpdateApplyControl,
+  pwaUpdateToast,
+  waitForPwaUpdaterReady,
+} from "./helpers/pwa-update-mock";
 
 test("multiple Update clicks apply the new build without adding ?v to the URL", async ({ page }, testInfo) => {
   // Record every URL the page navigates to so a `?v=` regression is easy to
@@ -46,26 +53,24 @@ test("multiple Update clicks apply the new build without adding ?v to the URL", 
   const swBefore = await snapshotSwRegs();
   console.log("[pwa-smoke] SW registrations BEFORE Update:", JSON.stringify(swBefore));
 
-  const toast = pwaUpdateToast(page);
-  await expect(toast).toBeVisible({ timeout: 5_000 });
+  await expectPwaUpdatePrompt(page);
 
-  const update = page.getByRole("button", { name: /^Update$/ });
+  const update = pwaUpdateApplyControl(page);
   await update.click();
-  // Rapid follow-up clicks should be ignored (button becomes "Update…").
-  // Bound each click's wait: once the update applies, the toast (and its
-  // button) is dismissed, and an unbounded locator wait for the vanishing
+  // Rapid follow-up clicks should be ignored (apply is a no-op while in-flight).
+  // Bound each click's wait: once the update applies, the FAB/toast control
+  // is dismissed, and an unbounded locator wait for the vanishing
   // button would otherwise eat the whole test budget — the exact WebKit
   // flake where the spec stalled in the follow-up loop and never reached
   // the reload-count poll.
   for (let i = 0; i < 4; i++) {
-    await page
-      .getByRole("button", { name: /^Update(…)?$/ })
+    await pwaUpdateApplyControl(page)
       .click({ force: true, timeout: 2_000 })
       .catch(() => {});
   }
 
   await expect.poll(() => getHardReloadCount(page)).toBe(1);
-  await expect(toast).toBeHidden({ timeout: 5_000 });
+  await expect(pwaUpdateToast(page)).toHaveCount(0);
 
   const swAfter = await snapshotSwRegs();
   console.log("[pwa-smoke] SW registrations AFTER Update:", JSON.stringify(swAfter));

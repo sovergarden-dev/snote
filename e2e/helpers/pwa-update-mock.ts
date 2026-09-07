@@ -12,6 +12,7 @@
 //   pending state deterministically and release it on demand.
 
 import { expect, type Page } from "@playwright/test";
+import { shouldHideDonateFab } from "../../src/lib/donate-fab-visibility";
 
 export type PwaMockOptions = {
   fromBuildId: string;
@@ -72,12 +73,59 @@ export async function getHardReloadCount(page: Page): Promise<number> {
  * also matches the Ko-fi FAB's sr-only `role="status"` live region
  * ("New version available. Reload to update."), which fails Playwright strict
  * mode. Scope to the toast host and match the title exactly.
+ *
+ * Only assert this on FAB-hidden routes (`/note`, `*.md`). On FAB-eligible
+ * routes the toast is suppressed; use {@link pwaUpdateFab} instead.
  */
 export function pwaUpdateToast(page: Page, state: "available" | "pending" = "available") {
   const title = state === "pending" ? "Update pending" : "New version available";
   return page.locator("[data-sonner-toast]").filter({
     has: page.getByText(title, { exact: true }),
   });
+}
+
+const FAB_UPDATE_NAME = "New version available. Reload to update.";
+
+/** Ko-fi FAB in update-available mode (primary click reloads). */
+export function pwaUpdateFab(page: Page) {
+  return page.getByRole("button", { name: FAB_UPDATE_NAME });
+}
+
+export function pwaUpdateFabLiveRegion(page: Page) {
+  return page.getByRole("status").filter({ hasText: FAB_UPDATE_NAME });
+}
+
+function pathnameOf(page: Page): string {
+  try {
+    return new URL(page.url()).pathname;
+  } catch {
+    return "/";
+  }
+}
+
+/** Primary control that applies the waiting PWA update on this page. */
+export function pwaUpdateApplyControl(page: Page) {
+  if (shouldHideDonateFab(pathnameOf(page))) {
+    return page.getByRole("button", { name: /^Update$/ });
+  }
+  return pwaUpdateFab(page);
+}
+
+/**
+ * Wait until the route-appropriate update UI is showing. FAB routes must not
+ * also show the Sonner toast (that was the Pixel covering-toast failure).
+ */
+export async function expectPwaUpdatePrompt(page: Page): Promise<"fab" | "toast"> {
+  if (shouldHideDonateFab(pathnameOf(page))) {
+    await expect(pwaUpdateToast(page)).toBeVisible({ timeout: 5_000 });
+    await expect(pwaUpdateFab(page)).toHaveCount(0);
+    return "toast";
+  }
+  await expect(pwaUpdateFab(page)).toBeVisible({ timeout: 5_000 });
+  await expect(pwaUpdateFab(page).locator("[aria-hidden='true']")).toHaveText("NEW");
+  await expect(pwaUpdateFabLiveRegion(page)).toHaveCount(1);
+  await expect(pwaUpdateToast(page)).toHaveCount(0);
+  return "fab";
 }
 
 /**

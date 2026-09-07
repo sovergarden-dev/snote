@@ -119,6 +119,7 @@ declare global {
   }
   interface Window {
     __SNOTE_PWA_APPLY_UPDATE__?: () => void;
+    __SNOTE_PWA_SYNC_UPDATE_UI__?: () => void;
   }
 }
 
