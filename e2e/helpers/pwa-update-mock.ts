@@ -91,6 +91,17 @@ export function pwaUpdateFab(page: Page) {
   return page.getByRole("button", { name: FAB_UPDATE_NAME });
 }
 
+/**
+ * Decorative NEW/MỚI badge on {@link pwaUpdateFab}.
+ *
+ * Do not query `[aria-hidden='true']` on the FAB itself: Lucide's Heart SVG
+ * is also aria-hidden, which fails Playwright strict mode (CI after #113).
+ * The badge is the only `span[aria-hidden='true']` inside the button.
+ */
+export function pwaUpdateFabBadge(page: Page) {
+  return pwaUpdateFab(page).locator("span[aria-hidden='true']");
+}
+
 export function pwaUpdateFabLiveRegion(page: Page) {
   return page.getByRole("status").filter({ hasText: FAB_UPDATE_NAME });
 }
@@ -122,7 +133,7 @@ export async function expectPwaUpdatePrompt(page: Page): Promise<"fab" | "toast"
     return "toast";
   }
   await expect(pwaUpdateFab(page)).toBeVisible({ timeout: 5_000 });
-  await expect(pwaUpdateFab(page).locator("[aria-hidden='true']")).toHaveText("NEW");
+  await expect(pwaUpdateFabBadge(page)).toHaveText(/^(NEW|MỚI|NEU|新|신|NOVO)$/);
   await expect(pwaUpdateFabLiveRegion(page)).toHaveCount(1);
   await expect(pwaUpdateToast(page)).toHaveCount(0);
   return "fab";

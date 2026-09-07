@@ -103,9 +103,14 @@ describe("DonateButton — update available", () => {
     expect(screen.getByText(dict.en["fab.update.badge"])).toBeInTheDocument();
     expect(dict.en["fab.update.badge"].toLowerCase()).not.toContain("version");
     expect(screen.queryByText(/^New Version$/i)).toBeNull();
-    expect(screen.getByRole("button", { name: dict.en["fab.update.aria"] })).toBeInTheDocument();
+    const updateBtn = screen.getByRole("button", { name: dict.en["fab.update.aria"] });
+    expect(updateBtn).toBeInTheDocument();
     const badge = screen.getByText(dict.en["fab.update.badge"]);
+    expect(badge.tagName).toBe("SPAN");
     expect(badge.getAttribute("aria-hidden")).toBe("true");
+    // Lucide Heart is also aria-hidden; E2E must target the span, not [aria-hidden].
+    expect(updateBtn.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    expect(updateBtn.querySelectorAll("[aria-hidden='true']")).toHaveLength(2);
   });
 
   it("announces via role=status live region when the update chrome appears", () => {
