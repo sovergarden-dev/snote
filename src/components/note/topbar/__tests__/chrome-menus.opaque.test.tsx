@@ -23,26 +23,33 @@ vi.mock("@/hooks/use-toast", () => ({
 const INDEX_CSS = resolve(__dirname, "../../../../index.css");
 const DROPDOWN_SRC = resolve(__dirname, "../../../ui/dropdown-menu.tsx");
 const TOPBAR_BRAND_SRC = resolve(__dirname, "../TopbarBrand.tsx");
+const SHORTCUT_HELP_SRC = resolve(__dirname, "../../../ShortcutHelp.tsx");
 
 function wrap(ui: ReactElement) {
   localStorage.setItem(STORAGE_KEY, "en");
   return render(<I18nProvider>{ui}</I18nProvider>);
 }
 
-function layerBody(css: string, name: string): string | null {
-  const startTok = `@layer ${name}`;
-  const start = css.indexOf(startTok);
-  if (start < 0) return null;
-  const brace = css.indexOf("{", start);
-  let depth = 0;
-  for (let i = brace; i < css.length; i++) {
-    if (css[i] === "{") depth++;
-    else if (css[i] === "}") {
-      depth--;
-      if (depth === 0) return css.slice(brace + 1, i);
+function layerBodies(css: string): string[] {
+  const bodies: string[] = [];
+  const re = /@layer\s+\w+/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(css))) {
+    const brace = css.indexOf("{", match.index);
+    if (brace < 0) continue;
+    let depth = 0;
+    for (let i = brace; i < css.length; i++) {
+      if (css[i] === "{") depth++;
+      else if (css[i] === "}") {
+        depth--;
+        if (depth === 0) {
+          bodies.push(css.slice(brace + 1, i));
+          break;
+        }
+      }
     }
   }
-  return null;
+  return bodies;
 }
 
 function hslChannels(raw: string): [number, number, number] {
@@ -129,9 +136,8 @@ describe("Mode / Export menus are opaque", () => {
 describe("H2 opaque chrome cascade", () => {
   it("keeps chrome-menu-surface unlayered so production CSS flatten cannot lose to bg-popover", () => {
     const css = readFileSync(INDEX_CSS, "utf8");
-    for (const name of ["base", "components", "utilities"]) {
-      const body = layerBody(css, name);
-      if (body) expect(body, `@layer ${name}`).not.toMatch(/\.chrome-menu-surface\s*\{/);
+    for (const body of layerBodies(css)) {
+      expect(body).not.toMatch(/\.chrome-menu-surface\s*\{/);
     }
     expect(css).toMatch(
       /\.chrome-menu-surface\s*\{[^}]*background-color:\s*hsl\(var\(--popover\)\s*\/\s*1\)/,
@@ -142,7 +148,7 @@ describe("H2 opaque chrome cascade", () => {
 
   it("popover fill vs label text meets 4.5:1 in light and dark tokens", () => {
     const css = readFileSync(INDEX_CSS, "utf8");
-    const root = layerBody(css, "base") ?? css;
+    const root = css.slice(css.indexOf("@layer base"), css.indexOf("@layer utilities"));
     const light = root.slice(root.indexOf(":root"), root.indexOf(".dark"));
     const dark = root.slice(root.indexOf(".dark"));
     for (const block of [light, dark]) {
@@ -162,8 +168,10 @@ describe("H2 opaque chrome cascade", () => {
 });
 
 describe("H4 Outline tooltip chord", () => {
-  it("uses the same formatModShortcut helper as the Shortcuts panel", () => {
-    const src = readFileSync(TOPBAR_BRAND_SRC, "utf8");
-    expect(src).toContain('formatModShortcut(["\\\\"])');
+  it("pins Outline tooltip and Shortcuts panel to the same backslash chord", () => {
+    const brand = readFileSync(TOPBAR_BRAND_SRC, "utf8");
+    const help = readFileSync(SHORTCUT_HELP_SRC, "utf8");
+    expect(brand).toContain('formatModShortcut(["\\\\"])');
+    expect(help).toContain('[Mod, "\\\\"]');
   });
 });
