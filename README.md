@@ -5,10 +5,11 @@ Offline-first realtime Markdown notes with a separately gated capability model.
 Production: [note.syrin.online](https://note.syrin.online/)
 
 **Current status:** Production currently runs canary-on `CutoverNotePage`
-(Phase A wire live on origin `7d00fd52`; findings §3e):
+(Phase A and Phase C live on origin `77d791af`; findings §3e):
 `capabilityRoutesEnabled` true. Plain slug URLs lazy-load `LegacyNotePage`
 (Phase B `legacy-note-open` read-only); `#owner`/`#edit` still render
-`NotePage`. Home mints capabilities when canary is on (fail-closed on idle). Additive SQL 220 and 270
+`NotePage`. RawView `/:slug.md` loads via LNO `open`; Home availability uses
+LNO `exists` (empty legacy rows are taken). Home mints capabilities when canary is on (fail-closed on idle). Additive SQL 220 and 270
 are applied on production; `writes_enabled=true` and
 `private_realtime_enabled=false` (findings §3d). SQL 240 is not applied;
 soak ≥48h started from the first canary (not soak-complete) — see

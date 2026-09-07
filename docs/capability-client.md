@@ -15,9 +15,11 @@ throw `capability API unavailable` without fetching, and default Auth
 minting stays off. Ordinary Vite builds follow `.env.example`
 (`VITE_CAPABILITY_ROUTES_ENABLED=false`) and attest
 `capabilityRoutesEnabled: false`. Live production `build:release` attests
-`capabilityRoutesEnabled: true` (findings §3e; live origin `7d00fd52`).
-Origin `7d00fd52` mounts `CutoverNotePage` when that canary is on (Phase A
-wire live).
+`capabilityRoutesEnabled: true` (findings §3e; live origin `77d791af`).
+Origin `77d791af` mounts `CutoverNotePage` when that canary is on (Phase A
+wire live). Phase C is also live: RawView `/:slug.md` loads via LNO `open`,
+and Home availability uses LNO `exists` (no `public.notes` SELECT; empty
+legacy rows are taken).
 
 This origin compiles `SlugDispatcher` and SplitView pane embeds to mount
 `CutoverNotePage` when that canary is on (lazy; `SlugDispatcher` keeps the
@@ -29,21 +31,21 @@ Flag-off builds keep `NotePage` with `legacyOnly` and do not import
 exact-match Edge (live; findings §1b). This origin attest does not deploy
 Edge.
 
-When that canary is on, Home create waits until the `notes.select` availability
-hint is `available` (it does not mint while `idle` or `checking`, and
-legacy-`taken` still opens `/<slug>` with no `#owner`). Idle submit re-checks;
-it does not fail-open to legacy `seedAndOpen`. Then it persists an
+When that canary is on, Home create waits until LNO `exists` is false
+(`available`; it does not mint while `idle` or `checking`, and
+legacy-`taken` still opens `/<slug>` with no `#owner`). Idle submit re-checks
+via LNO `exists`; it does not fail-open to legacy `seedAndOpen`. Then it persists an
 owner candidate in `sessionStorage`, calls `createCapabilityApi().createNote`
 (`POST note-session` `{action:"create"}`), queues any template seed only after
 that create succeeds, and navigates to `/<slug>#owner=<token>`. Random-note
 still mints a fresh slug without that wait. See
 [ADR-001](adr/001-home-capability-mint-before-sql-240.md).
-This Home mint path is live on origin `7d00fd52` (canary on; fail-closed idle; findings §3e).
+This Home mint path is live on origin `77d791af` (canary on; fail-closed idle; findings §3e).
 It is not SQL 240. Recents and
 pins store only the slug, never the owner token. Losing the fragment
-without another copy of the owner capability locks the note out. A
-`notes.select` miss is only a legacy hint: capability-managed slugs are
-invisible to that query, and create may still return `slug_unavailable`.
+without another copy of the owner capability locks the note out. An
+LNO `exists: false` miss is only a legacy hint: capability-managed slugs are
+invisible to LNO `exists`, and create may still return `slug_unavailable`.
 Do not fall back to a legacy upsert from the create button.
 
 An optional encryption secret is a separate `key` fragment field. Capability tokens are exchanged for a short-lived `NoteSession` and are sent to Edge APIs only as an exact `Authorization: Bearer` header. They are never placed in a request path, query, JSON body, recent-note entry, telemetry event, or log.

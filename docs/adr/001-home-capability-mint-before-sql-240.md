@@ -1,13 +1,13 @@
 # ADR-001: Home mints capabilities before SQL 240
 
-- Status: Accepted. Home mint fail-closed idle live on origin `7d00fd52` (not a SQL 240 go)
+- Status: Accepted. Home mint fail-closed idle live on origin `77d791af` (not a SQL 240 go)
 - Date: 2026-09-04
 - Deciders: Aegis (architecture); Atlas (go); Syringa (named production steps)
-- Evidence cut: `sovergarden-dev/snote` `main` `7d00fd52` (PR #103). Live origin `7d00fd52`, Worker `931430c0` / `5f94ab6c` (Cloudflare Version ID `5f94ab6c-fde5-4416-a3aa-74daaa2e6094`; see findings §1c). SQL 220+270 applied; 240 not applied. `writes_enabled=true`, `private_realtime_enabled=false`. Soak started 2026-09-02 ~12:01 ICT from `c5914c8e`; not complete as of 2026-09-07 ~04:11 ICT.
+- Evidence cut: `sovergarden-dev/snote` `main` `77d791af` (PR #105). Live origin `77d791af`, Worker `931430c0` / `5f94ab6c` (Cloudflare Version ID `5f94ab6c-fde5-4416-a3aa-74daaa2e6094`; see findings §1c). SQL 220+270 applied; 240 not applied. `writes_enabled=true`, `private_realtime_enabled=false`. Soak started 2026-09-02 ~12:01 ICT from `c5914c8e`; not complete as of 2026-09-07 ~07:28 ICT.
 
 ## Context
 
-Production dual-mode canary has `capabilityRoutesEnabled=true`. Home mint is live on origin `7d00fd52`: Home create fail-closes on idle (re-check; no legacy `seedAndOpen`), then on `available` calls `POST note-session` `{action:"create"}` and navigates `/<slug>#owner=<token>`. Canary-on SPA mounts `CutoverNotePage`: plain `/<slug>` lazy-loads `LegacyNotePage` (Phase B LNO read-only). `anon` RLS on `public.notes` (`NOT capability_managed`) still exists because SQL 240 is not applied. `capability_note_import_legacy` (SQL 240) is absent.
+Production dual-mode canary has `capabilityRoutesEnabled=true`. Home mint is live on origin `77d791af`: Home create fail-closes on idle (re-check; no legacy `seedAndOpen`), then on `available` calls `POST note-session` `{action:"create"}` and navigates `/<slug>#owner=<token>`. Canary-on SPA mounts `CutoverNotePage`: plain `/<slug>` lazy-loads `LegacyNotePage` (Phase B LNO read-only). Phase C: Home availability uses LNO `exists`; RawView `/:slug.md` uses LNO `open`. `anon` RLS on `public.notes` (`NOT capability_managed`) still exists because SQL 240 is not applied. `capability_note_import_legacy` (SQL 240) is absent.
 
 SQL 240 is irreversible: rollback never restores `notes` GRANT/policies. Kill switch is `capability_runtime_set(false, false)` → Edge 503. Tiny plan has no PITR (daily snapshot, ~24h worst-case loss). Staging `snote-g3c-staging` is inactive.
 
@@ -22,7 +22,7 @@ When the mint path is built (GitHub first; production only on a named go):
 3. Trust/identity (“quen/lạ”) stays a local label and must not become a write gate.
 
 This ADR does **not** authorize origin, Worker, Edge, SQL 240, `private_realtime_enabled`, or Home mint in production.
-A later named Pages deploy of #95 made Home mint live on canary origin `e05c73ea`; #98 made fail-closed idle mint live on `addeeb29`; #101+#103 made `CutoverNotePage` + Phase B LNO live on `7d00fd52`; this ADR still does not authorize SQL 240.
+A later named Pages deploy of #95 made Home mint live on canary origin `e05c73ea`; #98 made fail-closed idle mint live on `addeeb29`; #101+#103 made `CutoverNotePage` + Phase B LNO live on `7d00fd52`; #105 made Phase C RawView+Home LNO live on `77d791af`; this ADR still does not authorize SQL 240.
 
 ## Alternatives
 
@@ -46,7 +46,7 @@ A later named Pages deploy of #95 made Home mint live on canary origin `e05c73ea
 
 - Forge implements Home create against existing `note-session` contract (`createCapabilityApi().createNote`). No new Edge function.
 - Failures stay existing codes: `slug_unavailable` 409, admission 429/503, missing HMAC 503.
-- Canary-on `CutoverNotePage` is live on origin `7d00fd52`; flag-off builds keep `legacyOnly` `NotePage`. Home existence check today is `select slug, char_count from notes` — after mint, capability-managed rows are invisible to that query; Home must not treat “not in notes” as “slug free” once create can 409 from the RPC.
+- Canary-on `CutoverNotePage` is live on origin `77d791af`; flag-off builds keep `legacyOnly` `NotePage`. Home existence check today is LNO `exists` (canary-on; empty legacy rows are taken) — after mint, capability-managed rows are `exists: false`; Home must not treat that as “slug free” once create can 409 from the RPC.
 - SQL 240, private Realtime, and quen/lạ overlay stay separately named. Worker log deploy is already live (§1c).
 
 ## Open questions (do not guess)

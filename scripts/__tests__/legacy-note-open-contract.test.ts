@@ -380,6 +380,7 @@ describe("legacy-note-open docs", () => {
     expect(capability).toContain("security-findings.md");
     expect(capability).toContain("§1b");
     expect(capability).toContain("CutoverNotePage");
+    expect(capability).toContain("Phase C");
     expect(capability).toContain("SQL 240 is not applied");
     expect(capability).toContain("Do not restore a dump");
     expect(capability).toContain("browser roles still have no table grants");

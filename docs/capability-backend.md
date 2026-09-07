@@ -59,7 +59,7 @@ would write; do not invent Turnstile. Do not restore a dump.
 Production Edge is this Phase B reader (see [security findings §1b](security-findings.md)).
 This document does not authorize an Edge deploy, origin Pages, Worker, SQL 240, or
 Realtime flip.
-SPA canary-on `CutoverNotePage` is live (plain slug → `LegacyNotePage`; dual-mode canary on, findings §3e). Home create mints when canary is on (fail-closed idle). SQL 240 is not applied.
+SPA canary-on `CutoverNotePage` is live (plain slug → `LegacyNotePage`; dual-mode canary on, findings §3e). Phase C is live: RawView `/:slug.md` uses LNO `open`; Home availability uses LNO `exists`. Home create mints when canary is on (fail-closed idle). SQL 240 is not applied.
 After the atomic cutover, browser roles still have no table grants; rollback keeps
 this read-only LNO and must never restore `anon`/`authenticated` `notes` GRANTs.
 See [the cutover runbook](security/atomic-capability-cutover.md)
