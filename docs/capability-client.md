@@ -15,12 +15,12 @@ throw `capability API unavailable` without fetching, and default Auth
 minting stays off. Ordinary Vite builds follow `.env.example`
 (`VITE_CAPABILITY_ROUTES_ENABLED=false`) and attest
 `capabilityRoutesEnabled: false`. Live production `build:release` attests
-`capabilityRoutesEnabled: true` (findings §3e; live origin `9bf5e92b`).
-Origin `9bf5e92b` mounts `CutoverNotePage` when that canary is on (Phase A
+`capabilityRoutesEnabled: true` (findings §3e; live origin `b6824541`).
+Origin `b6824541` mounts `CutoverNotePage` when that canary is on (Phase A
 wire live). Phase C is also live: RawView `/:slug.md` loads via LNO `open`,
 and Home availability uses LNO `exists` (no `public.notes` SELECT; empty
 legacy rows are taken). Pixel HIGH UX H1–H6 is live on this origin. H2 opaque
-Mode/Export is live.
+Mode/Export is live. Ko-fi + New Version FAB is live.
 
 This origin compiles `SlugDispatcher` and SplitView pane embeds to mount
 `CutoverNotePage` when that canary is on (lazy; `SlugDispatcher` keeps the
@@ -41,7 +41,7 @@ owner candidate in `sessionStorage`, calls `createCapabilityApi().createNote`
 that create succeeds, and navigates to `/<slug>#owner=<token>`. Random-note
 still mints a fresh slug without that wait. See
 [ADR-001](adr/001-home-capability-mint-before-sql-240.md).
-This Home mint path is live on origin `9bf5e92b` (canary on; fail-closed idle; findings §3e).
+This Home mint path is live on origin `b6824541` (canary on; fail-closed idle; findings §3e).
 It is not SQL 240. Recents and
 pins store only the slug, never the owner token. Losing the fragment
 without another copy of the owner capability locks the note out. An
