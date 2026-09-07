@@ -16,8 +16,8 @@ Legacy policies. Capability SPA canary is on
 `capabilityRoutesEnabled` is true; see §3e). Canary-on `CutoverNotePage`
 is live (Phase A): plain slug lazy-loads `LegacyNotePage`; `#owner`/`#edit`
 still render `NotePage`. Phase C is live: RawView `/:slug.md` loads via LNO `open`;
-Home availability uses LNO `exists` (empty legacy rows are taken). Home mints capabilities when canary is on
-(create → `/<slug>#owner=`; fail-closed idle; live origin `77d791af`).
+Home availability uses LNO `exists` (empty legacy rows are taken). Pixel HIGH UX H1–H6 is live. Home mints capabilities when canary is on
+(create → `/<slug>#owner=`; fail-closed idle; live origin `9df65d53`).
 Home mint before SQL 240 is accepted as
 [ADR-001](adr/001-home-capability-mint-before-sql-240.md); live mint is
 not authorization to apply 240.
@@ -134,9 +134,9 @@ Production Worker `syrin-prerender` was redeployed 2026-09-03 ~20:42 UTC /
 - Staging `syrin-prerender-staging` was not deployed (still G3C staging
   versions from 2026-08-24)
 
-This is not the live SPA origin. Origin is `77d791af` (see §3e).
+This is not the live SPA origin. Origin is `9df65d53` (see §3e).
 At this Worker deploy, origin was not redeployed (then `27da93eb`);
-origin later bumped to `e05c73ea`, then `addeeb29`, then `7d00fd52`, then `77d791af`. Do not claim origin is `931430c0`. Git `main`
+origin later bumped to `e05c73ea`, then `addeeb29`, then `7d00fd52`, then `77d791af`, then `9df65d53`. Do not claim origin is `931430c0`. Git `main`
 includes this Worker SHA and may be ahead for later docs-only PRs; that
 does not change Worker identity.
 
@@ -566,7 +566,7 @@ Pages production deployment id `ed0e177e-b127-48b2-bac1-8e2460c82b28`
 replaced previous live origin `addeeb29` / Pages `25c47833-fd81-42b1-ba6b-39e7e8f5a5e3`.
 At that bump, credential-free LNO POST {} returned 400 `{"error":"invalid request"}`.
 
-Same-canary origin SHA bump 2026-09-07 ~07:28 ICT: Pages `snote-g4-origin`
+Same-canary origin SHA bump 2026-09-07 ~07:28 ICT (not current live): Pages `snote-g4-origin`
 redeployed Phase C RawView+Home off `public.notes` via LNO (#105) with git
 `77d791af`. Canary-on SPA still mounts `CutoverNotePage` (Phase A): plain
 `/<slug>` lazy-loads `LegacyNotePage`; matching `#owner`/`#edit` still render
@@ -576,9 +576,8 @@ LNO `exists` (no `char_count`; `exists: true` includes empty legacy rows and
 is treated as taken). Home mint fail-closed idle remains live. Phase B Edge
 `legacy-note-open` remains live (see §1b). This origin attest does not deploy
 Edge.
-Live `version.json` (browser UA; `no-store`; independently fetched
-2026-09-07 ~00:36 UTC / ~07:36 ICT) on both canonical and Pages hosts, plus
-short Pages preview `https://1fbf89fe.snote-g4-origin.pages.dev`:
+`version.json` at that bump (browser UA; `no-store`) on both canonical and Pages
+hosts, plus short Pages preview `https://1fbf89fe.snote-g4-origin.pages.dev`:
 `deployedSha` `77d791af89696877f1f794a94270395902285c56`,
 `capabilityRoutesEnabled` true, `builtAt` `2026-09-07T00:28:21.829Z`,
 `buildId` `1788740888124-oepsltsc`.
@@ -588,10 +587,37 @@ and `CDN-Cache-Control: no-store`. Pages `.dev` hosts returned
 on those responses).
 Pages production deployment id `1fbf89fe` (short preview
 `https://1fbf89fe.snote-g4-origin.pages.dev`; full UUID not supplied in this
-attest) replaces previous live origin `7d00fd52` / Pages
+attest) replaced previous live origin `7d00fd52` / Pages
 `ed0e177e-b127-48b2-bac1-8e2460c82b28`.
 PWA smoke after that ship: SUCCESS (GitHub Actions `workflow_dispatch` run
 `34070206821`). Pulse smoke PASS: Home mint, Cutover→LNO, RawView `.md`.
+
+Same-canary origin SHA bump 2026-09-07 ~09:51 ICT: Pages `snote-g4-origin`
+redeployed Pixel HIGH UX H1–H6 (#107) with git `9df65d53`. Canary-on SPA still
+mounts `CutoverNotePage` (Phase A): plain `/<slug>` lazy-loads
+`LegacyNotePage`; matching `#owner`/`#edit` still render `NotePage`; flag-off
+builds keep `NotePage` with `legacyOnly={!canary}`. Phase C remains live on
+this origin: RawView `/:slug.md` loads via LNO `open`; Home availability uses
+LNO `exists` (no `char_count`; `exists: true` includes empty legacy rows and
+is treated as taken). Home mint fail-closed idle remains live. Phase B Edge
+`legacy-note-open` remains live (see §1b). This origin attest does not deploy
+Edge.
+Live `version.json` (browser UA; `no-store`; independently fetched
+2026-09-07 ~02:58 UTC / ~09:58 ICT) on both canonical and Pages hosts, plus
+short Pages preview `https://f0c40427.snote-g4-origin.pages.dev`:
+`deployedSha` `9df65d53b5ca38fbd48db4c9fe0fb57a950192f8`,
+`capabilityRoutesEnabled` true, `builtAt` `2026-09-07T02:51:40.515Z`,
+`buildId` `1788749485576-3fz1mz5u`.
+Canonical also returned `Cache-Control: no-cache, no-store, must-revalidate`
+and `CDN-Cache-Control: no-store`. Pages `.dev` hosts returned
+`Cache-Control: no-cache, no-store, must-revalidate` (no `CDN-Cache-Control`
+on those responses). All three hosts returned the same body and etag
+`"22100da168056c000f1d0def32cb0a00"`.
+Pages production deployment id `f0c40427` (short preview
+`https://f0c40427.snote-g4-origin.pages.dev`; full UUID not supplied in this
+attest) replaces previous live origin `77d791af` / Pages `1fbf89fe`.
+PWA smoke after that ship: SUCCESS (GitHub Actions `workflow_dispatch` run
+`34077809435`, `headSha` `9df65d53…`).
 
 Kill switch unchanged: `writes_enabled=true`,
 `private_realtime_enabled=false`, `updated_at`
@@ -607,10 +633,11 @@ This origin bump does not redeploy the Worker; live Worker remains
 `931430c0` / `5f94ab6c`. SQL 240 / Worker / Realtime not changed. Canary remains on.
 
 This is canary-on `CutoverNotePage` (Phase A live) plus Phase C
-RawView+Home via LNO: plain slug is `LegacyNotePage` via Phase B LNO;
-`#owner`/`#edit` may open capability polling. RawView `/:slug.md` loads via
-LNO `open`; Home availability uses LNO `exists`. Home mints capabilities
-when canary is on (create → `/<slug>#owner=`; fail-closed on idle).
+RawView+Home via LNO plus Pixel HIGH UX H1–H6: plain slug is
+`LegacyNotePage` via Phase B LNO; `#owner`/`#edit` may open capability
+polling. RawView `/:slug.md` loads via LNO `open`; Home availability uses
+LNO `exists`. Home mints capabilities when canary is on (create →
+`/<slug>#owner=`; fail-closed on idle). Phase C is still on this origin.
 This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
