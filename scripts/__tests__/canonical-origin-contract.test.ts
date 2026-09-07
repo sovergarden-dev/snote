@@ -46,6 +46,8 @@ describe("canonical production origin", () => {
     expect(readme).toContain("#116");
     expect(readme).toContain("Sonner");
     expect(readme).toContain("FAB-primary");
+    expect(readme).toContain("IDLE+UPDATE");
+    expect(readme).toContain("no Sonner on home");
     expect(readme).toContain("RawView");
     expect(readme).toMatch(/LNO `open`/);
     expect(readme).toMatch(/LNO `exists`/);
@@ -519,6 +521,9 @@ describe("canonical production origin", () => {
     expect(findings).toContain("34091257777");
     expect(findings).toMatch(/PWA smoke after that ship: SUCCESS/);
     expect(findings).toContain("Playwright 2 passed");
+    expect(findings).toContain("IDLE+UPDATE");
+    expect(findings).toContain("no Sonner on home");
+    expect(findings).toContain("Pulse confirmed");
     expect(findings).toContain("Pixel HIGH UX");
     expect(findings).toContain("H1–H6");
     expect(findings).toContain("34077809435");

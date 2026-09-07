@@ -751,6 +751,8 @@ PWA smoke after that ship: SUCCESS (GitHub Actions `workflow_dispatch` run
 `EXPECTED_CAPABILITY_ROUTES_ENABLED` true; Playwright 2 passed). GitHub
 `headSha` for that dispatch was `5c33ac241d6f6b4548ea290c299e15e4be799921`.
 Identity verify logged `Verified live release 5c33ac241d6f6b4548ea290c299e15e4be799921 capabilityRoutesEnabled=true`.
+Pulse confirmed live pin: `5c33ac24` / Pages `6e6cdcc3`; PWA smoke `34091257777` PASS.
+Pixel IDLE+UPDATE PASS (no Sonner on home).
 
 Kill switch unchanged: `writes_enabled=true`,
 `private_realtime_enabled=false`, `updated_at`
