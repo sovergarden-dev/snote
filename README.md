@@ -6,7 +6,8 @@ Production: [note.syrin.online](https://note.syrin.online/)
 
 **Current status:** Production currently runs canary-on `CutoverNotePage`
 (Phase A and Phase C live; Pixel HIGH UX H1–H6 still on this line; H2 opaque
-Mode/Export still on this line; Ko-fi + New Version FAB live on origin `b6824541`; findings §3e):
+Mode/Export still on this line; Ko-fi + New Version FAB still on this line;
+#113 PWA toast suppress when Ko-fi FAB handles update live on origin `a8f7eeb8`; findings §3e):
 `capabilityRoutesEnabled` true. Plain slug URLs lazy-load `LegacyNotePage`
 (Phase B `legacy-note-open` read-only); `#owner`/`#edit` still render
 `NotePage`. RawView `/:slug.md` loads via LNO `open`; Home availability uses
