@@ -266,10 +266,23 @@ function updateDescription(updateInProgress: boolean): ReactNode {
   );
 }
 
+/** FAB is primary whenever it is in the DOM or the route would render it. */
+function isFabUpdatePrimary(): boolean {
+  if (typeof document !== "undefined" && document.querySelector("[data-donate-fab]")) {
+    return true;
+  }
+  if (typeof window === "undefined") return false;
+  return !shouldHideDonateFab(window.location.pathname);
+}
+
 function showUpdateToast(options: {
   updateInProgress: boolean;
   onReload: () => void;
 }): void {
+  if (isFabUpdatePrimary()) {
+    sonnerToast.dismiss(TOAST_ID);
+    return;
+  }
   const lang = detectLang();
   const titleKey = options.updateInProgress ? "update.pending_title" : "update.title";
   sonnerToast(tr(lang, titleKey), {
@@ -379,8 +392,6 @@ export function registerAppUpdater(): void {
     }
   };
 
-  const isFabEligible = () => !shouldHideDonateFab(window.location.pathname);
-
   const syncDebugState = () => {
     writeDebugState({
       pendingBuildId: latestRemoteBuildId ?? pendingBuildFromPreviousLoad,
@@ -465,7 +476,7 @@ export function registerAppUpdater(): void {
   };
 
   const syncPresentation = () => {
-    if (updateAvailable && !isFabEligible()) {
+    if (updateAvailable && !isFabUpdatePrimary()) {
       showUpdateToast({
         updateInProgress: reloadInProgress,
         onReload: reloadNow,
@@ -478,8 +489,11 @@ export function registerAppUpdater(): void {
   const presentUpdate = () => {
     updateAvailable = true;
     syncDebugState();
+    if (isFabUpdatePrimary()) {
+      sonnerToast.dismiss(TOAST_ID);
+    }
     syncPresentation();
-    logLifecycle(isFabEligible() ? "fab-update-shown" : "toast-shown");
+    logLifecycle(isFabUpdatePrimary() ? "fab-update-shown" : "toast-shown");
   };
 
   window.__SNOTE_PWA_SYNC_UPDATE_UI__ = syncPresentation;

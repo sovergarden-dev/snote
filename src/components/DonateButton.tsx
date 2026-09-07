@@ -1,5 +1,5 @@
 import { Heart } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { useLocation } from "react-router";
 import { useI18n } from "@/i18n";
 import { shouldHideDonateFab } from "@/lib/donate-fab-visibility";
@@ -58,7 +58,7 @@ export function DonateButton() {
     return () => window.removeEventListener(PWA_UPDATE_STATE_EVENT, sync);
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     window.__SNOTE_PWA_SYNC_UPDATE_UI__?.();
   }, [pathname]);
 
@@ -74,6 +74,7 @@ export function DonateButton() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label={donateAria}
+        data-donate-fab=""
         className={cn(
           "zen-hide fixed bottom-20 right-4 z-40",
           FAB_DISK,
@@ -86,7 +87,10 @@ export function DonateButton() {
   }
 
   return (
-    <div className="zen-hide pointer-events-none fixed bottom-20 right-4 z-40 h-11 w-11">
+    <div
+      data-donate-fab=""
+      className="zen-hide pointer-events-none fixed bottom-20 right-4 z-40 h-11 w-11"
+    >
       <div role="status" aria-live="polite" className="sr-only">
         {t("fab.update.aria")}
       </div>

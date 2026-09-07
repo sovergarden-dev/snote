@@ -132,6 +132,7 @@ describe("registerAppUpdater", () => {
     Reflect.deleteProperty(navigator, "serviceWorker");
     Reflect.deleteProperty(globalThis, "caches");
     Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+    document.querySelector("[data-donate-fab]")?.remove();
     vi.unstubAllEnvs();
     vi.useRealTimers();
     vi.restoreAllMocks();
@@ -334,6 +335,52 @@ describe("registerAppUpdater", () => {
     expect(pwaState()?.updateAvailable).toBe(true);
   });
 
+  it("does not show a Sonner toast on /privacy (FAB-eligible)", async () => {
+    setPathname("/privacy");
+    respondVersion("build-b");
+    const mod = await fresh();
+    mod.registerAppUpdater();
+    await flush(80);
+
+    expect(toastMock).not.toHaveBeenCalled();
+    expect(pwaState()?.updateAvailable).toBe(true);
+  });
+
+  it("does not show Sonner when a donate FAB is mounted, even if pathname is /note", async () => {
+    setPathname("/note");
+    const fab = document.createElement("div");
+    fab.setAttribute("data-donate-fab", "");
+    document.body.appendChild(fab);
+    respondVersion("build-b");
+    const mod = await fresh();
+    mod.registerAppUpdater();
+    await flush(80);
+
+    expect(toastMock).not.toHaveBeenCalled();
+    expect(dismissMock).toHaveBeenCalledWith("pwa-update-toast");
+    expect(pwaState()?.updateAvailable).toBe(true);
+    fab.remove();
+  });
+
+  it("dismisses Sonner from SW onNeedRefresh when a donate FAB is mounted", async () => {
+    setPathname("/note");
+    const fab = document.createElement("div");
+    fab.setAttribute("data-donate-fab", "");
+    document.body.appendChild(fab);
+    vi.stubEnv("DEV", false);
+    (window as unknown as { __SNOTE_E2E_ENABLE_PWA_UPDATE__?: boolean }).__SNOTE_E2E_ENABLE_PWA_UPDATE__ = false;
+    respondVersion("dev");
+    installServiceWorkerHarness(async () => {});
+    const mod = await fresh();
+    mod.registerAppUpdater();
+    await registerSWMock.mock.calls[0][0].onNeedRefresh?.();
+
+    expect(pwaState()?.updateAvailable).toBe(true);
+    expect(toastMock).not.toHaveBeenCalled();
+    expect(dismissMock).toHaveBeenCalledWith("pwa-update-toast");
+    fab.remove();
+  });
+
   it("shows the Sonner toast on /note when the FAB is hidden", async () => {
     setPathname("/note");
     respondVersion("build-b");
@@ -344,6 +391,17 @@ describe("registerAppUpdater", () => {
     expect(toastMock).toHaveBeenCalled();
     expect(toastMock.mock.calls.at(-1)![0]).toBe("New version available");
     expect(pwaState()?.updateAvailable).toBe(true);
+  });
+
+  it("shows the Sonner toast on /note/ trailing slash when the FAB is hidden", async () => {
+    setPathname("/note/");
+    respondVersion("build-b");
+    const mod = await fresh();
+    mod.registerAppUpdater();
+    await flush(80);
+
+    expect(toastMock).toHaveBeenCalled();
+    expect(toastMock.mock.calls.at(-1)![0]).toBe("New version available");
   });
 
   it("shows the Sonner toast on raw .md routes when the FAB is hidden", async () => {
