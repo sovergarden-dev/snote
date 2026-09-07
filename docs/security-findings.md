@@ -775,8 +775,8 @@ canary is on (create → `/<slug>#owner=`; fail-closed on idle). Phase C is
 still on this origin. H1–H6 is still on this line. H2 is still on this line.
 Ko-fi FAB / New Version remains on this line. #113 is still on this line.
 #116 is still on this line. FAB is the primary update UX; Sonner is
-suppressed while Ko-fi FAB is mounted. This is not SQL 240, not Realtime,
-not soak-complete.
+suppressed while Ko-fi FAB is mounted.
+This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
 not soak-complete, not 240. Origin attest only.
