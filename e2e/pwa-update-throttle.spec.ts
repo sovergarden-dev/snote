@@ -1,5 +1,5 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
-import { installPwaUpdateMock, releaseHeldReload, waitForPwaUpdaterReady } from "./helpers/pwa-update-mock";
+import { installPwaUpdateMock, pwaUpdateToast, releaseHeldReload, waitForPwaUpdaterReady } from "./helpers/pwa-update-mock";
 
 // Cross-browser: this spec must pass on chromium, firefox, and webkit — do not
 // scope it to a single project. CI runs the full matrix via PLAYWRIGHT_PROJECT.
@@ -60,7 +60,7 @@ test("Repeated Update clicks only fire one reload and toast never flickers back"
   // timing out downstream on the toast assertion).
   await waitForPwaUpdaterReady(page, testInfo);
 
-  const toast = page.getByText("New version available");
+  const toast = pwaUpdateToast(page);
   await expect(toast).toBeVisible({ timeout: 5_000 });
   await attach(testInfo, page, "before-click");
 
@@ -75,7 +75,7 @@ test("Repeated Update clicks only fire one reload and toast never flickers back"
   for (let i = 0; i < 8; i++) {
     await pending.click({ force: true }).catch(() => {});
   }
-  await expect(page.getByText("Update pending")).toBeVisible({ timeout: 5_000 });
+  await expect(pwaUpdateToast(page, "pending")).toBeVisible({ timeout: 5_000 });
   await attach(testInfo, page, "while-pending");
 
   // Only one reload attempt should have been recorded.
@@ -84,7 +84,7 @@ test("Repeated Update clicks only fire one reload and toast never flickers back"
   // The state machine must stay in its pending invariant until the held reload
   // is released. Timer duration is covered at unit level; this browser check
   // verifies the observable state without a wall-clock sleep.
-  await expect(page.getByText("New version available")).toHaveCount(0);
+  await expect(toast).toHaveCount(0);
   await expect
     .poll(async () => (await pwaState(page))?.updateInProgress)
     .toBe(true);
@@ -96,7 +96,7 @@ test("Repeated Update clicks only fire one reload and toast never flickers back"
 
 
   await expect(toast).toBeHidden({ timeout: 5_000 });
-  await expect(page.getByText("Update pending")).toBeHidden();
+  await expect(pwaUpdateToast(page, "pending")).toBeHidden();
   const finalState = await pwaState(page);
   expect(finalState?.reloadAttemptCount).toBe(1);
   expect(finalState?.currentBuildId).toBe("build-v2");
