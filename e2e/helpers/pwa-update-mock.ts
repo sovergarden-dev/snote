@@ -122,6 +122,7 @@ export async function expectPwaUpdatePrompt(page: Page): Promise<"fab" | "toast"
     return "toast";
   }
   await expect(pwaUpdateFab(page)).toBeVisible({ timeout: 5_000 });
+  await expect(pwaUpdateFab(page).locator("[aria-hidden='true']")).toHaveText("NEW");
   await expect(pwaUpdateFabLiveRegion(page)).toHaveCount(1);
   await expect(pwaUpdateToast(page)).toHaveCount(0);
   return "fab";

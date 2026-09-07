@@ -396,48 +396,51 @@ export function registerAppUpdater(): void {
     if (reloadInProgress) return;
     reloadInProgress = true;
     reloadAttemptCount += 1;
-    const pendingBuildId = latestRemoteBuildId ?? pendingBuildFromPreviousLoad ?? "unknown";
-    try {
-      sessionStorage.setItem(PENDING_BUILD_KEY, pendingBuildId);
-    } catch {
-      /* ignore */
+    const pendingBuildId = latestRemoteBuildId ?? pendingBuildFromPreviousLoad;
+    if (pendingBuildId) {
+      try {
+        sessionStorage.setItem(PENDING_BUILD_KEY, pendingBuildId);
+      } catch {
+        /* ignore */
+      }
     }
     syncDebugState();
-    writeDebugState({ pendingBuildId, lastAcceptedAt: Date.now() });
+    writeDebugState({ pendingBuildId: pendingBuildId ?? null, lastAcceptedAt: Date.now() });
     syncPresentation();
+    const reloadTarget = pendingBuildId ?? getCurrentBuildId();
     // Lifecycle log happens after strategy is chosen below.
 
     if (waitingRegistration?.waiting && updateSWFn) {
       reloadStrategy = "waiting-sw";
       syncDebugState();
-      console.log("[pwa-update] reload strategy=waiting-sw", { currentBuildId: getCurrentBuildId(), pendingBuildId });
+      console.log("[pwa-update] reload strategy=waiting-sw", { currentBuildId: getCurrentBuildId(), pendingBuildId: reloadTarget });
       logLifecycle("reload-start");
       const fallback = window.setTimeout(() => {
-        console.log("[pwa-update] waiting-sw fallback → hard reload", { currentBuildId: getCurrentBuildId(), pendingBuildId });
-        recoverAndReloadCleanUrl(pendingBuildId);
+        console.log("[pwa-update] waiting-sw fallback → hard reload", { currentBuildId: getCurrentBuildId(), pendingBuildId: reloadTarget });
+        recoverAndReloadCleanUrl(reloadTarget);
       }, RELOAD_FALLBACK_MS);
       let done = false;
       const onCtrl = () => {
         if (done) return;
         done = true;
         window.clearTimeout(fallback);
-        reloadCleanUrl(pendingBuildId);
+        reloadCleanUrl(reloadTarget);
       };
       navigator.serviceWorker?.addEventListener("controllerchange", onCtrl, { once: true });
       cleanupTasks.push(() => navigator.serviceWorker?.removeEventListener("controllerchange", onCtrl));
       scrubLegacyVersionParamFromVisibleUrl();
       void updateSWFn(false).catch(() => {
         window.clearTimeout(fallback);
-        recoverAndReloadCleanUrl(pendingBuildId);
+        recoverAndReloadCleanUrl(reloadTarget);
       });
       return;
     }
 
     reloadStrategy = "hard";
     syncDebugState();
-    console.log("[pwa-update] reload strategy=hard", { currentBuildId: getCurrentBuildId(), pendingBuildId });
+    console.log("[pwa-update] reload strategy=hard", { currentBuildId: getCurrentBuildId(), pendingBuildId: reloadTarget });
     logLifecycle("reload-start");
-    recoverAndReloadCleanUrl(pendingBuildId);
+    recoverAndReloadCleanUrl(reloadTarget);
   };
 
   window.__SNOTE_PWA_APPLY_UPDATE__ = reloadNow;
@@ -566,7 +569,7 @@ export function registerAppUpdater(): void {
       presentUpdate();
       void readRemoteVersion()
         .then((remote) => {
-          if (remote?.buildId) {
+          if (remote?.buildId && remote.buildId !== getCurrentBuildId()) {
             latestRemoteBuildId = remote.buildId;
             syncDebugState();
           }

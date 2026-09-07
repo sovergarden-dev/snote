@@ -396,6 +396,42 @@ describe("registerAppUpdater", () => {
     expect(toastMock).not.toHaveBeenCalled();
   });
 
+  it("does not persist pending-build=unknown when applying before version.json returns", async () => {
+    vi.stubEnv("DEV", false);
+    (window as unknown as { __SNOTE_E2E_ENABLE_PWA_UPDATE__?: boolean }).__SNOTE_E2E_ENABLE_PWA_UPDATE__ = false;
+    (globalThis as unknown as { fetch: typeof fetch }).fetch = vi.fn(
+      () => new Promise(() => {}),
+    ) as unknown as typeof fetch;
+    installServiceWorkerHarness(async () => {});
+    const mod = await fresh();
+    mod.registerAppUpdater();
+    registerSWMock.mock.calls[0][0].onNeedRefresh?.();
+
+    expect(pwaState()?.updateAvailable).toBe(true);
+    const navigationWarning = silenceJsdomReloadWarning();
+    window.__SNOTE_PWA_APPLY_UPDATE__?.();
+    navigationWarning.mockRestore();
+
+    expect(sessionStorage.getItem("pwa-update-pending-build")).not.toBe("unknown");
+    expect(sessionStorage.getItem("pwa-update-pending-build")).toBeNull();
+    expect(pwaState()?.pendingBuildId).not.toBe("unknown");
+  });
+
+  it("shows the Sonner toast from SW onNeedRefresh on /note", async () => {
+    setPathname("/note");
+    vi.stubEnv("DEV", false);
+    (window as unknown as { __SNOTE_E2E_ENABLE_PWA_UPDATE__?: boolean }).__SNOTE_E2E_ENABLE_PWA_UPDATE__ = false;
+    respondVersion("dev");
+    installServiceWorkerHarness(async () => {});
+    const mod = await fresh();
+    mod.registerAppUpdater();
+    await registerSWMock.mock.calls[0][0].onNeedRefresh?.();
+
+    expect(pwaState()?.updateAvailable).toBe(true);
+    expect(toastMock).toHaveBeenCalled();
+    expect(toastMock.mock.calls.at(-1)![0]).toBe("New version available");
+  });
+
   it("FAB apply and toast Update share __SNOTE_PWA_APPLY_UPDATE__", async () => {
     setPathname("/note");
     respondVersion("build-b");
