@@ -109,12 +109,16 @@ SQL 240 wait on Home mint is [ADR-001](../adr/001-home-capability-mint-before-sq
    `deployedSha` `a8f7eeb830b8440b899a6ccf0f8018f1a4fe8805`, still
    `capabilityRoutesEnabled` true. Same-canary origin SHA bump
    2026-09-07 ~13:31 ICT:
-   live `deployedSha` `5c33ac241d6f6b4548ea290c299e15e4be799921`, still
-   `capabilityRoutesEnabled` true. Phase A `CutoverNotePage`, Phase B
-   LNO, and Phase C RawView+Home via LNO remain live on this canary.
-   Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi +
-   New Version FAB is live. FAB-primary + Sonner suppress (#113/#116)
-   is live. Home mint fail-closed idle remains live.
+   `deployedSha` `5c33ac241d6f6b4548ea290c299e15e4be799921`, still
+   `capabilityRoutesEnabled` true. Same-canary origin SHA bump
+   2026-09-07 ~17:42 ICT:
+   live `deployedSha` `9dc0240e7d714d548711623f94a50c42dac64475`, still
+   `capabilityRoutesEnabled` true. Choice A (#118) editable plain `/slug`
+   `NotePage` is live; optional `?legacyRo=1` still mounts
+   `CutoverNotePage`. Phase B LNO and Phase C RawView+Home via LNO remain
+   live on this canary. Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export
+   is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress
+   (#113/#116) is live. Home mint fail-closed idle remains live.
    This is not soak-complete.
    Do not treat snapshot verify as `capability_runtime_set`.
    This is not `LEGACY_SHARE_CUTOFF`, soak-complete,

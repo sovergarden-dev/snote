@@ -15,23 +15,25 @@ throw `capability API unavailable` without fetching, and default Auth
 minting stays off. Ordinary Vite builds follow `.env.example`
 (`VITE_CAPABILITY_ROUTES_ENABLED=false`) and attest
 `capabilityRoutesEnabled: false`. Live production `build:release` attests
-`capabilityRoutesEnabled: true` (findings §3e; live origin `5c33ac24`).
-Origin `5c33ac24` mounts `CutoverNotePage` when that canary is on (Phase A
-wire live). Phase C is also live: RawView `/:slug.md` loads via LNO `open`,
+`capabilityRoutesEnabled: true` (findings §3e; live origin `9dc0240e`).
+Origin `9dc0240e` is Choice A (#118): canary stays on, but ordinary slugs
+mount editable `NotePage` instead of `CutoverNotePage` → `LegacyNotePage`.
+Phase C is also live: RawView `/:slug.md` loads via LNO `open`,
 and Home availability uses LNO `exists` (no `public.notes` SELECT; empty
 legacy rows are taken). Pixel HIGH UX H1–H6 is live on this origin. H2 opaque
 Mode/Export is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner
-suppress (#113/#116) is live.
+suppress (#113/#116) is live. Choice A (#118) is live.
 
 This origin compiles `SlugDispatcher` and SplitView pane embeds to mount
-`CutoverNotePage` when that canary is on (lazy; `SlugDispatcher` keeps the
+editable `NotePage` when that canary is on (lazy; `SlugDispatcher` keeps the
 `EditorSkeleton` fallback). A plain `/<slug>` with no matching `#owner`/`#edit`
-fragment then lazy-loads `LegacyNotePage` instead of dual-mode `NotePage`
-`notes` upsert; matching owner/edit fragments still render `NotePage`.
-Flag-off builds keep `NotePage` with `legacyOnly` and do not import
-`CutoverNotePage`. Production `legacy-note-open` is the Phase B read-only
-exact-match Edge (live; findings §1b). This origin attest does not deploy
-Edge.
+fragment mounts `NotePage` (`notes` table path), not `CutoverNotePage`;
+matching owner/edit fragments still render `NotePage`. Optional `?legacyRo=1`
+opt-in lazy-loads `CutoverNotePage` → `LegacyNotePage`. Duplicate securely is
+hidden with honest unavailable copy. Flag-off builds keep `NotePage` with
+`legacyOnly` and do not import `CutoverNotePage`. Production `legacy-note-open`
+is the Phase B read-only exact-match Edge (live; findings §1b). This origin
+attest does not deploy Edge.
 
 When that canary is on, Home create waits until LNO `exists` is false
 (`available`; it does not mint while `idle` or `checking`, and
@@ -42,7 +44,7 @@ owner candidate in `sessionStorage`, calls `createCapabilityApi().createNote`
 that create succeeds, and navigates to `/<slug>#owner=<token>`. Random-note
 still mints a fresh slug without that wait. See
 [ADR-001](adr/001-home-capability-mint-before-sql-240.md).
-This Home mint path is live on origin `5c33ac24` (canary on; fail-closed idle; findings §3e).
+This Home mint path is live on origin `9dc0240e` (canary on; fail-closed idle; findings §3e).
 It is not SQL 240. Recents and
 pins store only the slug, never the owner token. Losing the fragment
 without another copy of the owner capability locks the note out. An
