@@ -7,6 +7,7 @@ const ja: Dictionary = {
     "home.intro_prefix": "URL で任意のメモを開く — 例: ",
     "home.intro_suffix": "。自動保存、デバイス間リアルタイム同期、オフラインでも動作。",
     "home.placeholder": "my-note",
+    "home.skip_to_slug": "メモ名へスキップ",
     "home.status.checking": "確認中…",
     "home.status.available": "使用可能",
     "home.status.taken": "既に存在",

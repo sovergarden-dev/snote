@@ -14,6 +14,8 @@ import {
 } from "@/lib/note-index";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n/index";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 
 interface OutlineSidebarProps {
@@ -29,11 +31,10 @@ interface OutlineSidebarProps {
 }
 
 /**
- * Slide-in Table of Contents from the LEFT.
- *  - Toggle with the floating button or Cmd/Ctrl+\
- *  - Lives outside the editor so it never reflows the writing area.
- *  - Re-parses on every Y.Text change (debounced via observe coalescing).
- *  - Backlinks and dead-link hints read the client-only knowledge index.
+ * Table of Contents.
+ *  - Desktop/tablet: in-flow sidebar that reflows (pushes) the editor.
+ *  - Mobile: overlay + backdrop; Esc and close dismiss.
+ *  - Does not steal caret/focus from the editor (composing stays usable).
  */
 export function OutlineSidebar({
   id = "note-outline",
@@ -43,14 +44,13 @@ export function OutlineSidebar({
   onOpenChange,
   onJump,
   onOpenNote,
-  triggerRef,
 }: OutlineSidebarProps) {
   const { t } = useI18n();
+  const isMobile = useIsMobile();
   const [headings, setHeadings] = useState<Heading[]>([]);
   const [content, setContent] = useState("");
   const [, setIndexEpoch] = useState(0);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const wasOpenRef = useRef(open);
 
   // Re-parse outline whenever the doc changes, but defer to idle callbacks so
   // long notes don't pay parse cost on every keystroke.
@@ -106,24 +106,14 @@ export function OutlineSidebar({
     return () => window.removeEventListener("keydown", onKey);
   }, [onOpenChange, open]);
 
-  useEffect(() => {
-    if (open) {
-      closeRef.current?.focus();
-    } else if (wasOpenRef.current) {
-      triggerRef.current?.focus();
-    }
-    wasOpenRef.current = open;
-  }, [open, triggerRef]);
-
   const handleJump = (line: number) => {
     onJump(line);
-    // Keep open on desktop, close on small screens to free up space.
-    if (window.matchMedia("(max-width: 767px)").matches) onOpenChange(false);
+    if (isMobile) onOpenChange(false);
   };
 
   const handleOpenNote = (target: string) => {
     onOpenNote?.(target);
-    if (window.matchMedia("(max-width: 767px)").matches) onOpenChange(false);
+    if (isMobile) onOpenChange(false);
   };
 
   if (!open) return null;
@@ -136,19 +126,25 @@ export function OutlineSidebar({
 
   return (
     <>
-      {/* Backdrop on mobile */}
-      <div
-        className="fixed inset-0 z-30 bg-background/40 backdrop-blur-sm md:hidden"
-        onClick={() => onOpenChange(false)}
-        aria-hidden
-      />
+      {isMobile && (
+        <div
+          data-outline-backdrop=""
+          className="fixed inset-0 z-30 bg-background/40 backdrop-blur-sm"
+          onClick={() => onOpenChange(false)}
+          aria-hidden
+        />
+      )}
 
-      {/* Sidebar — overlay, so the editor does not jump or cover the first line */}
       <aside
         id={id}
-        role="dialog"
-        aria-modal="true"
-        className="zen-hide fixed left-0 top-11 bottom-0 z-40 w-72 max-w-[85vw] border-r border-border bg-background shadow-lg transition-transform duration-200 motion-reduce:transition-none"
+        role={isMobile ? "dialog" : "complementary"}
+        aria-modal={isMobile ? false : undefined}
+        className={cn(
+          "zen-hide flex w-72 max-w-[85vw] shrink-0 flex-col border-r border-border bg-background",
+          isMobile
+            ? "fixed bottom-0 left-0 top-11 z-40 shadow-lg"
+            : "relative h-full min-h-0",
+        )}
         aria-label={t("brand.outline")}
       >
         <div className="flex h-10 items-center justify-between border-b border-border px-3">

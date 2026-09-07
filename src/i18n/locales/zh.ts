@@ -7,6 +7,7 @@ const zh: Dictionary = {
     "home.intro_prefix": "通过 URL 打开任何笔记 — 例如 ",
     "home.intro_suffix": "。自动保存，跨设备实时同步，离线也能用。",
     "home.placeholder": "我的笔记",
+    "home.skip_to_slug": "跳到笔记名称",
     "home.status.checking": "检查中…",
     "home.status.available": "可用",
     "home.status.taken": "已存在",

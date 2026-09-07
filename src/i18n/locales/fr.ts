@@ -7,6 +7,7 @@ const fr: Dictionary = {
     "home.intro_prefix": "Ouvrez une note par URL — ex. ",
     "home.intro_suffix": ". Sauvegarde automatique, sync temps réel multi-appareils, fonctionne hors-ligne.",
     "home.placeholder": "ma-note",
+    "home.skip_to_slug": "Aller au nom de la note",
     "home.status.checking": "Vérification…",
     "home.status.available": "Disponible",
     "home.status.taken": "Existe déjà",

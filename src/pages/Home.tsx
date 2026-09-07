@@ -13,6 +13,7 @@ import { useI18n, type TKey } from "@/i18n";
 import { useSceneTheme } from "@/hooks/use-scene-theme";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SCENE_NONE } from "@/components/home/scenes/registry";
+import { formatModShortcut } from "@/lib/shortcut-hint";
 import { cn } from "@/lib/utils";
 import SceneHost from "@/components/home/SceneHost";
 import { softNavigate } from "@/lib/soft-navigate";
@@ -316,6 +317,16 @@ export default function Home() {
       className={`relative isolate min-h-svh ${hasScene ? "bg-transparent" : "bg-background"}`}
     >
       {hasScene && <SceneHost />}
+      <a
+        href="#home-slug"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded-md focus:border focus:border-border focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-md"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById("home-slug")?.focus();
+        }}
+      >
+        {t("home.skip_to_slug")}
+      </a>
       <header
         className={cn(
           "relative z-10 flex h-12 items-center justify-between border-b px-4 motion-reduce:transition-none",
@@ -423,7 +434,7 @@ export default function Home() {
                 </>
               )}
               {slugStatus === "taken" && (
-                <span className="text-[10px] font-medium text-warning">{t("home.status.taken")}</span>
+                <span className="text-xs font-medium text-foreground">{t("home.status.taken")}</span>
               )}
               {slugStatus === "invalid" && (
                 <span className="text-[10px] font-medium text-destructive">{t("home.status.invalid")}</span>
@@ -474,9 +485,9 @@ export default function Home() {
             <HomeTemplatePicker value={templateId} onChange={setTemplateId} />
           </Suspense>
           <span className="text-[11px] text-muted-foreground">
-            {t("home.cmdk_hint_prefix")}<kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">⌘K</kbd>
+            {t("home.cmdk_hint_prefix")}<kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">{formatModShortcut(["K"])}</kbd>
             {" / "}
-            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">⌘P</kbd>{t("home.cmdk_hint_suffix")}
+            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">{formatModShortcut(["P"])}</kbd>{t("home.cmdk_hint_suffix")}
           </span>
         </div>
 
@@ -615,7 +626,7 @@ export default function Home() {
                   <button
                     aria-label={t("home.recent.remove")}
                     onClick={() => setRecents(removeRecent(r.slug))}
-                    className="opacity-0 text-muted-foreground group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 motion-safe:transition-opacity hover:text-destructive"
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 motion-safe:transition-opacity hover:text-destructive"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

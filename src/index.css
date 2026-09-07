@@ -189,6 +189,16 @@
   }
 }
 
+@layer components {
+  /* Opaque floating chrome (Mode / Export / Shortcuts) so editor text cannot
+     show through. Color tokens stay the existing popover pair. */
+  .chrome-menu-surface {
+    background-color: hsl(var(--popover) / 1);
+    color: hsl(var(--popover-foreground) / 1);
+    opacity: 1;
+  }
+}
+
 @layer utilities {
   /* Editor + preview text rendering: smart wrapping for mixed scripts */
   .cm-content,

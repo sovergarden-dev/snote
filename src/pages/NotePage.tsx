@@ -989,47 +989,47 @@ export default function NotePage({
         outlineTriggerRef={outlineTriggerRef}
       />
 
-      <main
-        className={
-          narrow
-            ? "relative flex flex-1 min-h-0 flex-col"
-            : "relative flex flex-1 min-h-0 flex-col divide-y divide-border md:flex-row md:divide-x md:divide-y-0"
-        }
-      >
-        {showEditorPane && (
-          <div className={showPreviewPane && !narrow ? "flex-1 min-h-0 min-w-0" : "flex-1 min-w-0"}>
-            <Editor
-              ref={editorRef}
-              doc={doc}
-              awareness={provider.awareness}
-              editable={!writeFenced}
-              className="h-full overflow-auto"
-              onScrollEl={setEditorScrollEl}
-              vim={vim}
-            />
-          </div>
-        )}
-        {showPreviewPane && (
-          <div
-            ref={setPreviewScrollEl}
-            className={`flex-1 min-h-0 min-w-0 overflow-auto bg-muted/30 ${zen ? "zen-hide" : ""}`}
-          >
-            <Preview doc={doc} slug={slug} />
-          </div>
-        )}
-
-      </main>
-
-      <OutlineSidebar
-        id="note-outline"
-        slug={slug}
-        doc={doc}
-        open={outlineOpen}
-        onOpenChange={setOutlineOpen}
-        onJump={(line) => editorRef.current?.jumpToLine(line)}
-        onOpenNote={(target) => navigate("/" + target)}
-        triggerRef={outlineTriggerRef}
-      />
+      <div className="flex min-h-0 flex-1">
+        <OutlineSidebar
+          id="note-outline"
+          slug={slug}
+          doc={doc}
+          open={outlineOpen}
+          onOpenChange={setOutlineOpen}
+          onJump={(line) => editorRef.current?.jumpToLine(line)}
+          onOpenNote={(target) => navigate("/" + target)}
+          triggerRef={outlineTriggerRef}
+        />
+        <main
+          className={
+            narrow
+              ? "relative flex min-h-0 min-w-0 flex-1 flex-col"
+              : "relative flex min-h-0 min-w-0 flex-1 flex-col divide-y divide-border md:flex-row md:divide-x md:divide-y-0"
+          }
+        >
+          {showEditorPane && (
+            <div className={showPreviewPane && !narrow ? "flex-1 min-h-0 min-w-0" : "flex-1 min-w-0"}>
+              <Editor
+                ref={editorRef}
+                doc={doc}
+                awareness={provider.awareness}
+                editable={!writeFenced}
+                className="h-full overflow-auto"
+                onScrollEl={setEditorScrollEl}
+                vim={vim}
+              />
+            </div>
+          )}
+          {showPreviewPane && (
+            <div
+              ref={setPreviewScrollEl}
+              className={`flex-1 min-h-0 min-w-0 overflow-auto bg-muted/30 ${zen ? "zen-hide" : ""}`}
+            >
+              <Preview doc={doc} slug={slug} />
+            </div>
+          )}
+        </main>
+      </div>
 
       <GoalConfetti trigger={confettiTrigger} />
 

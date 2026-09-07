@@ -5,6 +5,8 @@ import * as Y from "yjs";
 import { resetNoteIndexForTests, upsertPlaintextNote } from "@/lib/note-index";
 import { OutlineSidebar } from "../OutlineSidebar";
 
+const overlay = vi.hoisted(() => ({ mobile: false }));
+vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => overlay.mobile }));
 vi.mock("@/i18n/index", () => ({ useI18n: () => ({ t: (key: string, vars?: Record<string, string | number>) => {
   if (!vars) return key;
   return Object.entries(vars).reduce((s, [k, v]) => s.replace(`{${k}}`, String(v)), key);
@@ -18,6 +20,7 @@ function Harness() {
   docRef.current.getText("content").insert(0, "# First heading");
   return (
     <>
+      <input aria-label="editor" defaultValue="draft" />
       <button ref={triggerRef} onClick={() => setOpen(true)}>Open outline</button>
       <OutlineSidebar
         slug="current"
@@ -33,10 +36,12 @@ function Harness() {
 
 describe("OutlineSidebar", () => {
   beforeEach(async () => {
+    overlay.mobile = false;
     await resetNoteIndexForTests();
   });
 
   afterEach(async () => {
+    overlay.mobile = false;
     await resetNoteIndexForTests();
   });
 
@@ -53,26 +58,78 @@ describe("OutlineSidebar", () => {
       />,
     );
     expect(screen.queryByRole("dialog", { name: "brand.outline" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "brand.outline" })).not.toBeInTheDocument();
   });
 
-  it("focuses the close control, closes on Escape, and restores trigger focus", () => {
-    render(<Harness />);
-    const trigger = screen.getByRole("button", { name: "Open outline" });
-    trigger.focus();
-    fireEvent.click(trigger);
-
-    expect(screen.getByRole("dialog", { name: "brand.outline" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "outline.close" })).toHaveFocus();
-
-    fireEvent.keyDown(window, { key: "Escape" });
+  it("reflows as an in-flow complementary region on desktop and does not overlay", () => {
+    const doc = new Y.Doc();
+    render(
+      <OutlineSidebar
+        slug="current"
+        doc={doc}
+        open
+        onOpenChange={vi.fn()}
+        onJump={vi.fn()}
+        triggerRef={createRef<HTMLButtonElement>()}
+      />,
+    );
+    const aside = screen.getByRole("complementary", { name: "brand.outline" });
     expect(screen.queryByRole("dialog", { name: "brand.outline" })).not.toBeInTheDocument();
-    expect(trigger).toHaveFocus();
+    expect(aside.className).not.toMatch(/\bfixed\b/);
+    expect(aside.className).toMatch(/\brelative\b/);
+    expect(document.querySelector("[data-outline-backdrop]")).toBeNull();
+  });
+
+  it("does not steal composing focus when opened on desktop", () => {
+    render(<Harness />);
+    const editor = screen.getByLabelText("editor");
+    editor.focus();
+    fireEvent.click(screen.getByRole("button", { name: "Open outline" }));
+    expect(screen.getByRole("complementary", { name: "brand.outline" })).toBeInTheDocument();
+    expect(editor).toHaveFocus();
+    expect(screen.getByRole("button", { name: "outline.close" })).not.toHaveFocus();
+  });
+
+  it("closes on Escape without restoring trigger focus over the editor", () => {
+    render(<Harness />);
+    const editor = screen.getByLabelText("editor");
+    editor.focus();
+    fireEvent.click(screen.getByRole("button", { name: "Open outline" }));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("complementary", { name: "brand.outline" })).not.toBeInTheDocument();
+    expect(editor).toHaveFocus();
   });
 
   it("retains the Control/Command plus backslash shortcut", () => {
     render(<Harness />);
     fireEvent.keyDown(window, { key: "\\", ctrlKey: true });
-    expect(screen.getByRole("dialog", { name: "brand.outline" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "brand.outline" })).toBeInTheDocument();
+  });
+
+  it("overlays on mobile with a backdrop that Esc and close dismiss", () => {
+    overlay.mobile = true;
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: "Open outline" }));
+
+    const dialog = screen.getByRole("dialog", { name: "brand.outline" });
+    expect(dialog).toHaveAttribute("aria-modal", "false");
+    expect(document.querySelector("[data-outline-backdrop]")).not.toBeNull();
+    expect(dialog.className).toMatch(/\bfixed\b/);
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "brand.outline" })).not.toBeInTheDocument();
+  });
+
+  it("dismisses the mobile overlay from the close button without locking composing", () => {
+    overlay.mobile = true;
+    render(<Harness />);
+    const editor = screen.getByLabelText("editor");
+    editor.focus();
+    fireEvent.click(screen.getByRole("button", { name: "Open outline" }));
+    expect(editor).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "outline.close" }));
+    expect(screen.queryByRole("dialog", { name: "brand.outline" })).not.toBeInTheDocument();
+    expect(editor).toHaveFocus();
   });
 
   it("lists clickable backlinks from the local index", () => {
