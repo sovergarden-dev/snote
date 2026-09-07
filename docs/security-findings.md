@@ -841,8 +841,7 @@ merged origin attest was `9dc0240e` / `304342e0` in #120). This attest pins
 the independently verified short id, not an invented UUID.
 Atlas/Pulse pin matches this independent fetch: live `note.syrin.online`,
 SHA `15ec8285`, Pages `5367a813`, buildId `1788782168827-zcsaepnh`, canary
-on. Pixel visual latch PASS on `15ec8285`: `/hage` editable; FAB Update = 1
-reload; evidence `latch-15ec8285/`. Duplicate hidden remains on this Choice A
+on. Pixel visual latch PASS on `15ec8285`: `/hage` editable; FAB Update = 1 reload; evidence `latch-15ec8285/`. Duplicate hidden remains on this Choice A
 line.
 PWA smoke after this ship: SUCCESS (GitHub Actions `workflow_dispatch` run
 `34119265815`; `EXPECTED_DEPLOYED_SHA` `15ec8285…`;
@@ -884,8 +883,7 @@ Ko-fi FAB / New Version remains on this line. #113 is still on this line.
 #116 is still on this line. #118 is still on this line. #119 is still on
 this line. FAB is the primary update UX; Sonner is suppressed while Ko-fi
 FAB is mounted; Update apply consumes one hard-reload per target.
-Pixel visual latch PASS on `15ec8285`: `/hage` editable; FAB Update = 1
-reload; evidence `latch-15ec8285/`. Sentinel pin: live `15ec8285` / Pages
+Pixel visual latch PASS on `15ec8285`: `/hage` editable; FAB Update = 1 reload; evidence `latch-15ec8285/`. Sentinel pin: live `15ec8285` / Pages
 `5367a813` khớp; smoke `34119265815` PASS (2/2); multi-click residual
 cleared; 240 HOLD.
 This is not SQL 240, not Realtime, not soak-complete.
