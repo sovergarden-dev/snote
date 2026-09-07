@@ -8,7 +8,8 @@ Production: [note.syrin.online](https://note.syrin.online/)
 (Phase C still live; Pixel HIGH UX H1–H6 still on this line; H2 opaque
 Mode/Export still on this line; Ko-fi + New Version FAB still on this line;
 FAB-primary + Sonner suppress (#113/#116) still on this line; Choice A (#118)
-live on origin `9dc0240e`; Pixel visual PASS (/hage editable + Duplicate hidden);
+still on this line; PWA latch (#119) one hard-reload per Update apply live
+on origin `15ec8285`; Pixel visual PASS (/hage editable + Duplicate hidden);
 Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e):
 `capabilityRoutesEnabled` true. Plain slug URLs and SplitView panes mount
 editable `NotePage` (not `CutoverNotePage` → `LegacyNotePage` default);

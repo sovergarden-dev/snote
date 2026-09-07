@@ -391,6 +391,7 @@ describe("legacy-note-open docs", () => {
     expect(capability).toContain("#113");
     expect(capability).toContain("#116");
     expect(capability).toContain("#118");
+    expect(capability).toContain("#119");
     expect(capability).toContain("Choice A");
     expect(capability).toContain("Sonner");
     expect(capability).toContain("FAB-primary");

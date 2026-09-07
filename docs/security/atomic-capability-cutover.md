@@ -112,9 +112,13 @@ SQL 240 wait on Home mint is [ADR-001](../adr/001-home-capability-mint-before-sq
    `deployedSha` `5c33ac241d6f6b4548ea290c299e15e4be799921`, still
    `capabilityRoutesEnabled` true. Same-canary origin SHA bump
    2026-09-07 ~17:42 ICT:
-   live `deployedSha` `9dc0240e7d714d548711623f94a50c42dac64475`, still
-   `capabilityRoutesEnabled` true. Choice A (#118) editable plain `/slug`
-   `NotePage` is live; optional `?legacyRo=1` still mounts
+   `deployedSha` `9dc0240e7d714d548711623f94a50c42dac64475`, still
+   `capabilityRoutesEnabled` true. Same-canary origin SHA bump
+   2026-09-07 ~18:56 ICT:
+   live `deployedSha` `15ec8285a7f02fdf383a1b5aa87ccd13d72ba6f7`, still
+   `capabilityRoutesEnabled` true. PWA latch (#119) one hard-reload per
+   Update apply is live; Choice A (#118) editable plain `/slug`
+   `NotePage` remains live; optional `?legacyRo=1` still mounts
    `CutoverNotePage`. Phase B LNO and Phase C RawView+Home via LNO remain
    live on this canary. Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export
    is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress
