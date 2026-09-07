@@ -1,5 +1,12 @@
 import { Heart } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router";
+import { useI18n } from "@/i18n";
+import { PWA_UPDATE_STATE_EVENT } from "@/lib/pwa-update-readiness";
+import { cn } from "@/lib/utils";
+
+const KOFI_HREF = "https://ko-fi.com/sovergarden";
+const SNOOZE_KEY = "pwa-fab-snooze";
 
 /**
  * Routes where the floating donate button is intentionally suppressed:
@@ -12,25 +19,122 @@ function shouldHide(pathname: string) {
   return false;
 }
 
+function readSnooze(): string | null {
+  try {
+    return sessionStorage.getItem(SNOOZE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeSnooze(buildId: string): void {
+  try {
+    sessionStorage.setItem(SNOOZE_KEY, buildId);
+  } catch {
+    /* ignore */
+  }
+}
+
+const FAB_DISK =
+  "flex h-11 w-11 items-center justify-center rounded-full bg-background/80 text-primary shadow-sm backdrop-blur-md";
+
 /**
- * Fixed floating support-the-project button. Single-click opens Ko-fi in a new
- * tab — no dropdown, no PayPal fallback. Anchored above `PageIndicator` so the
- * two never collide. Hidden in Zen mode via the shared `zen-hide` class.
+ * Fixed floating support-the-project button. Idle: single-click opens Ko-fi
+ * in a new tab. When a PWA update is available, the primary click reloads;
+ * Ko-fi stays on a secondary heart. Anchored above `PageIndicator`. Hidden
+ * in Zen mode via the shared `zen-hide` class.
  */
 export function DonateButton() {
   const { pathname } = useLocation();
+  const { t } = useI18n();
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [pendingBuildId, setPendingBuildId] = useState<string | null>(null);
+  const [snoozedBuildId, setSnoozedBuildId] = useState<string | null>(readSnooze);
+
+  useEffect(() => {
+    const sync = () => {
+      const state = window.__SNOTE_PWA_UPDATE_STATE__;
+      setUpdateAvailable(!!state?.updateAvailable);
+      setPendingBuildId(state?.pendingBuildId ?? null);
+    };
+    sync();
+    window.addEventListener(PWA_UPDATE_STATE_EVENT, sync);
+    return () => window.removeEventListener(PWA_UPDATE_STATE_EVENT, sync);
+  }, []);
+
   if (shouldHide(pathname)) return null;
 
+  const showUpdate = Boolean(
+    updateAvailable && pendingBuildId && pendingBuildId !== snoozedBuildId,
+  );
+  const donateAria = t("fab.donate.aria");
+
+  if (!showUpdate) {
+    return (
+      <a
+        href={KOFI_HREF}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={donateAria}
+        className={cn(
+          "zen-hide fixed bottom-20 right-4 z-40",
+          FAB_DISK,
+          "border border-border transition duration-300 animate-heartbeat motion-reduce:animate-none hover:scale-110 hover:animate-none hover:shadow-lg hover:shadow-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        )}
+      >
+        <Heart className="h-5 w-5 fill-current" />
+      </a>
+    );
+  }
+
   return (
-    <a
-      href="https://ko-fi.com/sovergarden"
-      target="_blank"
-      rel="noopener noreferrer"
-      // eslint-disable-next-line no-restricted-syntax -- brand label
-      aria-label="Support Syrin Notes on Ko-fi"
-      className="zen-hide fixed bottom-20 right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/80 text-primary shadow-sm backdrop-blur-md transition duration-300 animate-heartbeat motion-reduce:animate-none hover:scale-110 hover:animate-none hover:shadow-lg hover:shadow-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <Heart className="h-5 w-5 fill-current" />
-    </a>
+    <div className="zen-hide pointer-events-none fixed bottom-20 right-4 z-40 h-11 w-11">
+      <div role="status" aria-live="polite" className="sr-only">
+        {t("fab.update.aria")}
+      </div>
+      <a
+        href={KOFI_HREF}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={donateAria}
+        className={cn(
+          "pointer-events-auto absolute right-full top-1/2 mr-2 -translate-y-1/2",
+          FAB_DISK,
+          "border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        )}
+      >
+        <Heart className="h-4 w-4 fill-current" />
+      </a>
+      <button
+        type="button"
+        aria-label={t("fab.update.snooze_aria")}
+        onClick={() => {
+          if (!pendingBuildId) return;
+          writeSnooze(pendingBuildId);
+          setSnoozedBuildId(pendingBuildId);
+        }}
+        className="pointer-events-auto absolute bottom-full right-0 mb-2 min-h-11 rounded-full border border-border bg-background/90 px-3 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-md hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {t("fab.update.snooze")}
+      </button>
+      <button
+        type="button"
+        aria-label={t("fab.update.aria")}
+        onClick={() => window.__SNOTE_PWA_APPLY_UPDATE__?.()}
+        className={cn(
+          "pointer-events-auto absolute inset-0",
+          FAB_DISK,
+          "animate-heartbeat-update motion-reduce:animate-none hover:shadow-lg hover:shadow-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        )}
+      >
+        <Heart className="h-5 w-5 fill-current" />
+        <span
+          aria-hidden="true"
+          className="absolute -right-1 -top-1 rounded-full bg-primary px-1 text-[9px] font-bold leading-4 text-primary-foreground"
+        >
+          {t("fab.update.badge")}
+        </span>
+      </button>
+    </div>
   );
 }

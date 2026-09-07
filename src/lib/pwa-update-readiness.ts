@@ -97,6 +97,9 @@ export function emitPwaReadinessInvalidEvent(input: unknown): PwaReadinessInvali
   return reason;
 }
 
+/** Fired whenever `window.__SNOTE_PWA_UPDATE_STATE__` is rewritten. */
+export const PWA_UPDATE_STATE_EVENT = "snote:pwa-update-state" as const;
+
 /** Canonical event name for readiness-validator rejections. */
 export const PWA_READINESS_INVALID_EVENT = "snote:pwa-readiness-invalid" as const;
 
@@ -112,6 +115,10 @@ export type PwaReadinessInvalidEvent = CustomEvent<PwaReadinessInvalidEventDetai
 declare global {
   interface WindowEventMap {
     "snote:pwa-readiness-invalid": PwaReadinessInvalidEvent;
+    "snote:pwa-update-state": Event;
+  }
+  interface Window {
+    __SNOTE_PWA_APPLY_UPDATE__?: () => void;
   }
 }
 

@@ -1,12 +1,7 @@
 {
   "$schema": "./.lintrc-i18n-allowlist.schema.json",
   "description": "Allowlist for intentional hardcoded aria-label/placeholder/title/<meta content> strings that bypass the no-restricted-syntax i18n guard in eslint.config.js. Each entry MUST have a non-empty `reason` matching the `-- <reason>` suffix on the corresponding `eslint-disable-next-line no-restricted-syntax -- <reason>` comment. scripts/i18n-allowlist-check.ts enforces structure (via JSON Schema) + drift on CI.",
-  "entries": [
-    {
-      "file": "src/components/DonateButton.tsx",
-      "reason": "brand label",
-      "notes": "Donate button surface uses the brand word 'Donate' verbatim."
-    },
+    "entries": [
     {
       "file": "src/components/dev/DiagnosticsPanel.tsx",
       "reason": "internal dev-only UI",

@@ -301,6 +301,26 @@ describe("registerAppUpdater", () => {
     expect(serialized).not.toContain("build-b");
   });
 
+  it("dispatches snote:pwa-update-state and wires __SNOTE_PWA_APPLY_UPDATE__", async () => {
+    respondVersion("build-b");
+    const seen: string[] = [];
+    window.addEventListener("snote:pwa-update-state", () => {
+      seen.push(window.__SNOTE_PWA_UPDATE_STATE__?.pendingBuildId ?? "");
+    });
+    const mod = await fresh();
+    mod.registerAppUpdater();
+    await flush(80);
+
+    expect(seen.length).toBeGreaterThan(0);
+    expect(window.__SNOTE_PWA_UPDATE_STATE__?.updateAvailable).toBe(true);
+    expect(typeof window.__SNOTE_PWA_APPLY_UPDATE__).toBe("function");
+
+    window.__SNOTE_PWA_APPLY_UPDATE__?.();
+    const state = window.__SNOTE_PWA_UPDATE_STATE__;
+    expect(state?.reloadAttemptCount).toBe(1);
+    expect(state?.reloadStrategy).toBe("hard");
+  });
+
   it("does not append site-data cleanup copy while the update is pending", async () => {
     respondVersion("build-b");
     const mod = await fresh();
