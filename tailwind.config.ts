@@ -102,6 +102,10 @@ export default {
           "0%, 20%, 100%": { transform: "scale(1)" },
           "10%": { transform: "scale(1.06)" },
         },
+        "heartbeat-update": {
+          "0%, 20%, 100%": { transform: "scale(1.2)" },
+          "10%": { transform: "scale(1.45)" },
+        },
         "fade-in": {
           "0%": { transform: "translateY(4px)" },
           "100%": { transform: "translateY(0)" },
@@ -111,6 +115,7 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         heartbeat: "heartbeat 3s ease-in-out infinite",
+        "heartbeat-update": "heartbeat-update 1.2s ease-in-out infinite",
         "fade-in": "fade-in 0.4s ease-out both",
       },
     },

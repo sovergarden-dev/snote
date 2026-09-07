@@ -15,7 +15,11 @@ import {
   type Lang,
   type TKey,
 } from "@/i18n";
-import type { PwaReloadStrategy, PwaUpdateReadinessState } from "@/lib/pwa-update-readiness";
+import {
+  PWA_UPDATE_STATE_EVENT,
+  type PwaReloadStrategy,
+  type PwaUpdateReadinessState,
+} from "@/lib/pwa-update-readiness";
 
 declare const __BUILD_ID__: string;
 const STAMPED_BUILD_ID: string = typeof __BUILD_ID__ === "string" ? __BUILD_ID__ : "dev";
@@ -55,6 +59,7 @@ declare global {
     __SNOTE_E2E_PWA_POLL_INTERVAL_MS__?: number;
     __SNOTE_PWA_UPDATE_STATE__?: PwaUpdateDebugState;
     __SNOTE_PWA_UPDATE_CLEANUP__?: () => void;
+    __SNOTE_PWA_APPLY_UPDATE__?: () => void;
   }
 }
 
@@ -95,6 +100,7 @@ function writeDebugState(next: Partial<PwaUpdateDebugState>): void {
     ...next,
     currentBuildId: getCurrentBuildId(),
   };
+  window.dispatchEvent(new Event(PWA_UPDATE_STATE_EVENT));
 }
 
 export async function nukeServiceWorkersAndCaches(): Promise<void> {
@@ -435,6 +441,13 @@ export function registerAppUpdater(): void {
     logLifecycle("reload-start");
     recoverAndReloadCleanUrl(pendingBuildId);
   };
+
+  window.__SNOTE_PWA_APPLY_UPDATE__ = reloadNow;
+  cleanupTasks.push(() => {
+    if (window.__SNOTE_PWA_APPLY_UPDATE__ === reloadNow) {
+      delete window.__SNOTE_PWA_APPLY_UPDATE__;
+    }
+  });
 
   const logLifecycle = (event: string) => {
     const payload = {
