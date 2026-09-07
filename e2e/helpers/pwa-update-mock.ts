@@ -99,7 +99,9 @@ export function pwaUpdateFab(page: Page) {
  * The badge is the only `span[aria-hidden='true']` inside the button.
  */
 export function pwaUpdateFabBadge(page: Page) {
-  return pwaUpdateFab(page).locator("span[aria-hidden='true']");
+  return pwaUpdateFab(page).locator("span[aria-hidden='true']").filter({
+    hasText: /^(NEW|MỚI|NEU|新|신|NOVO)$/,
+  });
 }
 
 export function pwaUpdateFabLiveRegion(page: Page) {
@@ -133,7 +135,7 @@ export async function expectPwaUpdatePrompt(page: Page): Promise<"fab" | "toast"
     return "toast";
   }
   await expect(pwaUpdateFab(page)).toBeVisible({ timeout: 5_000 });
-  await expect(pwaUpdateFabBadge(page)).toHaveText(/^(NEW|MỚI|NEU|新|신|NOVO)$/);
+  await expect(pwaUpdateFabBadge(page)).toBeVisible();
   await expect(pwaUpdateFabLiveRegion(page)).toHaveCount(1);
   await expect(pwaUpdateToast(page)).toHaveCount(0);
   return "fab";
