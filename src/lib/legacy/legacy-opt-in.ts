@@ -49,5 +49,5 @@ export function markLegacyOptInConfirmed(slug: string): void {
   }
 }
 
-/** Duplicate securely stays off until SQL 240 ships import-legacy. */
-export const DUPLICATE_SECURELY_AVAILABLE = false;
+/** Duplicate securely is on: SQL 240 import-legacy is available to the SPA. */
+export const DUPLICATE_SECURELY_AVAILABLE = true;

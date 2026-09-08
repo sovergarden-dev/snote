@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Lock, LockOpen } from "lucide-react";
+import { CopyPlus, Loader2, Lock, LockOpen } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import * as Y from "yjs";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,9 @@ export interface NoteSecurityPanelProps {
   ownerOnly?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onDuplicateSecurely?: () => void;
+  duplicateBusy?: boolean;
+  duplicateFeedback?: "network" | "permission" | "retry" | "success" | null;
 }
 
 export function LegacyRoBanner() {
@@ -75,6 +78,9 @@ export function NoteSecurityPanel({
   ownerOnly = false,
   open: openProp,
   onOpenChange,
+  onDuplicateSecurely,
+  duplicateBusy = false,
+  duplicateFeedback = null,
 }: NoteSecurityPanelProps) {
   const { t } = useI18n();
   const isMobile = useIsMobile();
@@ -119,6 +125,28 @@ export function NoteSecurityPanel({
     setConfirmKind(null);
     applyLegacy(true);
   };
+
+  const showDuplicate = DUPLICATE_SECURELY_AVAILABLE && showLegacy && legacyOn
+    && Boolean(onDuplicateSecurely || isEncrypted);
+  const duplicateFailed = duplicateFeedback === "network"
+    || duplicateFeedback === "permission"
+    || duplicateFeedback === "retry";
+  const duplicateCtaLabel = duplicateBusy
+    ? t("security.duplicate_busy")
+    : duplicateFailed
+      ? t("security.duplicate_retry")
+      : t("security.duplicate_label");
+  const duplicateHelperKey = duplicateBusy
+    ? "security.duplicate_busy" as const
+    : duplicateFeedback === "permission"
+      ? "security.duplicate_fail_permission" as const
+      : duplicateFailed
+        ? "security.duplicate_fail" as const
+        : duplicateFeedback === "success"
+          ? "security.duplicate_success" as const
+          : !onDuplicateSecurely && isEncrypted
+            ? "security.duplicate_helper_locked" as const
+            : "security.duplicate_helper" as const;
 
   const triggerButton = (
     <Button
@@ -196,20 +224,47 @@ export function NoteSecurityPanel({
               onCheckedChange={requestLegacy}
             />
           </div>
-          {DUPLICATE_SECURELY_AVAILABLE && (
-            <div className="flex min-h-11 items-start justify-between gap-3 opacity-60">
+          {showDuplicate && (
+            <div
+              data-testid="security-duplicate-row"
+              className="flex min-h-11 items-start justify-between gap-3"
+            >
               <div className="min-w-0">
                 <p id="security-duplicate-label" className="text-sm font-medium">
                   {t("security.duplicate_label")}
                 </p>
-                <p className="text-[11px] text-muted-foreground">{t("security.duplicate_helper")}</p>
+                <p
+                  className={cn(
+                    "text-[11px] text-muted-foreground",
+                    duplicateFailed && "text-destructive",
+                  )}
+                  role={
+                    duplicateBusy || duplicateFeedback === "success"
+                      ? "status"
+                      : duplicateFailed
+                        ? "alert"
+                        : undefined
+                  }
+                >
+                  {t(duplicateHelperKey)}
+                </p>
               </div>
-              <SecuritySwitch
-                checked={false}
-                disabled
-                labelledBy="security-duplicate-label"
-                onCheckedChange={() => {}}
-              />
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="h-11 min-h-11 min-w-11 px-3"
+                aria-label={duplicateCtaLabel}
+                aria-busy={duplicateBusy || undefined}
+                disabled={busy || duplicateBusy || duplicateFeedback === "success" || !onDuplicateSecurely}
+                onClick={() => onDuplicateSecurely?.()}
+              >
+                {duplicateBusy
+                  ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
+                  : duplicateFailed
+                    ? t("security.duplicate_retry")
+                    : <CopyPlus className="h-4 w-4" aria-hidden="true" />}
+              </Button>
             </div>
           )}
         </div>

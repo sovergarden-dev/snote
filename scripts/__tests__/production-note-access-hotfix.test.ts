@@ -77,7 +77,7 @@ describe("production note access hotfix", () => {
     expect(panel).toContain("security.legacy_helper_on_plain");
     expect(panel).toContain("security.legacy_banner_cta");
     expect(source("src/lib/legacy/legacy-opt-in.ts")).toContain(
-      "export const DUPLICATE_SECURELY_AVAILABLE = false",
+      "export const DUPLICATE_SECURELY_AVAILABLE = true",
     );
     expect(source("src/pages/LegacyNotePage.tsx")).toContain(
       "allowEncryptionTransitions={false}",
@@ -176,10 +176,11 @@ describe("production note access hotfix", () => {
     expect(shareDialog).toContain('import("@/lib/capability/client")');
     expect(lockButton).toContain('import("@/lib/capability/client")');
     expect(securityPanel).not.toContain('import("@/lib/capability/client")');
-    expect(legacyNotePage).not.toContain('import("@/lib/capability/client")');
-    expect(legacyNotePage).not.toContain("loadCapabilityApi");
+    expect(legacyNotePage).toContain('import("@/lib/capability/client")');
+    expect(legacyNotePage).toContain("loadCapabilityApi");
     expectValueImportBehindRoutesGuard(shareDialog, "@/lib/capability/client");
     expectValueImportBehindRoutesGuard(lockButton, "@/lib/capability/client");
+    expectValueImportBehindRoutesGuard(legacyNotePage, "@/lib/capability/client");
 
     const revokeLink = shareDialog.slice(shareDialog.indexOf("const revokeLink"));
     const capabilityGuardAt = revokeLink.indexOf("if (capabilityAccess)");
@@ -342,6 +343,34 @@ describe("production note access hotfix", () => {
       /VITE_ADMIN_PANEL_ENABLED === ["']true["']/,
     );
     expect(gate).toContain("Admin SPA must not ship in default production JS");
+  });
+
+  it("routes Duplicate securely through note-session import-legacy, not PostgREST", () => {
+    const legacyNotePage = source("src/pages/LegacyNotePage.tsx");
+    const cutover = source("src/lib/legacy/cutover.ts");
+    const panel = source("src/components/note/NoteSecurityPanel.tsx");
+    const client = source("src/lib/capability/client.ts");
+    const notePage = source("src/pages/NotePage.tsx");
+    const topbar = source("src/components/note/topbar/Topbar.tsx");
+    const envExample = source(".env.example");
+
+    expect(legacyNotePage).not.toContain("integrations/supabase/client");
+    expect(legacyNotePage).not.toContain(".rpc(");
+    expect(legacyNotePage).not.toContain("capability_note_import_legacy");
+    expect(cutover).not.toContain("integrations/supabase/client");
+    expect(cutover).not.toContain(".rpc(");
+    expect(cutover).not.toContain("capability_note_import_legacy");
+    expect(panel).not.toContain("integrations/supabase/client");
+    expect(panel).not.toContain(".rpc(");
+    expect(notePage).not.toContain("onDuplicateSecurely");
+    expect(topbar).not.toContain("onDuplicateSecurely");
+    expect(cutover).toContain("importLegacyNote");
+    expect(legacyNotePage).toContain("createCapabilityApi");
+    expect(legacyNotePage).toContain("duplicateLegacyNote");
+    expect(client).toContain('action: "import-legacy"');
+    expect(client).toContain("Authorization");
+    expect(envExample).not.toMatch(/VITE_.*SERVICE/i);
+    expect(envExample).not.toMatch(/VITE_.*SECRET/i);
   });
 
   it("locks the default production bundle off capability invoke strings", () => {

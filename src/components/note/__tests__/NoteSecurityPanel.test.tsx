@@ -28,6 +28,8 @@ vi.mock("lucide-react", () => ({
   Lock: () => null,
   LockOpen: () => null,
   ChevronDown: () => null,
+  CopyPlus: () => null,
+  Loader2: () => null,
 }));
 
 function LocationProbe() {
@@ -43,6 +45,10 @@ function renderPanel({
   ownerOnly = false,
   slug = "daily",
   capabilityAccess = null,
+  isEncrypted = false,
+  onDuplicateSecurely,
+  duplicateBusy = false,
+  duplicateFeedback = null,
 }: {
   path?: string;
   legacyOn?: boolean;
@@ -51,6 +57,10 @@ function renderPanel({
   ownerOnly?: boolean;
   slug?: string;
   capabilityAccess?: CapabilityAccess | null;
+  isEncrypted?: boolean;
+  onDuplicateSecurely?: () => void;
+  duplicateBusy?: boolean;
+  duplicateFeedback?: "network" | "permission" | "retry" | "success" | null;
 } = {}) {
   return render(
     <MemoryRouter initialEntries={[path]}>
@@ -64,12 +74,15 @@ function renderPanel({
                 <NoteSecurityPanel
                   slug={slug}
                   doc={new Y.Doc()}
-                  isEncrypted={false}
+                  isEncrypted={isEncrypted}
                   allowEncryptionTransitions={allowEncryptionTransitions}
                   capabilityAccess={capabilityAccess}
                   legacyOn={legacyOn}
                   loading={loading}
                   ownerOnly={ownerOnly}
+                  onDuplicateSecurely={onDuplicateSecurely}
+                  duplicateBusy={duplicateBusy}
+                  duplicateFeedback={duplicateFeedback}
                 />
               </>
             }
@@ -311,5 +324,92 @@ describe("NoteSecurityPanel", () => {
     const row = screen.getByTestId("security-legacy-row");
     expect(row.className).toMatch(/min-h-11/);
     expect(screen.getByRole("switch", { name: "security.legacy_label" }).className).toMatch(/h-11/);
+  });
+
+  it("hides Duplicate securely on the editable capability path", async () => {
+    renderPanel({
+      path: "/daily#owner=abc",
+      capabilityAccess: { slug: "daily", scope: "owner", token: "a".repeat(43) },
+      onDuplicateSecurely: () => {},
+    });
+    await openPanel();
+    expect(screen.queryByText("security.duplicate_label")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "security.duplicate_label" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "security.duplicate_label" })).not.toBeInTheDocument();
+  });
+
+  it("shows a clickable Duplicate securely CTA on Legacy RO, not a disabled switch", async () => {
+    const onDuplicateSecurely = vi.fn();
+    renderPanel({
+      path: "/daily?legacyRo=1",
+      legacyOn: true,
+      allowEncryptionTransitions: false,
+      onDuplicateSecurely,
+    });
+    await openPanel();
+
+    expect(screen.getByText("security.duplicate_helper")).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "security.duplicate_label" })).not.toBeInTheDocument();
+    const cta = screen.getByRole("button", { name: "security.duplicate_label" });
+    expect(cta).not.toBeDisabled();
+    expect(cta.className).toMatch(/min-h-11/);
+    expect(cta.className).toMatch(/min-w-11/);
+    await userEvent.click(cta);
+    expect(onDuplicateSecurely).toHaveBeenCalledOnce();
+  });
+
+  it("keeps Duplicate securely disabled until the note can be imported", async () => {
+    renderPanel({
+      path: "/daily",
+      legacyOn: true,
+      isEncrypted: true,
+      allowEncryptionTransitions: false,
+    });
+    await openPanel();
+    expect(screen.getByText("security.duplicate_helper_locked")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "security.duplicate_label" })).toBeDisabled();
+  });
+
+  it("shows busy and fail copy without a forever-disabled switch", async () => {
+    const onDuplicateSecurely = vi.fn();
+    renderPanel({
+      path: "/daily",
+      legacyOn: true,
+      onDuplicateSecurely,
+      duplicateBusy: true,
+    });
+    await openPanel();
+    expect(screen.getByText("security.duplicate_busy")).toBeInTheDocument();
+    const busy = screen.getByRole("button", { name: "security.duplicate_busy" });
+    expect(busy).toBeDisabled();
+    expect(busy).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryByRole("switch", { name: "security.duplicate_label" })).not.toBeInTheDocument();
+    cleanup();
+
+    renderPanel({
+      path: "/daily",
+      legacyOn: true,
+      onDuplicateSecurely,
+      duplicateFeedback: "network",
+    });
+    await openPanel();
+    const fail = screen.getByRole("alert");
+    expect(fail).toHaveTextContent("security.duplicate_fail");
+    const retry = screen.getByRole("button", { name: "security.duplicate_retry" });
+    expect(retry).not.toBeDisabled();
+    expect(retry.className).toMatch(/min-h-11/);
+    await userEvent.click(retry);
+    expect(onDuplicateSecurely).toHaveBeenCalledOnce();
+    cleanup();
+
+    renderPanel({
+      path: "/daily",
+      legacyOn: true,
+      onDuplicateSecurely,
+      duplicateFeedback: "permission",
+    });
+    await openPanel();
+    expect(screen.getByRole("alert")).toHaveTextContent("security.duplicate_fail_permission");
+    expect(screen.getByRole("button", { name: "security.duplicate_retry" })).not.toBeDisabled();
   });
 });
