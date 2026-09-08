@@ -22,8 +22,9 @@ vi.mock("@/components/note/HistoryDialog", () => ({
     return null;
   },
 }));
-vi.mock("@/components/note/LockButton", () => ({
-  LockButton: () => <button type="button">Encryption transition</button>,
+vi.mock("@/components/note/NoteSecurityPanel", () => ({
+  NoteSecurityPanel: () => <button type="button">Note security</button>,
+  LegacyRoBanner: () => null,
 }));
 vi.mock("@/components/note/PinButton", () => ({ PinButton: () => null }));
 vi.mock("@/components/note/WordGoalDialog", () => ({ WordGoalDialog: () => null }));
@@ -104,31 +105,31 @@ describe("Topbar encryption transitions", () => {
   it.each([
     ["wide", false],
     ["narrow", true],
-  ])("hides the LockButton in the %s layout when transitions are disabled", (_layout, narrowOverride) => {
+  ])("keeps the security panel in the %s layout when encryption transitions are disabled", (_layout, narrowOverride) => {
     renderTopbar({ allowEncryptionTransitions: false, narrowOverride });
 
-    expect(screen.queryByRole("button", { name: "Encryption transition" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Note security" })).toBeInTheDocument();
   });
 
-  it("keeps the owner LockButton visible by default", () => {
+  it("keeps the owner security panel visible by default", () => {
     renderTopbar({ narrowOverride: false });
 
-    expect(screen.getByRole("button", { name: "Encryption transition" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Note security" })).toBeInTheDocument();
   });
 
-  it("keeps the owner LockButton visible when transitions are explicitly enabled", () => {
+  it("keeps the owner security panel visible when transitions are explicitly enabled", () => {
     renderTopbar({ allowEncryptionTransitions: true, narrowOverride: true });
 
-    expect(screen.getByRole("button", { name: "Encryption transition" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Note security" })).toBeInTheDocument();
   });
 
-  it("keeps the existing non-owner capability scope gate", () => {
+  it("keeps Legacy available on non-owner capability notes (view opt-in)", () => {
     renderTopbar({
       allowEncryptionTransitions: true,
       capabilityAccess: { ...ownerAccess, scope: "edit" },
     });
 
-    expect(screen.queryByRole("button", { name: "Encryption transition" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Note security" })).toBeInTheDocument();
   });
 
   it("does not expose slug-keyed legacy history to capability notes", () => {

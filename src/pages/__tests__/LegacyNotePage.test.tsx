@@ -29,6 +29,15 @@ vi.mock("@/components/app/AppShell", () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 vi.mock("@/i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
+vi.mock("@/components/note/NoteSecurityPanel", () => ({
+  NoteSecurityPanel: () => <button type="button" aria-label="security.panel_title" />,
+  LegacyRoBanner: ({ onOpenSecurity }: { onOpenSecurity: () => void }) => (
+    <div>
+      <span>security.legacy_banner</span>
+      <button type="button" onClick={onOpenSecurity}>security.legacy_banner_open</button>
+    </div>
+  ),
+}));
 vi.mock("react-helmet-async", () => ({ Helmet: () => null }));
 vi.mock("lucide-react", () => ({ ArrowLeft: () => null, Eye: () => null, Loader2: () => null }));
 
@@ -88,6 +97,8 @@ describe("LegacyNotePage cutover mode", () => {
     await waitFor(() => expect(screen.getByText("legacy.read_only")).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: "legacy.duplicate_securely" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("legacy.new_slug")).not.toBeInTheDocument();
-    expect(screen.getByText("legacy.duplicate_unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("legacy.duplicate_unavailable")).not.toBeInTheDocument();
+    expect(screen.getByText("security.legacy_banner")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "security.panel_title" })).toBeInTheDocument();
   });
 });

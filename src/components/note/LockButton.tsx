@@ -45,6 +45,7 @@ import {
   unprotectExistingSnapshots,
   type SnapshotProtection,
 } from "@/lib/snapshots";
+import { SecuritySwitch } from "./SecuritySwitch";
 
 const loadCapabilityApi = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
   ? async () => (await import("@/lib/capability/client")).createCapabilityApi()
@@ -59,6 +60,9 @@ interface LockButtonProps {
   provider?: YjsProviderLike | null;
   capabilityAccess?: CapabilityAccess | null;
   encryption?: SnapshotProtection | null;
+  layout?: "icon" | "switch";
+  switchLabelledBy?: string;
+  disabled?: boolean;
 }
 
 type CapabilityProviderSurface = YjsProviderLike & {
@@ -122,6 +126,9 @@ export function LockButton({
   provider = null,
   capabilityAccess = null,
   encryption = null,
+  layout = "icon",
+  switchLabelledBy = "security-encrypt-label",
+  disabled = false,
 }: LockButtonProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -300,35 +307,7 @@ export function LockButton({
     }
   };
 
-  if (isEncrypted) {
-    return (
-      <DropdownMenu>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={t("lock.aria_encryption")}>
-                <Lock className="h-4 w-4 text-success" />
-              </Button>
-            </DropdownMenuTrigger>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">{t("lock.encrypted_tooltip")}</TooltipContent>
-        </Tooltip>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={copyKey}>
-            <Copy className="h-3.5 w-3.5" />
-            {t("lock.copy_url_key")}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={unlockNote} disabled={busy}>
-            <LockOpen className="h-3.5 w-3.5" />
-            {t("lock.unlock")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  }
-
-  return (
+  const encryptDialog = (
     <Dialog
       open={open}
       onOpenChange={(o) => {
@@ -336,16 +315,18 @@ export function LockButton({
         if (!o) setPass("");
       }}
     >
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={t("lock.aria_encrypt")}>
-              <LockOpen className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">{t("lock.tooltip_encrypt")}</TooltipContent>
-      </Tooltip>
+      {layout === "icon" && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={t("lock.aria_encrypt")}>
+                <LockOpen className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{t("lock.tooltip_encrypt")}</TooltipContent>
+        </Tooltip>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -382,4 +363,68 @@ export function LockButton({
       </DialogContent>
     </Dialog>
   );
+
+  if (isEncrypted) {
+    if (layout === "switch") {
+      return (
+        <div className="flex flex-col items-end gap-1">
+          <SecuritySwitch
+            checked
+            disabled={busy || disabled}
+            labelledBy={switchLabelledBy}
+            onCheckedChange={(next) => {
+              if (!next) void unlockNote();
+            }}
+          />
+          <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-[11px]" onClick={copyKey}>
+            <Copy className="h-3.5 w-3.5" />
+            {t("lock.copy_url_key")}
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <DropdownMenu>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={t("lock.aria_encryption")}>
+                <Lock className="h-4 w-4 text-success" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{t("lock.encrypted_tooltip")}</TooltipContent>
+        </Tooltip>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={copyKey}>
+            <Copy className="h-3.5 w-3.5" />
+            {t("lock.copy_url_key")}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={unlockNote} disabled={busy}>
+            <LockOpen className="h-3.5 w-3.5" />
+            {t("lock.unlock")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  if (layout === "switch") {
+    return (
+      <>
+        <SecuritySwitch
+          checked={false}
+          disabled={busy || disabled}
+          labelledBy={switchLabelledBy}
+          onCheckedChange={(next) => {
+            if (next) setOpen(true);
+          }}
+        />
+        {encryptDialog}
+      </>
+    );
+  }
+
+  return encryptDialog;
 }

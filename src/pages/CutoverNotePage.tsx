@@ -18,11 +18,9 @@ interface CutoverNotePageProps {
 const LegacyNotePage = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
   ? lazy(() => import("./LegacyNotePage"))
   : null;
-const NotePage = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
-  ? lazy(() => import("./NotePage"))
-  : null;
 const editorFallback = <EditorSkeleton />;
 
+/** Choice A: this page is mounted only for `?legacyRo=1`. Always LNO, even with #owner/#edit. */
 export function CutoverNotePage(props: CutoverNotePageProps) {
   const params = useParams();
   const location = useLocation();
@@ -43,22 +41,14 @@ export function CutoverNotePage(props: CutoverNotePageProps) {
     }
   }, [capabilityAccess, slug]);
 
-  if (!capabilityAccess) {
-    if (!LegacyNotePage) return null;
-    return (
-      <Suspense fallback={editorFallback}>
-        <LegacyNotePage
-          slug={slug}
-          embed={!!props.embedSlug}
-          onPrimaryScroller={props.onPrimaryScroller}
-        />
-      </Suspense>
-    );
-  }
-  if (!NotePage) return null;
+  if (!LegacyNotePage) return null;
   return (
     <Suspense fallback={editorFallback}>
-      <NotePage {...props} />
+      <LegacyNotePage
+        slug={slug}
+        embed={!!props.embedSlug}
+        onPrimaryScroller={props.onPrimaryScroller}
+      />
     </Suspense>
   );
 }

@@ -43,7 +43,7 @@ function renderRoute(path: string) {
   );
 }
 
-describe("CutoverNotePage canary dispatch", () => {
+describe("CutoverNotePage Legacy RO opt-in", () => {
   beforeEach(() => {
     harness.notePage.length = 0;
     harness.legacyPage.length = 0;
@@ -57,19 +57,19 @@ describe("CutoverNotePage canary dispatch", () => {
     expect(harness.notePage).toHaveLength(0);
   });
 
-  it("renders NotePage for a matching #owner fragment", async () => {
+  it("keeps LegacyNotePage when #owner is present (opt-in is view-only LNO)", async () => {
     renderRoute(`/daily#owner=${OWNER}`);
 
-    expect(await screen.findByText("note-page:route")).toBeInTheDocument();
-    expect(screen.queryByText(/legacy-page:/)).not.toBeInTheDocument();
-    expect(harness.legacyPage).toHaveLength(0);
+    expect(await screen.findByText("legacy-page:daily")).toBeInTheDocument();
+    expect(screen.queryByText("note-page:route")).not.toBeInTheDocument();
+    expect(harness.notePage).toHaveLength(0);
   });
 
-  it("renders NotePage for a matching #edit fragment", async () => {
+  it("keeps LegacyNotePage when #edit is present", async () => {
     renderRoute(`/daily#edit=${EDIT}`);
 
-    expect(await screen.findByText("note-page:route")).toBeInTheDocument();
-    expect(screen.queryByText(/legacy-page:/)).not.toBeInTheDocument();
+    expect(await screen.findByText("legacy-page:daily")).toBeInTheDocument();
+    expect(screen.queryByText("note-page:route")).not.toBeInTheDocument();
   });
 
   it("uses LegacyNotePage for an embedded plain slug", async () => {
