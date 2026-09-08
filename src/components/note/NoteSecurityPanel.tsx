@@ -131,9 +131,11 @@ export function NoteSecurityPanel({
   const duplicateFailed = duplicateFeedback === "network"
     || duplicateFeedback === "permission"
     || duplicateFeedback === "retry";
-  const duplicateCtaLabel = duplicateFailed
-    ? t("security.duplicate_retry")
-    : t("security.duplicate_label");
+  const duplicateCtaLabel = duplicateBusy
+    ? t("security.duplicate_busy")
+    : duplicateFailed
+      ? t("security.duplicate_retry")
+      : t("security.duplicate_label");
   const duplicateHelperKey = duplicateBusy
     ? "security.duplicate_busy" as const
     : duplicateFeedback === "permission"

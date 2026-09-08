@@ -60,8 +60,18 @@ describe("Note security panel i18n", () => {
     expect(dict.vi["security.duplicate_busy"]).toBe("Đang sao chép…");
     expect(dict.en["security.duplicate_success"]).toBe("Copy created. Opening the new note.");
     expect(dict.vi["security.duplicate_success"]).toBe("Đã tạo bản sao. Đang mở note mới.");
-    expect(dict.en["security.duplicate_fail"]).toMatch(/connection/i);
-    expect(dict.vi["security.duplicate_fail"]).toMatch(/kết nối/i);
+    expect(dict.en["security.duplicate_fail"]).toBe(
+      "Couldn't duplicate this note. Check your connection and try again.",
+    );
+    expect(dict.vi["security.duplicate_fail"]).toBe(
+      "Không sao chép được note này. Kiểm tra kết nối rồi thử lại.",
+    );
+    expect(dict.en["security.duplicate_fail_permission"]).toBe(
+      "Couldn't duplicate this note. You may not have permission.",
+    );
+    expect(dict.vi["security.duplicate_fail_permission"]).toBe(
+      "Không sao chép được note này. Có thể bạn không có quyền.",
+    );
     expect(dict.en["security.duplicate_retry"]).toBe("Retry");
     expect(dict.vi["security.duplicate_retry"]).toBe("Thử lại");
     expect(dict.en["security.legacy_helper_on_plain"]).toMatch(/view-only/);

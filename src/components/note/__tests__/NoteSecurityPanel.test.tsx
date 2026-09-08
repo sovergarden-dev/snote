@@ -341,7 +341,7 @@ describe("NoteSecurityPanel", () => {
   it("shows a clickable Duplicate securely CTA on Legacy RO, not a disabled switch", async () => {
     const onDuplicateSecurely = vi.fn();
     renderPanel({
-      path: "/daily",
+      path: "/daily?legacyRo=1",
       legacyOn: true,
       allowEncryptionTransitions: false,
       onDuplicateSecurely,
@@ -380,7 +380,9 @@ describe("NoteSecurityPanel", () => {
     });
     await openPanel();
     expect(screen.getByText("security.duplicate_busy")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "security.duplicate_label" })).toBeDisabled();
+    const busy = screen.getByRole("button", { name: "security.duplicate_busy" });
+    expect(busy).toBeDisabled();
+    expect(busy).toHaveAttribute("aria-busy", "true");
     expect(screen.queryByRole("switch", { name: "security.duplicate_label" })).not.toBeInTheDocument();
     cleanup();
 
@@ -398,5 +400,16 @@ describe("NoteSecurityPanel", () => {
     expect(retry.className).toMatch(/min-h-11/);
     await userEvent.click(retry);
     expect(onDuplicateSecurely).toHaveBeenCalledOnce();
+    cleanup();
+
+    renderPanel({
+      path: "/daily",
+      legacyOn: true,
+      onDuplicateSecurely,
+      duplicateFeedback: "permission",
+    });
+    await openPanel();
+    expect(screen.getByRole("alert")).toHaveTextContent("security.duplicate_fail_permission");
+    expect(screen.getByRole("button", { name: "security.duplicate_retry" })).not.toBeDisabled();
   });
 });

@@ -200,6 +200,25 @@ describe("LegacyNotePage cutover mode", () => {
     expect(screen.getByRole("button", { name: "security.duplicate_label" })).not.toBeDisabled();
   });
 
+  it("maps a 403 import-legacy rejection to permission copy without leaving the legacy note", async () => {
+    harness.open.mockResolvedValue(PLAIN_NOTE);
+    harness.importLegacyNote.mockRejectedValue({ status: 403, code: "unauthorized" });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "security.duplicate_label" })).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: "security.duplicate_label" }));
+
+    await waitFor(() => {
+      expect(harness.toast).toHaveBeenCalledWith({
+        title: "security.duplicate_fail_permission",
+        variant: "destructive",
+      });
+    });
+    expect(screen.getByTestId("loc")).toHaveTextContent("/daily");
+    expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
+  });
+
   it("keeps Note security on LNO miss", async () => {
     harness.open.mockResolvedValue(null);
 
