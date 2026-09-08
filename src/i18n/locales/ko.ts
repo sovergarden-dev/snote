@@ -271,6 +271,7 @@ const ko: Dictionary = {
     "security.panel_title": "노트 보안",
     "security.encrypt_label": "노트 암호화",
     "security.encrypt_helper": "이 노트를 브라우저에서 AES-256으로 암호화합니다. 다른 사람이 읽으려면 URL에 #key를 붙여 공유하세요.",
+    "security.encrypt_helper_unavailable": "암호화는 소유자 권한 노트(#owner=)에서만 사용할 수 있습니다. 이 일반 노트는 기존 암호화 게이트를 유지합니다.",
     "security.advanced": "고급",
     "security.legacy_label": "레거시 형식",
     "security.legacy_helper_off": "이 노트를 읽기 전용 레거시 뷰어로 엽니다. 다른 노트는 최신 편집기에 그대로 둡니다.",

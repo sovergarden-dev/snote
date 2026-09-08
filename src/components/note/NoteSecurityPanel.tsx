@@ -91,7 +91,7 @@ export function NoteSecurityPanel({
   const open = openProp ?? uncontrolledOpen;
   const setOpen = onOpenChange ?? setUncontrolledOpen;
   const showLegacy = canaryOn && !ownerOnly;
-  const showEncrypt = allowEncryptionTransitions && !!doc && !ownerOnly;
+  const showEncrypt = !!doc && !ownerOnly && (canaryOn || allowEncryptionTransitions);
   const busy = loading;
   const isSplit = location.pathname.includes("+");
   const legacyBlocked = Boolean(capabilityAccess) || isSplit;
@@ -149,7 +149,9 @@ export function NoteSecurityPanel({
             <p id="security-encrypt-label" className="text-sm font-medium">
               {t("security.encrypt_label")}
             </p>
-            <p className="text-[11px] text-muted-foreground">{t("security.encrypt_helper")}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {t(allowEncryptionTransitions ? "security.encrypt_helper" : "security.encrypt_helper_unavailable")}
+            </p>
           </div>
           <LockButton
             slug={slug}
@@ -160,7 +162,7 @@ export function NoteSecurityPanel({
             encryption={encryption}
             layout="switch"
             switchLabelledBy="security-encrypt-label"
-            disabled={busy}
+            disabled={busy || !allowEncryptionTransitions}
           />
         </div>
       )}
