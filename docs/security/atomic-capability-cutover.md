@@ -115,14 +115,22 @@ SQL 240 wait on Home mint is [ADR-001](../adr/001-home-capability-mint-before-sq
    `deployedSha` `9dc0240e7d714d548711623f94a50c42dac64475`, still
    `capabilityRoutesEnabled` true. Same-canary origin SHA bump
    2026-09-07 ~18:56 ICT:
-   live `deployedSha` `15ec8285a7f02fdf383a1b5aa87ccd13d72ba6f7`, still
-   `capabilityRoutesEnabled` true. PWA latch (#119) one hard-reload per
-   Update apply is live; Choice A (#118) editable plain `/slug`
-   `NotePage` remains live; optional `?legacyRo=1` still mounts
-   `CutoverNotePage`. Phase B LNO and Phase C RawView+Home via LNO remain
-   live on this canary. Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export
-   is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress
-   (#113/#116) is live. Home mint fail-closed idle remains live.
+   `deployedSha` `15ec8285a7f02fdf383a1b5aa87ccd13d72ba6f7`, still
+   `capabilityRoutesEnabled` true. Same-canary origin SHA bump
+   2026-09-08 ~10:24 ICT:
+   `deployedSha` `0073d53bb2524882eda0c36528f0c25a94346a65`, still
+   `capabilityRoutesEnabled` true. Same-canary origin SHA bump
+   2026-09-08 ~12:23 ICT:
+   live `deployedSha` `1e76e2b7cb1ee239cb9af1bc8e8a04c229641e7d`, still
+   `capabilityRoutesEnabled` true. Encrypt disabled+honest (#123) is live
+   on Choice A plain `/slug` (gate not opened); Pixel Legacy opt-in (#122)
+   remains live; PWA latch (#119) one hard-reload per Update apply remains
+   live; Choice A (#118) editable plain `/slug` `NotePage` remains live;
+   optional `?legacyRo=1` still mounts `CutoverNotePage`. Phase B LNO and
+   Phase C RawView+Home via LNO remain live on this canary. Pixel HIGH UX
+   H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is
+   live. FAB-primary + Sonner suppress (#113/#116) is live. Home mint
+   fail-closed idle remains live.
    This is not soak-complete.
    Do not treat snapshot verify as `capability_runtime_set`.
    This is not `LEGACY_SHARE_CUTOFF`, soak-complete,
