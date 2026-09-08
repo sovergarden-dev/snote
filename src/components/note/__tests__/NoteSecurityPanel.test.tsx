@@ -6,6 +6,7 @@ import * as Y from "yjs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { NoteSecurityPanel } from "../NoteSecurityPanel";
 import { legacyOptInConfirmStorageKey, markLegacyOptInConfirmed } from "@/lib/legacy/legacy-opt-in";
+import type { CapabilityAccess } from "@/lib/capability/url";
 
 vi.mock("@/components/note/LockButton", () => ({
   LockButton: () => (
@@ -35,6 +36,7 @@ function renderPanel({
   loading = false,
   ownerOnly = false,
   slug = "daily",
+  capabilityAccess = null,
 }: {
   path?: string;
   legacyOn?: boolean;
@@ -42,6 +44,7 @@ function renderPanel({
   loading?: boolean;
   ownerOnly?: boolean;
   slug?: string;
+  capabilityAccess?: CapabilityAccess | null;
 } = {}) {
   return render(
     <MemoryRouter initialEntries={[path]}>
@@ -57,6 +60,7 @@ function renderPanel({
                   doc={new Y.Doc()}
                   isEncrypted={false}
                   allowEncryptionTransitions={allowEncryptionTransitions}
+                  capabilityAccess={capabilityAccess}
                   legacyOn={legacyOn}
                   loading={loading}
                   ownerOnly={ownerOnly}
@@ -189,6 +193,30 @@ describe("NoteSecurityPanel", () => {
     await openPanel();
     expect(screen.queryByRole("switch", { name: "security.legacy_label" })).not.toBeInTheDocument();
     expect(screen.getByText("security.owner_only")).toBeInTheDocument();
+  });
+
+  it("disables Legacy on capability owner/edit links and does not apply ?legacyRo=1", async () => {
+    renderPanel({
+      capabilityAccess: { slug: "daily", scope: "owner", token: "a".repeat(43) },
+    });
+    await openPanel();
+    const sw = screen.getByRole("switch", { name: "security.legacy_label" });
+    expect(sw).toBeDisabled();
+    expect(screen.getByText("security.legacy_helper_capability")).toBeInTheDocument();
+    await userEvent.click(sw);
+    expect(screen.queryByTestId("legacy-opt-in-confirm")).not.toBeInTheDocument();
+    expect(screen.getByTestId("loc")).not.toHaveTextContent("legacyRo");
+  });
+
+  it("disables Legacy in split view so the other pane is not converted", async () => {
+    renderPanel({ path: "/alpha+beta", slug: "alpha" });
+    await openPanel();
+    const sw = screen.getByRole("switch", { name: "security.legacy_label" });
+    expect(sw).toBeDisabled();
+    expect(screen.getByText("security.legacy_helper_split")).toBeInTheDocument();
+    await userEvent.click(sw);
+    expect(screen.queryByTestId("legacy-opt-in-confirm")).not.toBeInTheDocument();
+    expect(screen.getByTestId("loc")).not.toHaveTextContent("legacyRo");
   });
 
   it("sizes security rows at least 44px", async () => {

@@ -146,19 +146,6 @@ export default function LegacyNotePage({
     </Helmet>
   );
 
-  if (state.kind === "loading") {
-    return <>{head}<div className={`flex h-full items-center justify-center ${embed ? "min-h-0" : "min-h-svh"}`} role="status" aria-label={t("common.loading")}><Loader2 className="h-5 w-5 motion-safe:animate-spin" aria-hidden="true" /></div></>;
-  }
-  if (state.kind === "notfound" || state.kind === "error") {
-    return (
-      <>{head}<div className="flex min-h-svh flex-col items-center justify-center gap-3 px-4 text-center">
-        <p className="text-sm text-muted-foreground">
-          {state.kind === "notfound" ? t("legacy.not_found") : t("legacy.unavailable")}
-        </p>
-        <Link to="/" className="text-sm text-primary hover:underline">{t("share.back_home")}</Link>
-      </div></>
-    );
-  }
   const security = (
     <NoteSecurityPanel
       slug={slug}
@@ -170,6 +157,26 @@ export default function LegacyNotePage({
       onOpenChange={setSecurityOpen}
     />
   );
+
+  if (state.kind === "loading") {
+    return <>{head}<div className={`flex h-full items-center justify-center ${embed ? "min-h-0" : "min-h-svh"}`} role="status" aria-label={t("common.loading")}><Loader2 className="h-5 w-5 motion-safe:animate-spin" aria-hidden="true" /></div></>;
+  }
+  if (state.kind === "notfound" || state.kind === "error") {
+    return (
+      <>
+        {head}
+        <div className="flex min-h-svh flex-col">
+          <div className="flex min-h-11 items-center justify-end border-b px-3 py-1">{security}</div>
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              {state.kind === "notfound" ? t("legacy.not_found") : t("legacy.unavailable")}
+            </p>
+            <Link to="/" className="text-sm text-primary hover:underline">{t("share.back_home")}</Link>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   if (state.kind === "needs-key") {
     return (

@@ -284,6 +284,8 @@ const en = {
     "security.legacy_label": "Legacy format",
     "security.legacy_helper_off": "Open this note in the read-only Legacy viewer. Other notes stay in the modern editor.",
     "security.legacy_helper_on": "This note is using Legacy format. It is view-only until you turn this off.",
+    "security.legacy_helper_capability": "Not available on owner or edit links. Legacy format only opens table notes.",
+    "security.legacy_helper_split": "Not available in split view. It would change both notes.",
     "security.duplicate_label": "Duplicate securely",
     "security.duplicate_helper": "Not available yet…",
     "security.legacy_confirm_title": "Turn on Legacy format?",

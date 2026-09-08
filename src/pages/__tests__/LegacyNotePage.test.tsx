@@ -101,4 +101,13 @@ describe("LegacyNotePage cutover mode", () => {
     expect(screen.getByText("security.legacy_banner")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "security.panel_title" })).toBeInTheDocument();
   });
+
+  it("keeps Note security on LNO miss so Legacy opt-in can be turned off", async () => {
+    harness.open.mockResolvedValue(null);
+
+    render(<MemoryRouter><LegacyNotePage slug="daily" /></MemoryRouter>);
+
+    await waitFor(() => expect(screen.getByText("legacy.not_found")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "security.panel_title" })).toBeInTheDocument();
+  });
 });

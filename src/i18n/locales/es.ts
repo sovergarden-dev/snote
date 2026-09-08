@@ -275,6 +275,8 @@ const es: Dictionary = {
     "security.legacy_label": "Formato Legacy",
     "security.legacy_helper_off": "Abre esta nota en el visor Legacy de solo lectura. Las demás notas siguen en el editor moderno.",
     "security.legacy_helper_on": "Esta nota usa el formato Legacy. Es de solo lectura hasta que lo desactives.",
+    "security.legacy_helper_capability": "No disponible en enlaces owner o edit. El formato Legacy solo abre notas de tabla.",
+    "security.legacy_helper_split": "No disponible en vista dividida. Cambiaría ambas notas.",
     "security.duplicate_label": "Duplicar de forma segura",
     "security.duplicate_helper": "Aún no disponible…",
     "security.legacy_confirm_title": "¿Activar el formato Legacy?",

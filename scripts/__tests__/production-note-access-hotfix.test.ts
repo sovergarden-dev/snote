@@ -73,6 +73,8 @@ describe("production note access hotfix", () => {
     const panel = source("src/components/note/NoteSecurityPanel.tsx");
     expect(panel).toContain("buildLegacyOptInLocation");
     expect(panel).toContain("DUPLICATE_SECURELY_AVAILABLE");
+    expect(panel).toContain("legacyBlocked");
+    expect(panel).toContain("security.legacy_helper_capability");
     expect(source("src/lib/legacy/legacy-opt-in.ts")).toContain(
       "export const DUPLICATE_SECURELY_AVAILABLE = false",
     );
@@ -249,7 +251,7 @@ describe("production note access hotfix", () => {
     expect(notePage).not.toContain("@/lib/legacy/cutover");
     expectValueImportBehindRoutesGuard(notePage, "./CutoverNotePage");
     expectValueImportBehindRoutesGuard(cutoverNotePage, "./LegacyNotePage");
-    expect(withoutTypeImports(cutoverNotePage)).not.toContain('import("./NotePage")');
+    expectValueImportBehindRoutesGuard(cutoverNotePage, "./NotePage");
     expect(cutoverNotePage).not.toMatch(
       /import\s+NotePage\s+from\s+["']@\/pages\/NotePage["']/,
     );

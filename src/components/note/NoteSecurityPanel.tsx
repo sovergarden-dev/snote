@@ -93,6 +93,8 @@ export function NoteSecurityPanel({
   const showLegacy = canaryOn && !ownerOnly;
   const showEncrypt = allowEncryptionTransitions && !!doc && !ownerOnly;
   const busy = loading;
+  const isSplit = location.pathname.includes("+");
+  const legacyBlocked = Boolean(capabilityAccess) || isSplit;
 
   const applyLegacy = (enabled: boolean) => {
     navigate(
@@ -107,7 +109,7 @@ export function NoteSecurityPanel({
       applyLegacy(false);
       return;
     }
-    if (legacyOn) return;
+    if (legacyOn || legacyBlocked) return;
     setOpen(false);
     setConfirmKind(hasConfirmedLegacyOptIn(slug) ? "short" : "full");
   };
@@ -176,12 +178,18 @@ export function NoteSecurityPanel({
                 {t("security.legacy_label")}
               </p>
               <p className="text-[11px] text-muted-foreground">
-                {legacyOn ? t("security.legacy_helper_on") : t("security.legacy_helper_off")}
+                {capabilityAccess
+                  ? t("security.legacy_helper_capability")
+                  : isSplit && !legacyOn
+                    ? t("security.legacy_helper_split")
+                    : legacyOn
+                      ? t("security.legacy_helper_on")
+                      : t("security.legacy_helper_off")}
               </p>
             </div>
             <SecuritySwitch
               checked={legacyOn}
-              disabled={busy}
+              disabled={busy || (legacyBlocked && !legacyOn)}
               labelledBy="security-legacy-label"
               onCheckedChange={requestLegacy}
             />
@@ -288,7 +296,12 @@ export function NoteSecurityPanel({
           </TooltipTrigger>
           <TooltipContent side="bottom">{t("security.panel_title")}</TooltipContent>
         </Tooltip>
-        <PopoverContent align="end" className="w-80 p-4 sm:w-96">
+        <PopoverContent
+          align="end"
+          role="dialog"
+          aria-labelledby="note-security-heading"
+          className="w-80 p-4 sm:w-96"
+        >
           {body}
         </PopoverContent>
       </Popover>

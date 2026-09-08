@@ -10,6 +10,8 @@ const SECURITY_KEYS = [
   "security.legacy_label",
   "security.legacy_helper_off",
   "security.legacy_helper_on",
+  "security.legacy_helper_capability",
+  "security.legacy_helper_split",
   "security.duplicate_label",
   "security.duplicate_helper",
   "security.legacy_confirm_title",
@@ -37,6 +39,18 @@ describe("Note security panel i18n", () => {
     expect(dict.vi["security.duplicate_label"]).toBe("Sao chép an toàn");
     expect(dict.en["security.duplicate_helper"]).toBe("Not available yet…");
     expect(dict.vi["security.duplicate_helper"]).toBe("Chưa mở…");
+    expect(dict.en["security.legacy_helper_capability"]).toBe(
+      "Not available on owner or edit links. Legacy format only opens table notes.",
+    );
+    expect(dict.vi["security.legacy_helper_capability"]).toBe(
+      "Không dùng được trên link owner hoặc edit. Định dạng Legacy chỉ mở note dạng bảng.",
+    );
+    expect(dict.en["security.legacy_helper_split"]).toBe(
+      "Not available in split view. It would change both notes.",
+    );
+    expect(dict.vi["security.legacy_helper_split"]).toBe(
+      "Không dùng được trong chế độ chia đôi. Thao tác này sẽ đổi cả hai note.",
+    );
     expect(dict.en["security.legacy_confirm_title"]).toBe("Turn on Legacy format?");
     expect(dict.vi["security.legacy_confirm_title"]).toBe("Bật định dạng Legacy?");
     expect(dict.en["security.legacy_confirm_turn_on"]).toBe("Turn on Legacy");
