@@ -134,6 +134,10 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is
    live. FAB-primary + Sonner suppress (#113/#116) is live. Home mint
    fail-closed idle remains live.
+   SPA source (this tree, not live origin): A′ restores Cutover Legacy RO for
+   plain `/slug`. Choice A (#118) editable-plain default is superseded for SPA
+   routing. See [A′ Cutover restore](./a-prime-cutover-restore.md). This does
+   not change live origin until a named Pages go.
    This is not soak-complete.
    Do not treat snapshot verify as `capability_runtime_set`.
    This is not `LEGACY_SHARE_CUTOFF`, soak-complete,

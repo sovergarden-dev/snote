@@ -36,11 +36,11 @@ describe("production note access hotfix", () => {
     expect(app).toContain("<NotePage legacyOnly={!capabilityRoutesEnabled} />");
     expect(app).not.toContain("<NotePage legacyOnly />");
     expectValueImportBehindRoutesGuard(app, "./pages/CutoverNotePage");
-    // Choice A: canary-on default is editable NotePage, not CutoverNotePage→LNO.
-    expect(app).not.toMatch(
-      /\{capabilityRoutesEnabled\s*&&\s*CutoverNotePage\s*\?/,
-    );
+    // A′: canary-on default is CutoverNotePage→LNO RO, not Choice A editable NotePage.
     expect(app).toMatch(
+      /capabilityRoutesEnabled\s*&&\s*CutoverNotePage\s*\?\s*\(\s*<CutoverNotePage\s*\/>/,
+    );
+    expect(app).not.toMatch(
       /legacyRo && capabilityRoutesEnabled && CutoverNotePage \?/,
     );
     expect(app.match(/<SharePage legacyOnly=\{!capabilityRoutesEnabled\} \/>/g)).toHaveLength(2);
@@ -57,13 +57,13 @@ describe("production note access hotfix", () => {
     expect(mdArm).toBeGreaterThan(0);
     expect(splitArm).toBeGreaterThan(mdArm);
     expect(defaultReturn).toBeGreaterThan(splitArm);
-    expect(dispatcher).toContain('get("legacyRo") === "1"');
+    expect(dispatcher).not.toContain('get("legacyRo") === "1"');
     const defaultArm = dispatcher.slice(defaultReturn);
     expect(defaultArm).toContain("<NotePage legacyOnly={!capabilityRoutesEnabled} />");
-    expect(defaultArm).not.toMatch(
-      /\{capabilityRoutesEnabled\s*&&\s*CutoverNotePage\s*\?/,
-    );
     expect(defaultArm).toMatch(
+      /capabilityRoutesEnabled\s*&&\s*CutoverNotePage\s*\?\s*\(\s*<CutoverNotePage\s*\/>/,
+    );
+    expect(defaultArm).not.toMatch(
       /legacyRo && capabilityRoutesEnabled && CutoverNotePage \?/,
     );
     expect(defaultArm).toContain("<CutoverNotePage />");
@@ -73,11 +73,19 @@ describe("production note access hotfix", () => {
     const panel = source("src/components/note/NoteSecurityPanel.tsx");
     expect(panel).toContain("buildLegacyOptInLocation");
     expect(panel).toContain("DUPLICATE_SECURELY_AVAILABLE");
-    expect(panel).toContain("legacyBlocked");
-    expect(panel).toContain("security.legacy_helper_capability");
+    expect(panel).toContain("legacyLockedOn");
+    expect(panel).toContain("security.legacy_helper_on_plain");
+    expect(panel).toContain("security.legacy_banner_cta");
     expect(source("src/lib/legacy/legacy-opt-in.ts")).toContain(
       "export const DUPLICATE_SECURELY_AVAILABLE = false",
     );
+    expect(source("src/pages/LegacyNotePage.tsx")).toContain(
+      "allowEncryptionTransitions={false}",
+    );
+    expect(source("src/pages/NotePage.tsx")).toContain(
+      "allowEncryptionTransitions={!legacyContainment}",
+    );
+    expect(source("src/pages/CutoverNotePage.tsx")).toContain("isLegacyRoSearch");
     expect(source("src/pages/SharePage.tsx")).not.toContain("NoteSecurityPanel");
 
     const client = source("src/lib/capability/client.ts");
@@ -98,7 +106,7 @@ describe("production note access hotfix", () => {
     expect(defaultSource).toContain('import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"');
   });
 
-  it("keeps SplitView on Choice A editable NotePage and canary-gates Home mint plus LNO", () => {
+  it("keeps SplitView on A′ CutoverNotePage and canary-gates Home mint plus LNO", () => {
     const split = source("src/pages/SplitView.tsx");
     const home = source("src/pages/Home.tsx");
     const raw = source("src/pages/RawView.tsx");
@@ -106,10 +114,10 @@ describe("production note access hotfix", () => {
     expect(split).toContain("const NotePage = lazy(() => loadNotePage());");
     expect(split).toContain("legacyOnly={!capabilityRoutesEnabled}");
     expectValueImportBehindRoutesGuard(split, "./CutoverNotePage");
-    expect(split).not.toMatch(
-      /\{capabilityRoutesEnabled\s*&&\s*CutoverNotePage\s*\?/,
-    );
     expect(split).toMatch(
+      /capabilityRoutesEnabled\s*&&\s*CutoverNotePage\s*\?/,
+    );
+    expect(split).not.toMatch(
       /legacyRo && capabilityRoutesEnabled && CutoverNotePage \?/,
     );
     expect(split).toContain("<CutoverNotePage");

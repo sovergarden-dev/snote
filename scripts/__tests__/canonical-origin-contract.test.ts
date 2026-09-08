@@ -66,6 +66,9 @@ describe("canonical production origin", () => {
     expect(readme).toContain("Home mints capabilities when canary is on");
     expect(readme).toContain("fail-closed on idle");
     expect(readme).toContain("LegacyNotePage");
+    expect(readme).toContain("A′");
+    expect(readme).toContain("superseded");
+    expect(readme).toContain("a-prime-cutover-restore.md");
     expect(readme).not.toMatch(/origin `7d00fd52`/);
     expect(readme).not.toMatch(/origin `77d791af`/);
     expect(readme).not.toMatch(/origin `9df65d53`/);
@@ -174,6 +177,9 @@ describe("canonical production origin", () => {
     expect(findings).toContain("#122");
     expect(findings).toContain("#123");
     expect(findings).toContain("Choice A");
+    expect(findings).toContain("A′");
+    expect(findings).toContain("superseded");
+    expect(findings).toContain("a-prime-cutover-restore.md");
     expect(findings).toContain("Sonner");
     expect(findings).toContain("FAB-primary");
     expect(findings).not.toContain("`RawView` reads `public.notes` directly");
@@ -669,6 +675,9 @@ describe("canonical production origin", () => {
     expect(client).toContain("1e76e2b7");
     expect(client).toContain("This Home mint path is live on origin `1e76e2b7`");
     expect(client).toContain("Choice A");
+    expect(client).toContain("A′");
+    expect(client).toContain("superseded");
+    expect(client).toContain("a-prime-cutover-restore.md");
     expect(client).toContain("#118");
     expect(client).toContain("#119");
     expect(client).toContain("#122");
@@ -763,6 +772,9 @@ describe("canonical production origin", () => {
     expect(backend).toContain("#122");
     expect(backend).toContain("#123");
     expect(backend).toContain("Choice A");
+    expect(backend).toContain("A′");
+    expect(backend).toContain("superseded");
+    expect(backend).toContain("a-prime-cutover-restore.md");
     expect(backend).toContain("Sonner");
     expect(backend).toContain("FAB-primary");
     expect(backend).toContain("SQL 240 is not applied");
@@ -943,6 +955,9 @@ describe("canonical production origin", () => {
     expect(adr).toContain("#122");
     expect(adr).toContain("#123");
     expect(adr).toContain("Choice A");
+    expect(adr).toContain("A′");
+    expect(adr).toContain("superseded");
+    expect(adr).toContain("a-prime-cutover-restore.md");
     expect(adr).toContain("Sonner");
     expect(adr).toContain("FAB-primary");
     expect(adr).toMatch(/LNO `exists`/);
@@ -1194,6 +1209,9 @@ describe("canonical production origin", () => {
     expect(cutover).toContain("#122");
     expect(cutover).toContain("#123");
     expect(cutover).toContain("Choice A");
+    expect(cutover).toContain("A′");
+    expect(cutover).toContain("superseded");
+    expect(cutover).toContain("a-prime-cutover-restore.md");
     expect(cutover).toContain("Sonner");
     expect(cutover).toContain("FAB-primary");
     expect(cutover).toContain("`capabilityRoutesEnabled` true");

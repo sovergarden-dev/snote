@@ -27,6 +27,13 @@ are applied on production; `writes_enabled=true` and
 soak ≥48h started from the first canary (not soak-complete) — see
 [security findings](docs/security-findings.md).
 
+**SPA source (this tree, not live origin):** A′ restores canary-on plain `/<slug>`
+and SplitView panes to `CutoverNotePage` → `LegacyNotePage` (LNO RO). Choice A
+(#118) editable-plain default is **superseded** for SPA routing. `#owner=`/`#edit=`
+still render `NotePage`. `?legacyRo=1` still RO + banner. Canary stays on. See
+[A′ Cutover restore](docs/security/a-prime-cutover-restore.md). This PR does not
+deploy; live origin remains Choice A `1e76e2b7` until a named Pages go.
+
 ## Product
 
 - CodeMirror 6 editing with Markdown, Vim and typewriter modes.

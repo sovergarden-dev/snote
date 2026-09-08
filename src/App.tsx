@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, useParams } from "react-router";
+import { BrowserRouter, Routes, Route, useParams } from "react-router";
 import { ThemeProvider } from "next-themes";
 import { lazy, Suspense } from "react";
 import Home from "./pages/Home";
@@ -47,8 +47,6 @@ const PlainFallback = (
  */
 function SlugDispatcher() {
   const { slug = "" } = useParams();
-  const { search } = useLocation();
-  const legacyRo = new URLSearchParams(search).get("legacyRo") === "1";
   if (slug === "note") {
     if (!adminPanelEnabled || !AdminPanel) {
       return <NotFound />;
@@ -75,7 +73,7 @@ function SlugDispatcher() {
   }
   return (
     <Suspense fallback={EditorFallback}>
-      {legacyRo && capabilityRoutesEnabled && CutoverNotePage ? (
+      {capabilityRoutesEnabled && CutoverNotePage ? (
         <CutoverNotePage />
       ) : (
         <NotePage legacyOnly={!capabilityRoutesEnabled} />

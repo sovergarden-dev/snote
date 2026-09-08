@@ -1,4 +1,4 @@
-/** Query-param opt-in for Choice A Legacy RO (`CutoverNotePage` → LNO). */
+/** Query-param force for Legacy RO (`CutoverNotePage` → LNO), including `#owner=` opt-in. */
 
 export const LEGACY_RO_PARAM = "legacyRo";
 export const LEGACY_RO_VALUE = "1";

@@ -395,6 +395,8 @@ describe("legacy-note-open docs", () => {
     expect(capability).toContain("#122");
     expect(capability).toContain("#123");
     expect(capability).toContain("Choice A");
+    expect(capability).toContain("A′");
+    expect(capability).toContain("superseded");
     expect(capability).toContain("Sonner");
     expect(capability).toContain("FAB-primary");
     expect(capability).toContain("SQL 240 is not applied");

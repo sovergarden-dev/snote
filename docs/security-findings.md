@@ -27,6 +27,12 @@ not authorization to apply 240.
 The [SQL 240 readiness contract](security/sql-240-readiness-contract.md) and
 [ops preflight](security/sql-240-ops-preflight.md) are a docs package only;
 they do **not** authorize apply. This is not SQL 240, not Realtime, not soak-complete.
+SPA source (this tree, not live origin): A′ restores canary-on plain `/<slug>`
+to `CutoverNotePage` → `LegacyNotePage` (LNO RO). Choice A (#118) editable-plain
+default is **superseded** for SPA routing. See
+[A′ Cutover restore](security/a-prime-cutover-restore.md). Live origin `1e76e2b7`
+remains Choice A until a named Pages go. This does not deploy and does not
+authorize SQL 240.
 `VITE_CAPABILITY_AUTH_ENABLED` and `VITE_ADMIN_PANEL_ENABLED` stayed
 false. Local tests prove capability code contracts only; 240, soak, and
 post-cutover probes remain mandatory gates. Soak ≥48h started from the

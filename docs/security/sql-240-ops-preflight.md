@@ -16,7 +16,7 @@ Named go required: Syringa (apply) / Atlas (coordinate)
 | Pages | `snote-g4-origin` deploy `49c127f4` |
 | Main tip (docs) | `d31857d5` (#124 attest) — origin may lag docs tip |
 | Walls | SQL **240 HOLD**, Worker HOLD (no redeploy for 240), `writes_enabled` HOLD (do not flip for 240 alone), Edge HOLD for 240 |
-| Live default / apply blocker | Choice A editable plain `/slug` (table sync). **Do not apply** until A′ (plain → `CutoverNotePage` → LNO RO) **or** Syringa written accept-break B. See [sql-240-readiness-contract.md](./sql-240-readiness-contract.md) §0. |
+| Live default / apply blocker | Choice A editable plain `/slug` (table sync). **Do not apply** until A′ (plain → `CutoverNotePage` → LNO RO) **or** Syringa written accept-break B. See [sql-240-readiness-contract.md](./sql-240-readiness-contract.md) §0. SPA source A′ restore is in-tree ([a-prime-cutover-restore.md](./a-prime-cutover-restore.md)); live origin remains Choice A until a named Pages go. |
 | Product still live (not a go) | Encrypt disabled+honest on plain; Legacy opt-in `?legacyRo=1`; LNO Phase B/C; Home mint fail-closed; canary on |
 
 Re-verify live before any named apply:

@@ -3,6 +3,7 @@ import { useLocation, useParams } from "react-router";
 import { EditorSkeleton } from "@/components/note/EditorSkeleton";
 import { parseCapabilityLocation } from "@/lib/capability/url";
 import { clearLegacyImportRecovery } from "@/lib/legacy/cutover";
+import { isLegacyRoSearch } from "@/lib/legacy/legacy-opt-in";
 
 interface CutoverNotePageProps {
   /** Ignore capability-shaped fragments while the capability backend is offline. */
@@ -43,7 +44,7 @@ export function CutoverNotePage(props: CutoverNotePageProps) {
     }
   }, [capabilityAccess, slug]);
 
-  if (!capabilityAccess) {
+  if (isLegacyRoSearch(location.search) || !capabilityAccess) {
     if (!LegacyNotePage) return null;
     return (
       <Suspense fallback={editorFallback}>
