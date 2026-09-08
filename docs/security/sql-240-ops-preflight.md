@@ -1,6 +1,7 @@
 # SQL 240 ops preflight (docs only — do not apply)
 
-Status: **Docs package — does not authorize apply** of `20260724000000_atomic_capability_cutover.sql`.
+Status: **SQL 240 already applied — do not re-apply.** Docs package does not authorize apply
+of `20260724000000_atomic_capability_cutover.sql` again.
 
 This is not SQL 240, not Realtime, not soak-complete.
 
@@ -8,16 +9,16 @@ Owner (ops): Pulse
 Architecture: Aegis ([sql-240-readiness-contract.md](./sql-240-readiness-contract.md))  
 Named go required: Syringa (apply) / Atlas (coordinate)
 
-## 0. Live baseline (as of 2026-09-08 ~16:58 ICT)
+## 0. Live baseline (as of 2026-09-08 ~23:58 ICT)
 
 | Surface | Value |
 |---|---|
-| Origin `version.json` | `deployedSha` `b4eba5d2…`, `capabilityRoutesEnabled` true, buildId `1788860033092-xa1nnac8` |
-| Pages | `snote-g4-origin` deploy `07cb774d` |
-| Main tip (product) | `b4eba5d2` (#126 A′ Cutover restore) — this docs attest does not change origin |
-| Walls | SQL **240 HOLD**, Worker HOLD (no redeploy for 240), `writes_enabled` HOLD (do not flip for 240 alone), Edge HOLD for 240 |
-| Live default / apply blocker | A′ live: plain `/slug` → `CutoverNotePage` → LNO RO. Choice A editable table path is **not** the live default. **Do not apply** until Syringa names apply. A′ is prerequisite, not apply. See [sql-240-readiness-contract.md](./sql-240-readiness-contract.md) §0 and [a-prime-cutover-restore.md](./a-prime-cutover-restore.md). |
-| Product still live (not a go) | A′ Cutover/LNO RO; Encrypt omit on plain; Legacy opt-in `?legacyRo=1`; LNO Phase B/C; Home mint fail-closed; canary on |
+| Origin `version.json` | `deployedSha` `f84183ba…`, `capabilityRoutesEnabled` true, buildId `1788884922635-dbv60j3l` |
+| Pages | `snote-g4-origin` deploy `74637d87` |
+| Main tip (product) | `f84183ba` (#128 Duplicate securely on A′ #126) — this docs attest does not change origin |
+| Walls | SQL **240 already applied**, Worker HOLD (no redeploy), `writes_enabled` HOLD, Edge HOLD from this PR |
+| Live default / apply blocker | A′ live: plain `/slug` → `CutoverNotePage` → LNO RO. Duplicate securely enabled. Choice A editable table path is **not** the live default. **Do not re-apply** 240 from this docs pin. See [sql-240-readiness-contract.md](./sql-240-readiness-contract.md) §0 and [a-prime-cutover-restore.md](./a-prime-cutover-restore.md). |
+| Product still live (not a go) | A′ Cutover/LNO RO; Duplicate securely enabled; Encrypt omit on plain; Legacy opt-in `?legacyRo=1`; LNO Phase B/C; Home mint fail-closed; canary on |
 
 Re-verify live before any named apply:
 
@@ -30,7 +31,7 @@ curl -sS -H 'Cache-Control: no-cache' "https://note.syrin.online/version.json"
 
 File: `supabase/migrations/20260724000000_atomic_capability_cutover.sql`
 
-At origin pin `b4eba5d2`:
+At origin pin `f84183ba`:
 
 - Lines: 245
 - SHA-256: `1043a46844e66859ccb8bec16888d6dd78f5f5e5a04df203f220a9b90302cf2f`
@@ -43,7 +44,9 @@ sha256sum supabase/migrations/20260724000000_atomic_capability_cutover.sql
 # must match recorded identity for that go SHA
 ```
 
-Confirm not already applied (service_role / SQL editor — read-only):
+Confirm not already applied (historical pre-apply probe; SQL 240 is already
+applied on live — expect `capability_note_import_legacy` present; do not re-apply)
+(service_role / SQL editor — read-only):
 
 ```sql
 SELECT to_regprocedure('public.capability_note_import_legacy(text,text,text,text,text,text,boolean,text,text,integer)');
@@ -115,13 +118,16 @@ SELECT public.capability_runtime_set(false, false);
 
 Do **not** attempt to “undo” 240 by re-GRANT anon policies in production without a new ADR + named go.
 
-## 4. Apply procedure (named go only — placeholder)
+## 4. Historical apply procedure (SQL 240 already applied — do not re-apply)
 
-When Syringa names apply (separate go from this doc):
+SQL 240 is already applied. Do not run this procedure. The steps below are the
+original named-go template only.
+
+When Syringa named apply (historical; separate go from this doc):
 
 1. Re-run §0–§2 same day.
-2. **STOP** unless A′ is live (plain `/slug` → `CutoverNotePage` → LNO RO) **or** Syringa has written accept-break B. A′ is live on `b4eba5d2`. Do not apply until Syringa names apply.
-3. Apply migration via approved production SQL path (Lovable Cloud / service_role editor) — **one transaction** as written (`pg_advisory_xact_lock(20260724000000)`).
+2. **STOP** unless A′ is live (plain `/slug` → `CutoverNotePage` → LNO RO) **or** Syringa has written accept-break B. A′ is live on `f84183ba`. SQL 240 already applied; do not re-apply from this docs pin.
+3. Do **not** apply. SQL 240 is already applied. Historical step was: apply migration via approved production SQL path (Lovable Cloud / service_role editor) — **one transaction** as written (`pg_advisory_xact_lock(20260724000000)`).
 4. Do **not** couple: Worker redeploy, Pages redeploy, `writes_enabled` flip, `private_realtime_enabled`, Edge unrelated deploys.
 5. Immediately run §5 post-verify.
 6. Record apply ICT timestamp + operator + migration sha256.
@@ -162,7 +168,7 @@ curl -sS -H 'Cache-Control: no-cache' "https://note.syrin.online/version.json"
 | No PITR | Snapshot-only rollback window |
 | Irreversible revoke | Kill switch ≠ restore grants |
 | Soak not complete | ADR-001: soak started 2026-09-02; still not soak-complete as of Encrypt loop close |
-| Duplicate securely | Product residual (honest unavailable) — not an ops blocker for docs package |
+| Duplicate securely | Enabled (PR #128; Edge `note-session` `import-legacy`) — not an ops blocker for docs package |
 | quen/lạ | Parked label-only — must not become write ACL |
 | CF-Connecting-IP | Open question for public create anti-spoof |
 | Worker invocation_logs | Already live; privacy risk; do not couple 240 to Worker ship |
@@ -176,4 +182,4 @@ Done when:
 3. Sentinel light-reviews docs accuracy vs live pin + migration identity.
 4. Syringa has a clear named-go template for **apply** later (separate from merge of docs).
 
-**NOT done / NOT authorized by this package:** applying SQL 240.
+**NOT done / NOT authorized by this package:** applying SQL 240 again (already applied).

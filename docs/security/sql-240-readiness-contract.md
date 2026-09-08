@@ -1,12 +1,12 @@
 # SQL 240 readiness contract (architecture + ops fold-in)
 
-- Status: **Docs package only** — does **not** authorize apply
+- Status: **Docs package only** — does **not** authorize apply (SQL 240 already applied; do not re-apply)
 - Date: 2026-09-08
 - Repo: `sovergarden-dev/snote`
-- Live pin (product): origin `b4eba5d2` / Pages `07cb774d` / canary true / smoke `34211082005`
-- Main tip: `b4eba5d2` (#126 A′ Cutover restore) — this docs attest does not change origin
+- Live pin (product): origin `f84183ba` / Pages `74637d87` / canary true / smoke `34251814023`
+- Main tip: `f84183ba` (#128 Duplicate securely on A′ #126) — this docs attest does not change origin
 - Owners: Aegis (gates) · Pulse (ops) · Forge (docs PR) · Atlas (coord) · Syringa (named apply)
-- Walls until named apply: no SQL 240, no Worker, no `writes_enabled` flip, no Realtime, no Edge/Pages couple
+- Walls: SQL 240 already applied; Worker HOLD (no redeploy), `writes_enabled` HOLD, Realtime HOLD, no Edge/Pages couple from this PR
 
 This is not SQL 240, not Realtime, not soak-complete.
 
@@ -16,9 +16,10 @@ Ops detail: [sql-240-ops-preflight.md](./sql-240-ops-preflight.md) (Pulse). This
 
 ## 0. Hard architecture gate (before any apply)
 
-**A′ is live** on origin `b4eba5d2`: plain `/slug` = `CutoverNotePage` → LNO RO.
-Choice A editable-plain is **not** the live default. SQL 240 still HOLD
-(A′ is prerequisite, not apply). Do not apply until Syringa names apply.
+**A′ is live** on origin `f84183ba`: plain `/slug` = `CutoverNotePage` → LNO RO.
+Choice A editable-plain is **not** the live default. SQL 240 already applied.
+Duplicate securely is enabled (PR #128; Edge `note-session` `import-legacy`).
+Worker / `writes_enabled` / Realtime still HOLD. This docs pin does not re-apply.
 
 SQL 240 `REVOKE`s browser grants on `public.notes`. Choice A depended on those
 grants. Applying 240 while Choice A was live would have instantly broken plain
@@ -34,11 +35,11 @@ by A′; remaining gates below still HOLD apply.
 
 Choice A routing contract (`SNOTE-EDITABLE-PLAIN-SLUG-ROUTING-CONTRACT.md`, Aegis artifact name — not a path in this repo) is **superseded** by live A′ (findings §3e / #126). A′ is a **prerequisite**, not SQL 240 apply (or same calendar day only if Atlas sequences SPA → soak smoke → 240).
 
-A′ Cutover restore is live on origin `b4eba5d2` ([a-prime-cutover-restore.md](./a-prime-cutover-restore.md)). Choice A (#118) editable-plain default is **superseded**. This does not authorize apply.
+A′ Cutover restore is live on origin `f84183ba` ([a-prime-cutover-restore.md](./a-prime-cutover-restore.md)). Choice A (#118) editable-plain default is **superseded**. Duplicate securely (#128) is enabled. This does not authorize re-apply.
 
 ---
 
-## 1. Migration identity (verified @ `b4eba5d2`)
+## 1. Migration identity (verified @ `f84183ba`)
 
 | Field | Value |
 |---|---|
@@ -56,7 +57,7 @@ Copy Pulse §0–§2; architecture adds:
 
 - [ ] Live `version.json` SHA = go SHA; `capabilityRoutesEnabled` true
 - [ ] Migration sha256 matches §1 for that SHA
-- [ ] 240 **not** already applied (Pulse SQL probes: policies/grants + `capability_note_import_legacy` absent)
+- [x] 240 already applied (do **not** re-apply). Historical pre-apply probe was: policies/grants + `capability_note_import_legacy` absent
 - [ ] Fresh `notes_total` / `capability_managed` recorded (**do not** reuse stale 61/0)
 - [ ] Tiny daily snapshot verified (<~24h); else STOP (no PITR)
 - [ ] **§0 hard gate:** A′ live **or** Syringa written accept-break (B)
@@ -93,7 +94,7 @@ Ops SQL (Pulse §5) plus product:
 
 ## 5. Explicit non-blockers for docs package
 
-- Duplicate securely still honest-unavailable (accepted on live A′; Pixel PASS) — does **not** authorize 240
+- Duplicate securely is enabled (PR #128; Edge `note-session` `import-legacy`) — does **not** authorize re-apply
 - Soak “≥48h from 2026-09-02” narrative — record as residual; Atlas/Syringa decide if soak is still a soft gate
 - quen/lạ parked (label only — never write ACL)
 - Worker `invocation_logs` privacy — do not couple to 240
@@ -127,4 +128,4 @@ Out of scope for that PR: applying 240, origin ship, Worker, Realtime.
 
 **READY WITH KNOWN RISKS** to open the **docs package**.
 
-**A′ is live** (plain `/slug` = Cutover/LNO RO; prerequisite met). Still **HOLD** — not apply. Not soak-complete.
+**A′ is live** (plain `/slug` = Cutover/LNO RO; Duplicate securely enabled). SQL 240 already applied. Worker / `writes_enabled` / Realtime still **HOLD**. Not soak-complete.

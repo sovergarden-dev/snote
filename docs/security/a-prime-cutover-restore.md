@@ -1,6 +1,6 @@
 # A′ Cutover restore — SPA routing (live on origin)
 
-- Status: **Live on origin** `b4eba5d2` / Pages `07cb774d` (named Pages go of #126)
+- Status: **Live on origin** `f84183ba` / Pages `74637d87` (named Pages go of #128 Duplicate securely on A′ #126)
 - Date: 2026-09-08
 - Owners: Aegis (contract) · Pixel (UX) · Atlas (coord) · Syringa (named go)
 - Canary: keep `VITE_CAPABILITY_ROUTES_ENABLED` / `capabilityRoutesEnabled` **on**
@@ -8,9 +8,10 @@
 Choice A (#118) made canary-on plain `/<slug>` mount editable `NotePage`
 (`notes` table path). That dispatcher default is **superseded by A′**.
 
-Live origin `b4eba5d2` is A′ Cutover restore: plain `/slug` = Cutover/LNO RO.
-This document does not apply SQL 240 and does not flip `writes_enabled` /
-`private_realtime_enabled`. SQL 240 still HOLD (A′ is prerequisite, not apply).
+Live origin `f84183ba` is A′ Cutover restore plus Duplicate securely: plain `/slug` = Cutover/LNO RO.
+This document does not re-apply SQL 240 and does not flip `writes_enabled` /
+`private_realtime_enabled`. SQL 240 already applied; Worker / writes_enabled /
+Realtime still HOLD.
 
 ## Mount table (canary on)
 
@@ -32,15 +33,15 @@ Flag-off builds keep `NotePage` `legacyOnly` and do not import `CutoverNotePage`
 - Plain Legacy RO **omits** the Encrypt row. `#owner=` Encrypt stays **active**.
 - Do **not** reopen `allowEncryptionTransitions` on the plain table path.
 - On plain RO, turning Legacy off must **not** reopen Choice A editable `NotePage`.
-- Duplicate securely stays hidden (`DUPLICATE_SECURELY_AVAILABLE = false`).
+- Duplicate securely is enabled (`DUPLICATE_SECURELY_AVAILABLE = true`; Edge `note-session` `import-legacy`). Hidden on pure `#owner=` editable `NotePage`.
 
-Pixel visual A′ PASS on live `b4eba5d2` (plain `/hage` Legacy RO + banner +
-CTA Home; Encrypt omit; Duplicate hidden; mint `#owner=` editable; evidence
-`pixel-qa/a-prime-b4eba5d2/`).
+Pixel visual A′ PASS on prior live `b4eba5d2` (plain `/hage` Legacy RO + banner +
+CTA Home; Encrypt omit; mint `#owner=` editable; evidence
+`pixel-qa/a-prime-b4eba5d2/`). Duplicate securely is now enabled on this A′ line.
 
 ## Walls
 
 - This attest does not deploy origin / Pages / Worker / Edge
-- No SQL 240 apply (A′ is prerequisite, not apply)
+- SQL 240 already applied; this attest does not re-apply
 - No `writes_enabled` / `private_realtime_enabled` flip
 - Do not merge the attest PR from the implementing agent
