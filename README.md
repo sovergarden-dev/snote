@@ -12,28 +12,29 @@ FAB-primary + Sonner suppress (#113/#116) still on this line; Choice A (#118)
 editable-plain default is **superseded** on this line; PWA latch (#119) one
 hard-reload per Update apply still on this line; Pixel Legacy opt-in (#122)
 still on this line; Encrypt omit on plain Legacy RO (#123 `#owner=` Encrypt
-stays active); A′ (#126) live on origin `b4eba5d2`; Pixel visual A′ PASS (plain `/hage`
-Legacy RO + banner + CTA Home; Encrypt omit; Duplicate hidden; mint `#owner=`
+stays active); A′ (#126) + Duplicate securely (#128) live on origin `f84183ba`; Pixel visual A′ PASS (plain `/hage`
+Legacy RO + banner + CTA Home; Encrypt omit; mint `#owner=`
 editable; evidence pixel-qa/a-prime-b4eba5d2/); Sentinel READY WITH KNOWN RISKS
 (LOW non-blocking: transient dynamic-import on first `?legacyRo=1`, update
-reminder, SplitView not smoked); Duplicate hidden remains on this A′ line;
+reminder, SplitView not smoked); Duplicate securely is enabled on this A′ line
+(Edge `note-session` `import-legacy`);
 Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e):
 `capabilityRoutesEnabled` true. Plain slug URLs and SplitView panes mount
 `CutoverNotePage` → `LegacyNotePage` (LNO RO); `#owner`/`#edit` still render
 `NotePage`. Optional `?legacyRo=1` still RO + banner (Phase B `legacy-note-open`
 read-only). RawView `/:slug.md` loads via LNO `open`; Home availability uses
-LNO `exists` (empty legacy rows are taken). Duplicate securely is hidden with
-honest unavailable copy. Home mints capabilities when canary is on (fail-closed on idle). Additive SQL 220 and 270
+LNO `exists` (empty legacy rows are taken). Duplicate securely is enabled
+(PR #128; Edge `note-session` `import-legacy`). Home mints capabilities when canary is on (fail-closed on idle). Additive SQL 220 and 270
 are applied on production; `writes_enabled=true` and
-`private_realtime_enabled=false` (findings §3d). SQL 240 is not applied;
+`private_realtime_enabled=false` (findings §3d). SQL 240 is already applied;
 soak ≥48h started from the first canary (not soak-complete) — see
 [security findings](docs/security-findings.md).
 
-**A′ live (named Pages go of #126):** canary-on plain `/<slug>` and SplitView
+**A′ live (named Pages go of #126) plus Duplicate securely (#128):** canary-on plain `/<slug>` and SplitView
 panes are `CutoverNotePage` → `LegacyNotePage` (LNO RO). Choice A (#118)
 editable-plain default is **superseded**. `#owner=`/`#edit=` still render
-`NotePage`. `?legacyRo=1` still RO + banner. Canary stays on. SQL 240 still
-HOLD (A′ is prerequisite, not apply). See
+`NotePage`. `?legacyRo=1` still RO + banner. Canary stays on. SQL 240 already
+applied; Worker / `writes_enabled` / Realtime still HOLD. See
 [A′ Cutover restore](docs/security/a-prime-cutover-restore.md).
 
 ## Product
@@ -63,8 +64,8 @@ After cutover, a slug locates a note but never grants access. New notes use
 
 The SPA then exchanges a fragment capability for a short-lived `NoteSession`.
 Backend clients send capabilities in `Authorization`, never in a query or path.
-The database stores keyed hashes, not raw capabilities. The atomic cutover is
-designed to revoke direct anonymous table access; it has not been applied.
+The database stores keyed hashes, not raw capabilities. The atomic cutover
+revokes direct anonymous table access; SQL 240 is already applied.
 
 After cutover, legacy notes become exact-match read-only and can be copied into
 a new secure note. They never acquire an owner implicitly. The planned rollback

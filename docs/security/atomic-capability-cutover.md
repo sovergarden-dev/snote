@@ -127,8 +127,12 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    `deployedSha` `1e76e2b7cb1ee239cb9af1bc8e8a04c229641e7d`, still
    `capabilityRoutesEnabled` true. Same-canary origin SHA bump
    2026-09-08 ~16:34 ICT:
-   live `deployedSha` `b4eba5d29cb8057c534c13588140bbe5ffa4f19e`, still
-   `capabilityRoutesEnabled` true. A′ Cutover restore (#126) is live:
+   `deployedSha` `b4eba5d29cb8057c534c13588140bbe5ffa4f19e`, still
+   `capabilityRoutesEnabled` true. Same-canary origin SHA bump
+   2026-09-08 ~23:28 ICT:
+   live `deployedSha` `f84183ba32d4057a4012424766a4ee53577528a4`, still
+   `capabilityRoutesEnabled` true. Duplicate securely (#128) is live:
+   Edge `note-session` `import-legacy`. A′ Cutover restore (#126) remains:
    canary-on plain `/slug` and SplitView panes mount `CutoverNotePage` →
    `LegacyNotePage` (LNO RO). Choice A (#118) editable-plain default is
    superseded. Optional `?legacyRo=1` still RO + banner. Encrypt omit on
@@ -138,9 +142,10 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    on this canary. Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export is
    live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress
    (#113/#116) is live. Home mint fail-closed idle remains live.
-   A′ live (named Pages go of #126): Cutover Legacy RO for plain `/slug`.
-   See [A′ Cutover restore](./a-prime-cutover-restore.md). SQL 240 still
-   HOLD (A′ is prerequisite, not apply).
+   A′ live (named Pages go of #126) plus Duplicate securely (#128): Cutover
+   Legacy RO for plain `/slug`.
+   See [A′ Cutover restore](./a-prime-cutover-restore.md). SQL 240 already
+   applied; Worker / `writes_enabled` / Realtime still HOLD.
    This is not soak-complete.
    Do not treat snapshot verify as `capability_runtime_set`.
    This is not `LEGACY_SHARE_CUTOFF`, soak-complete,
