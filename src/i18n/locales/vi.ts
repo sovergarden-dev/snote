@@ -282,7 +282,6 @@ const vi: Dictionary = {
     "security.legacy_helper_off": "Mở note này trong trình xem Legacy chỉ đọc. Các note khác vẫn dùng trình soạn hiện đại.",
     "security.legacy_helper_on": "Note này đang dùng định dạng Legacy. Chỉ xem được cho đến khi bạn tắt.",
     "security.legacy_helper_on_plain": "Note này chỉ xem. Tắt Legacy không làm note dạng bảng thành chỉnh sửa được. Tạo bản chỉnh sửa từ Trang chủ.",
-    "security.legacy_helper_capability": "Không dùng được trên link owner hoặc edit. Định dạng Legacy chỉ mở note dạng bảng.",
     "security.legacy_helper_split": "Không dùng được trong chế độ chia đôi. Thao tác này sẽ đổi cả hai note.",
     "security.duplicate_label": "Sao chép an toàn",
     "security.duplicate_helper": "Chưa mở…",

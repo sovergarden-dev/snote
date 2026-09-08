@@ -277,7 +277,6 @@ const ko: Dictionary = {
     "security.legacy_helper_off": "이 노트를 읽기 전용 레거시 뷰어로 엽니다. 다른 노트는 최신 편집기에 그대로 둡니다.",
     "security.legacy_helper_on": "이 노트는 레거시 형식입니다. 끌 때까지 보기만 가능합니다.",
     "security.legacy_helper_on_plain": "이 노트는 보기 전용입니다. Legacy를 꺼도 테이블 노트가 편집 가능해지지 않습니다. 홈에서 편집 가능한 사본을 만드세요.",
-    "security.legacy_helper_capability": "owner 또는 edit 링크에서는 사용할 수 없습니다. 레거시 형식은 테이블 노트만 엽니다.",
     "security.legacy_helper_split": "분할 보기에서는 사용할 수 없습니다. 두 노트 모두 바뀝니다.",
     "security.duplicate_label": "안전하게 복제",
     "security.duplicate_helper": "아직 열리지 않음…",

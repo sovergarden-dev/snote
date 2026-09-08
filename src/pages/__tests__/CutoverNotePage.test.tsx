@@ -83,6 +83,17 @@ describe("CutoverNotePage canary dispatch", () => {
     expect(harness.notePage).toHaveLength(0);
   });
 
+  it("keeps SplitView embeds on LegacyNotePage even when the shared URL has #owner=", async () => {
+    render(
+      <MemoryRouter initialEntries={[`/alpha+beta#owner=${OWNER}`]}>
+        <CutoverNotePage embedSlug="alpha" embedNarrow onPrimaryScroller={() => {}} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("legacy-page:alpha:embed")).toBeInTheDocument();
+    expect(harness.notePage).toHaveLength(0);
+  });
+
   it("keeps ?legacyRo=1 on LegacyNotePage even with a matching #owner fragment", async () => {
     renderRoute(`/daily?legacyRo=1#owner=${OWNER}`);
 

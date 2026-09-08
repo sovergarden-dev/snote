@@ -62,6 +62,10 @@ describe("LegacyNotePage cutover mode", () => {
 
     await waitFor(() => expect(harness.previewText).toHaveBeenCalledWith("legacy text"));
     expect(screen.getByText("legacy.read_only")).toBeInTheDocument();
+    expect(
+      screen.getByText("legacy.read_only").compareDocumentPosition(screen.getByRole("status"))
+        & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it("does not mount legacy ciphertext before unlock", async () => {

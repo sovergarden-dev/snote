@@ -20,8 +20,7 @@ does not deploy, does not apply SQL 240, and does not flip `writes_enabled` /
 | `/<slug>?legacyRo=1` | `LegacyNotePage` RO (same chrome + banner) |
 | `/<slug>#owner=` / `#edit=` | Capability `NotePage` (unchanged editable) |
 | `/<slug>?legacyRo=1#owner=` | Legacy RO (Advanced Legacy ON from `#owner=`) |
-| SplitView plain pane | Legacy RO via Cutover |
-| SplitView capability pane | Capability `NotePage` (matching fragment) |
+| SplitView `/a+b` panes | Legacy RO via Cutover (`+` pathnames cannot carry a matching `#owner=`/`#edit=` fragment; fail-closed LNO) |
 | `/:slug.md` | RawView unchanged (Phase C LNO `open`) |
 
 Flag-off builds keep `NotePage` `legacyOnly` and do not import `CutoverNotePage`.

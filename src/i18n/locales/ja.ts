@@ -278,7 +278,6 @@ const ja: Dictionary = {
     "security.legacy_helper_off": "このノートを読み取り専用のレガシー表示で開きます。他のノートは現行エディタのままです。",
     "security.legacy_helper_on": "このノートはレガシー形式です。オフにするまで閲覧のみです。",
     "security.legacy_helper_on_plain": "このノートは閲覧のみです。Legacy をオフにしても表形式ノートは編集可能になりません。ホームから編集可能なコピーを作成してください。",
-    "security.legacy_helper_capability": "owner / edit リンクでは使えません。レガシー形式はテーブル同期のノート専用です。",
     "security.legacy_helper_split": "分割表示では使えません。両方のノートが切り替わります。",
     "security.duplicate_label": "安全に複製",
     "security.duplicate_helper": "まだ利用できません…",

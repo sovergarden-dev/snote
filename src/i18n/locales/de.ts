@@ -274,7 +274,6 @@ const de: Dictionary = {
     "security.legacy_helper_off": "Öffnet diese Notiz im schreibgeschützten Legacy-Viewer. Andere Notizen bleiben im modernen Editor.",
     "security.legacy_helper_on": "Diese Notiz nutzt das Legacy-Format. Sie ist schreibgeschützt, bis du es ausschaltest.",
     "security.legacy_helper_on_plain": "Diese Notiz ist nur lesbar. Legacy auszuschalten macht sie nicht bearbeitbar. Erstelle eine Kopie von der Startseite.",
-    "security.legacy_helper_capability": "Nicht verfügbar über Owner- oder Edit-Links. Das Legacy-Format öffnet nur Tabellen-Notizen.",
     "security.legacy_helper_split": "Nicht verfügbar in der geteilten Ansicht. Beide Notizen würden wechseln.",
     "security.duplicate_label": "Sicher duplizieren",
     "security.duplicate_helper": "Noch nicht verfügbar…",

@@ -278,7 +278,6 @@ const zh: Dictionary = {
     "security.legacy_helper_off": "在只读 Legacy 查看器中打开此笔记。其他笔记仍使用新版编辑器。",
     "security.legacy_helper_on": "此笔记正在使用 Legacy 格式。关闭前仅可查看。",
     "security.legacy_helper_on_plain": "此笔记仅可查看。关闭 Legacy 不会让该表笔记变为可编辑。请从首页创建可编辑副本。",
-    "security.legacy_helper_capability": "所有者或编辑链接不可用。Legacy 格式仅打开表同步笔记。",
     "security.legacy_helper_split": "分屏视图不可用。开启后会同时改变两则笔记。",
     "security.duplicate_label": "安全复制",
     "security.duplicate_helper": "尚未开放…",

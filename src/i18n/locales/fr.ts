@@ -277,7 +277,6 @@ const fr: Dictionary = {
     "security.legacy_helper_off": "Ouvre cette note dans la visionneuse Legacy en lecture seule. Les autres notes restent dans l’éditeur moderne.",
     "security.legacy_helper_on": "Cette note utilise le format Legacy. Elle est en lecture seule jusqu’à ce que vous le désactiviez.",
     "security.legacy_helper_on_plain": "Cette note est en lecture seule. Désactiver Legacy ne la rend pas modifiable. Créez une copie depuis l’accueil.",
-    "security.legacy_helper_capability": "Indisponible sur les liens owner ou edit. Le format Legacy n’ouvre que les notes de table.",
     "security.legacy_helper_split": "Indisponible en vue scindée. Les deux notes changeraient.",
     "security.duplicate_label": "Dupliquer en sécurité",
     "security.duplicate_helper": "Pas encore disponible…",
