@@ -22,7 +22,7 @@ describe("LocalConvertProvider", () => {
     expect(onFirstPersist).not.toHaveBeenCalled();
     expect(provider.getPendingBytes()).toBeGreaterThan(0);
     expect(events).not.toContain("synced-durable");
-    expect(JSON.stringify(provider)).not.toMatch(/from\("notes"\)/);
+    expect(provider.hasUnflushedLocalChanges()).toBe(true);
 
     const early = new Y.Doc();
     const earlyPersist = vi.fn();

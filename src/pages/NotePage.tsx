@@ -894,7 +894,7 @@ export default function NotePage({
       unsubSync();
       idb?.destroy();
     };
-  }, [slug, validSlug, doc, provider, embedSlug, encPhase, encTargetIsCurrent, encryption, encMeta.isEncrypted, encMeta.ydocState, encMeta.rowExists, capabilityAccess, capabilityToken]);
+  }, [slug, validSlug, doc, provider, embedSlug, encPhase, encTargetIsCurrent, encryption, encMeta.isEncrypted, encMeta.ydocState, encMeta.rowExists, capabilityAccess, capabilityToken, plainProviderCtor]);
 
   if (!validSlug) return <Navigate to="/" replace />;
 

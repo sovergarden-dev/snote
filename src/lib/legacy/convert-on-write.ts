@@ -48,7 +48,7 @@ export function resetConvertOnWriteForTests(): void {
   seeds.clear();
 }
 
-export async function convertPlainNoteOnWrite(input: {
+export function convertPlainNoteOnWrite(input: {
   slug: string;
   doc: Y.Doc;
   source: LegacyNote | null;

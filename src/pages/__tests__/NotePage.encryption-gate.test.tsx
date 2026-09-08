@@ -224,6 +224,9 @@ vi.mock("@/lib/legacy/cutover", () => ({
   createLegacyNoteApi: () => ({
     open: async (slug: string) => {
       const result = await harness.metaForSlug(slug);
+      if (result && typeof result === "object" && "error" in result && (result as { error?: unknown }).error) {
+        throw (result as { error: unknown }).error;
+      }
       const data = (result as { data?: Record<string, unknown> | null } | null)?.data;
       if (!data) {
         return null;

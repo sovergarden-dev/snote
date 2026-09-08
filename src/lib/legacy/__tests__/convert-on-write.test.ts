@@ -127,8 +127,7 @@ describe("W1 convert-on-write", () => {
       api,
       recoveryStore: memoryRecoveryStore(),
     });
-    await Promise.resolve();
-    expect(api.importLegacyNote).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(api.importLegacyNote).toHaveBeenCalledOnce());
     const owner = api.importLegacyNote.mock.calls[0][1] as string;
     release(owner);
     await expect(Promise.all([first, second])).resolves.toEqual([
