@@ -45,6 +45,8 @@ describe("canonical production origin", () => {
     expect(readme).toContain("Encrypt omit");
     expect(readme).toContain("pixel-qa/a-prime-b4eba5d2/");
     expect(readme).toContain("READY WITH KNOWN RISKS");
+    expect(readme).toContain("Pixel PASS");
+    expect(readme).toContain("fail-path not smoke-tested live");
     expect(readme).toContain("CTA Home");
     expect(readme).toContain("Duplicate securely is enabled");
     expect(readme).toContain("import-legacy");
@@ -668,6 +670,8 @@ describe("canonical production origin", () => {
     expect(findings).toContain("34251814023");
     expect(findings).toContain("Duplicate securely is enabled");
     expect(findings).toContain("import-legacy");
+    expect(findings).toContain("Pixel PASS");
+    expect(findings).toContain("fail-path not smoke-tested live");
     expect(findings).not.toContain("Origin is `9bf5e92b`");
     expect(findings).not.toContain("Origin is `b6824541`");
     expect(findings).not.toContain("Origin is `a8f7eeb8`");

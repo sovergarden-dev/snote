@@ -14,9 +14,8 @@ hard-reload per Update apply still on this line; Pixel Legacy opt-in (#122)
 still on this line; Encrypt omit on plain Legacy RO (#123 `#owner=` Encrypt
 stays active); A′ (#126) + Duplicate securely (#128) live on origin `f84183ba`; Pixel visual A′ PASS (plain `/hage`
 Legacy RO + banner + CTA Home; Encrypt omit; mint `#owner=`
-editable; evidence pixel-qa/a-prime-b4eba5d2/); Sentinel READY WITH KNOWN RISKS
-(LOW non-blocking: transient dynamic-import on first `?legacyRo=1`, update
-reminder, SplitView not smoked); Duplicate securely is enabled on this A′ line
+editable; evidence pixel-qa/a-prime-b4eba5d2/); Pixel PASS; Sentinel READY WITH KNOWN RISKS
+(LOW: fail-path not smoke-tested live); Duplicate securely is enabled on this A′ line
 (Edge `note-session` `import-legacy`);
 Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e):
 `capabilityRoutesEnabled` true. Plain slug URLs and SplitView panes mount

@@ -1126,9 +1126,8 @@ Pulse confirmed that pin: `f84183ba` / Pages `74637d87`; PWA smoke
 `34251814023` PASS. Duplicate securely #128 live. A′ Cutover restore #126 still live.
 Encrypt omit on plain RO. Pixel Legacy opt-in #122 still live. PWA latch #119 still live. Choice A
 editable-plain is superseded.
-Sentinel pin: READY WITH KNOWN RISKS remains from A′ on this same-canary line
-(LOW non-blocking: transient dynamic-import on first `?legacyRo=1`, update
-reminder, SplitView not smoked).
+Sentinel pin: READY WITH KNOWN RISKS on live `f84183ba` / Pages `74637d87`
+(LOW: fail-path not smoke-tested live). Pixel PASS.
 Walls HOLD: Worker / Realtime / `writes_enabled`. SQL 240 already applied.
 
 Kill switch unchanged: `writes_enabled=true`,
@@ -1166,9 +1165,8 @@ plain Legacy RO; `#owner=` Encrypt stays active; the encryption gate is
 not opened on the plain table path.
 Pixel visual A′ PASS (plain `/hage` Legacy RO + banner + CTA Home; Encrypt
 omit; mint `#owner=` editable; evidence
-`pixel-qa/a-prime-b4eba5d2/`). Sentinel pin: READY WITH KNOWN RISKS remains
-from A′ (LOW non-blocking: transient dynamic-import on
-first `?legacyRo=1`, update reminder, SplitView not smoked).
+`pixel-qa/a-prime-b4eba5d2/`). Pixel PASS. Sentinel pin: READY WITH KNOWN RISKS
+on live `f84183ba` / Pages `74637d87` (LOW: fail-path not smoke-tested live).
 This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
