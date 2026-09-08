@@ -23,6 +23,7 @@ When the mint path is built (GitHub first; production only on a named go):
 
 This ADR does **not** authorize origin, Worker, Edge, SQL 240, `private_realtime_enabled`, or Home mint in production.
 A later named Pages deploy of #95 made Home mint live on canary origin `e05c73ea`; #98 made fail-closed idle mint live on `addeeb29`; #101+#103 made `CutoverNotePage` + Phase B LNO live on `7d00fd52`; #105 made Phase C RawView+Home LNO live on `77d791af`; #107 made Pixel HIGH UX H1–H6 live on `9df65d53`; #109 made H2 opaque Mode/Export live on `9bf5e92b`; #110 made Ko-fi + New Version FAB live on `b6824541`; #113 made PWA toast suppress when Ko-fi FAB handles update live on `a8f7eeb8`; #116 made FAB-primary + full PWA Sonner suppress while Ko-fi FAB is mounted live on `5c33ac24`; #118 made Choice A editable plain `/slug` live on `9dc0240e`; #119 made PWA latch one hard-reload per Update apply live on `15ec8285`; #122 made Pixel Legacy opt-in live on `0073d53b`; #123 made Encrypt disabled+honest live on `1e76e2b7`; this ADR still does not authorize SQL 240.
+The [SQL 240 readiness contract](../security/sql-240-readiness-contract.md) and [ops preflight](../security/sql-240-ops-preflight.md) are a docs package only; they do **not** authorize apply. This is not SQL 240, not Realtime, not soak-complete.
 
 ## Alternatives
 

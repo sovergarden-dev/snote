@@ -24,6 +24,9 @@ securely is hidden with honest unavailable copy. Pixel HIGH UX H1–H6 is live. 
 Home mint before SQL 240 is accepted as
 [ADR-001](adr/001-home-capability-mint-before-sql-240.md); live mint is
 not authorization to apply 240.
+The [SQL 240 readiness contract](security/sql-240-readiness-contract.md) and
+[ops preflight](security/sql-240-ops-preflight.md) are a docs package only;
+they do **not** authorize apply. This is not SQL 240, not Realtime, not soak-complete.
 `VITE_CAPABILITY_AUTH_ENABLED` and `VITE_ADMIN_PANEL_ENABLED` stayed
 false. Local tests prove capability code contracts only; 240, soak, and
 post-cutover probes remain mandatory gates. Soak ≥48h started from the

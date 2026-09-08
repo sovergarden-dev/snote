@@ -4,6 +4,9 @@ This release removes browser access to the `notes` table. It is a staged
 production operation, not a migration to apply automatically after merge.
 
 SQL 240 wait on Home mint is [ADR-001](../adr/001-home-capability-mint-before-sql-240.md).
+The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
+[ops preflight](./sql-240-ops-preflight.md) are a docs package only; they do
+**not** authorize apply. This is not SQL 240, not Realtime, not soak-complete.
 
 ## Immutable decisions
 
