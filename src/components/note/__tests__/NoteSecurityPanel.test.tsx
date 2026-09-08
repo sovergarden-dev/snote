@@ -221,6 +221,9 @@ describe("NoteSecurityPanel", () => {
 
   it("sizes security rows at least 44px", async () => {
     renderPanel();
+    const trigger = screen.getByRole("button", { name: "security.panel_title" });
+    expect(trigger.className).toMatch(/min-h-11/);
+    expect(trigger.className).toMatch(/min-w-11/);
     await openPanel();
     const row = screen.getByTestId("security-legacy-row");
     expect(row.className).toMatch(/min-h-11/);

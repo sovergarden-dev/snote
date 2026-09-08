@@ -125,7 +125,7 @@ export function NoteSecurityPanel({
       type="button"
       variant="ghost"
       size="icon"
-      className="h-7 w-7"
+      className="h-11 w-11 min-h-11 min-w-11"
       aria-label={t("security.panel_title")}
       aria-expanded={open}
       aria-haspopup="dialog"
