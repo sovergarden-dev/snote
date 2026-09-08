@@ -45,15 +45,26 @@ describe("atomic cutover migration", () => {
       "docs/security/sql-240-ops-preflight.md",
     ), "utf8");
 
+    const importSignature =
+      "public.capability_note_import_legacy(text,text,text,text,text,text,boolean,text,text,integer)";
+
     expect(sha256).toBe(
       "1043a46844e66859ccb8bec16888d6dd78f5f5e5a04df203f220a9b90302cf2f",
     );
     expect(lineCount).toBe(245);
     expect(contract).toContain(sha256);
-    expect(contract).toContain("245");
+    expect(contract).toMatch(/\| Lines \| 245 \|/);
     expect(preflight).toContain(sha256);
+    expect(preflight).toContain("- Lines: 245");
+    expect(preflight).toContain(importSignature);
+    expect(preflight).not.toContain(
+      "capability_note_import_legacy(text, text, text, text, text, jsonb, text)",
+    );
+    expect(preflight).toContain("SELECT public.capability_runtime_state();");
+    expect(preflight).not.toMatch(/FROM public\.capability_runtime\b/);
     expect(contract).toContain("does **not** authorize apply");
     expect(preflight).toContain("does not authorize apply");
+    expect(preflight).toContain("apply blocker");
     expect(contract).toContain(
       "This is not SQL 240, not Realtime, not soak-complete.",
     );

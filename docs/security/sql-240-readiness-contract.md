@@ -27,7 +27,7 @@ SQL 240 `REVOKE`s browser grants on `public.notes`. Choice A depends on those gr
 | **A′ (preferred)** | Re-flip plain `/slug` → `CutoverNotePage` → Legacy RO (LNO) as default; capability `#owner=`/`#edit=` unchanged | SPA ship + smoke: plain RO via LNO; Home mint `#owner=` PASS; Duplicate securely **PASS** or honest-unavailable with no trapped users; Encrypt disabled+honest OK on any remaining plain path |
 | **B (accept break)** | Syringa explicitly accepts plain table edit dies at apply | Written named acceptance; kill-switch plan ready |
 
-Choice A routing contract (`SNOTE-EDITABLE-PLAIN-SLUG-ROUTING-CONTRACT.md`) remains valid **until** A′ ships. A′ is a **separate** named origin go **before** 240 apply (or same calendar day only if Atlas sequences SPA → soak smoke → 240).
+Choice A routing contract (`SNOTE-EDITABLE-PLAIN-SLUG-ROUTING-CONTRACT.md`, Aegis artifact name — not a path in this repo; live Choice A is findings §3e / #118) remains valid **until** A′ ships. A′ is a **separate** named origin go **before** 240 apply (or same calendar day only if Atlas sequences SPA → soak smoke → 240).
 
 ---
 

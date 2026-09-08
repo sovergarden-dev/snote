@@ -16,7 +16,8 @@ Named go required: Syringa (apply) / Atlas (coordinate)
 | Pages | `snote-g4-origin` deploy `49c127f4` |
 | Main tip (docs) | `d31857d5` (#124 attest) — origin may lag docs tip |
 | Walls | SQL **240 HOLD**, Worker HOLD (no redeploy for 240), `writes_enabled` HOLD (do not flip for 240 alone), Edge HOLD for 240 |
-| Product prereqs live | Choice A editable plain `/slug`; Encrypt disabled+honest on plain; Legacy opt-in `?legacyRo=1`; LNO Phase B/C; Home mint fail-closed; canary on |
+| Live default / apply blocker | Choice A editable plain `/slug` (table sync). **Do not apply** until A′ (plain → `CutoverNotePage` → LNO RO) **or** Syringa written accept-break B. See [sql-240-readiness-contract.md](./sql-240-readiness-contract.md) §0. |
+| Product still live (not a go) | Encrypt disabled+honest on plain; Legacy opt-in `?legacyRo=1`; LNO Phase B/C; Home mint fail-closed; canary on |
 
 Re-verify live before any named apply:
 
@@ -45,7 +46,7 @@ sha256sum supabase/migrations/20260724000000_atomic_capability_cutover.sql
 Confirm not already applied (service_role / SQL editor — read-only):
 
 ```sql
-SELECT to_regprocedure('public.capability_note_import_legacy(text, text, text, text, text, jsonb, text)');
+SELECT to_regprocedure('public.capability_note_import_legacy(text,text,text,text,text,text,boolean,text,text,integer)');
 
 SELECT polname FROM pg_policy p
 JOIN pg_class c ON c.oid = p.polrelid
@@ -63,9 +64,10 @@ ORDER BY 1, 2;
 Also record:
 
 ```sql
-SELECT writes_enabled, private_realtime_enabled
-FROM public.capability_runtime
-ORDER BY 1; -- adapt to actual schema/RPC used in prod
+SELECT public.capability_runtime_state();
+-- JSON writesEnabled / privateRealtimeEnabled. Do not SELECT capability_runtime
+-- (no such table). Do not SELECT capability_runtime_settings as service_role
+-- (REVOKE ALL). Canonical RPC: docs/security/atomic-capability-cutover.md.
 
 SELECT count(*) AS notes_total,
        count(*) FILTER (WHERE capability_managed) AS capability_managed
@@ -118,10 +120,11 @@ Do **not** attempt to “undo” 240 by re-GRANT anon policies in production wit
 When Syringa names apply (separate go from this doc):
 
 1. Re-run §0–§2 same day.
-2. Apply migration via approved production SQL path (Lovable Cloud / service_role editor) — **one transaction** as written (`pg_advisory_xact_lock(20260724000000)`).
-3. Do **not** couple: Worker redeploy, Pages redeploy, `writes_enabled` flip, `private_realtime_enabled`, Edge unrelated deploys.
-4. Immediately run §5 post-verify.
-5. Record apply ICT timestamp + operator + migration sha256.
+2. **STOP** unless A′ is live (plain `/slug` → `CutoverNotePage` → LNO RO) **or** Syringa has written accept-break B. Do not apply while Choice A editable table path is the live default.
+3. Apply migration via approved production SQL path (Lovable Cloud / service_role editor) — **one transaction** as written (`pg_advisory_xact_lock(20260724000000)`).
+4. Do **not** couple: Worker redeploy, Pages redeploy, `writes_enabled` flip, `private_realtime_enabled`, Edge unrelated deploys.
+5. Immediately run §5 post-verify.
+6. Record apply ICT timestamp + operator + migration sha256.
 
 ## 5. Post-apply verification commands
 
@@ -136,10 +139,10 @@ FROM information_schema.role_table_grants
 WHERE table_schema = 'public' AND table_name = 'notes'
   AND grantee IN ('anon', 'authenticated', 'PUBLIC');
 
-SELECT to_regprocedure('public.capability_note_import_legacy(text, text, text, text, text, jsonb, text)');
+SELECT to_regprocedure('public.capability_note_import_legacy(text,text,text,text,text,text,boolean,text,text,integer)');
 ```
 
-Product smoke (after named go, not part of this docs draft alone):
+Product smoke (after named go, not part of this docs package alone):
 
 - Home mint create → `#owner=` path still works via Edge.
 - Plain `/slug` Choice A: no direct table write as anon (expect fail-closed / Edge-only).
