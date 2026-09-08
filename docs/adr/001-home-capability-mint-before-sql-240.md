@@ -11,7 +11,7 @@ Production dual-mode canary has `capabilityRoutesEnabled=true`. Home mint is liv
 
 SQL 240 is irreversible: rollback never restores `notes` GRANT/policies. Kill switch is `capability_runtime_set(false, false)` → Edge 503. Tiny plan has no PITR (daily snapshot, ~24h worst-case loss). Staging `snote-g3c-staging` is inactive.
 
-A 2026-09-01 snapshot had 61 notes / 0 `capability_managed`. Dual-mode soak started without Home mint; mint is now live on canary so later soak can include capability create/sync/outbox. Not soak-complete. Not SQL 240.
+A 2026-09-01 snapshot had 61 notes / 0 `capability_managed`. Dual-mode soak started without Home mint; mint is now live on canary so later soak can include capability create/sync/outbox. Not soak-complete. SQL 240 already applied.
 
 ## Decision
 

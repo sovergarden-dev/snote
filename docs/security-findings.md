@@ -203,6 +203,9 @@ redaction.
 
 Verified 2026-09-01 ~23:31 ICT against production Lovable Cloud project
 `8f71f52d-c666-442f-bfb8-5f0a4e0ac1d5` / Supabase `onfzjmfjldsbthchssfr`.
+Current production (header / §3e / §4): SQL 240 is already applied. The
+grants, Legacy policies, and `capability_note_import_legacy` is absent claims
+in this §3a are the 2026-09-01/02 SQL 220 check, not current live.
 There is no `supabase_migrations.schema_migrations` relation on this database;
 do not claim a recorded migration version. Do not re-run
 `20260722000000_capability_backend.sql`: the singleton INSERT is not
@@ -226,15 +229,16 @@ Aggregate counts only: 61 notes, 0 `capability_managed`, 0 with
 allows legacy rows).
 
 `anon` and `authenticated` still have SELECT, INSERT, UPDATE on
-`public.notes` (also REFERENCES, TRIGGER, TRUNCATE). SQL 240 would REVOKE
-these and drop every notes policy; that has not happened.
+`public.notes` (also REFERENCES, TRIGGER, TRUNCATE) **at that 2026-09-01 check**.
+SQL 240 would REVOKE these and drop every notes policy; that had not happened
+yet at that check. Current live: SQL 240 already applied (header / §4).
 
 Tables present: `note_capabilities`, `note_updates`, `note_checkpoints`,
 `note_realtime_memberships`, `capability_admission_windows`,
 `capability_runtime_settings`. At that 2026-09-01 check, kill switch row:
 `capability_runtime_settings` `singleton=true`, `writes_enabled=false`,
 `private_realtime_enabled=false`. Current production row is §3d
-(`writes_enabled=true`, Realtime still false). Function
+(`writes_enabled=true`, Realtime still false). At that 2026-09-01 check, function
 `capability_note_import_legacy` is absent (SQL 240 not applied). Function
 `capability_checkpoint_append` exists (SQL 230 objects are present). Live
 SPA still does not mount `CutoverNotePage`. This §3a attestation is 220 vs

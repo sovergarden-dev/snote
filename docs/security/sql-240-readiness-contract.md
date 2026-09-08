@@ -1,6 +1,6 @@
 # SQL 240 readiness contract (architecture + ops fold-in)
 
-- Status: **Docs package only** — does **not** authorize apply
+- Status: **Docs package only** — does **not** authorize apply (SQL 240 already applied; do not re-apply)
 - Date: 2026-09-08
 - Repo: `sovergarden-dev/snote`
 - Live pin (product): origin `f84183ba` / Pages `74637d87` / canary true / smoke `34251814023`
@@ -57,7 +57,7 @@ Copy Pulse §0–§2; architecture adds:
 
 - [ ] Live `version.json` SHA = go SHA; `capabilityRoutesEnabled` true
 - [ ] Migration sha256 matches §1 for that SHA
-- [ ] 240 **not** already applied (Pulse SQL probes: policies/grants + `capability_note_import_legacy` absent)
+- [x] 240 already applied (do **not** re-apply). Historical pre-apply probe was: policies/grants + `capability_note_import_legacy` absent
 - [ ] Fresh `notes_total` / `capability_managed` recorded (**do not** reuse stale 61/0)
 - [ ] Tiny daily snapshot verified (<~24h); else STOP (no PITR)
 - [ ] **§0 hard gate:** A′ live **or** Syringa written accept-break (B)

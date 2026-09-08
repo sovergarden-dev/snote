@@ -157,8 +157,8 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
 3. Production `legacy-note-open` is the Phase B SELECT-only exact-match reader
    (findings §1b). This docs attestation does not deploy Edge, origin, the
    Worker, or share compatibility. Do not restore a dump. Capability functions are SHA-pinned.
-   Deploy share compatibility code and the Cloudflare Worker. Do not deploy
-   the migration yet.
+   Deploy share compatibility code and the Cloudflare Worker. SQL 240 is
+   already applied; do not re-apply the migration.
 4. Run `bun run cutover:verify` from the exact production build artifact with
    `CAPABILITY_CUTOVER_AT`, both cutoff variables, and the credential-free
    `CAPABILITY_SHARE_VIEW_URL`. It checks cutover + 30 days, finds the value in

@@ -109,7 +109,10 @@ describe("canonical production origin", () => {
     expect(readme).toMatch(/soak ≥48h started from the first canary/);
     expect(readme).toMatch(/not soak-complete/);
     expect(readme).toMatch(
-      /The capability model below is the target post-cutover architecture, not the\s+authorization model currently active in production\./,
+      /The capability model below is the live table-access architecture\./,
+    );
+    expect(readme).not.toMatch(
+      /not the\s+authorization model currently active in production/,
     );
     expect(findings).toContain("Production SQL 240 is already applied");
     expect(findings).not.toContain(
@@ -734,6 +737,7 @@ describe("canonical production origin", () => {
     expect(client).toContain("legacyRo");
     expect(client).toContain("Duplicate securely is enabled");
     expect(client).toContain("import-legacy");
+    expect(client).not.toContain("Duplicate securely is hidden with");
     expect(client).toContain("Phase C");
     expect(client).toContain("Pixel HIGH UX");
     expect(client).toContain("H1–H6");
@@ -839,6 +843,7 @@ describe("canonical production origin", () => {
     expect(backend).not.toContain("SQL 240 is not applied");
     expect(backend).toContain("Duplicate securely is enabled");
     expect(backend).toContain("import-legacy");
+    expect(backend).not.toContain("Duplicate securely is hidden with");
     expect(backend).not.toMatch(
       /Live writes remain the legacy `NotePage` path \(canary off\)/,
     );
@@ -1041,6 +1046,7 @@ describe("canonical production origin", () => {
     expect(adr).toContain("A′");
     expect(adr).toContain("superseded");
     expect(adr).toContain("a-prime-cutover-restore.md");
+    expect(adr).not.toContain("Duplicate securely is hidden with");
     expect(adr).toContain("Sonner");
     expect(adr).toContain("FAB-primary");
     expect(adr).toMatch(/LNO `exists`/);

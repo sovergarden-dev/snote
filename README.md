@@ -52,8 +52,10 @@ applied; Worker / `writes_enabled` / Realtime still HOLD. See
 
 ## Security model
 
-The capability model below is the target post-cutover architecture, not the
-authorization model currently active in production.
+SQL 240 is already applied: browser roles no longer have direct `notes` table
+access. Dual-mode canary, A′ LNO read-only for plain `/slug`, Home mint, and
+Duplicate securely are live. Soak is not complete; `private_realtime_enabled`
+remains false. The capability model below is the live table-access architecture.
 
 After cutover, a slug locates a note but never grants access. New notes use
 32-byte random capabilities:

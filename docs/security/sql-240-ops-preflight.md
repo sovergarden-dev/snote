@@ -1,6 +1,7 @@
 # SQL 240 ops preflight (docs only — do not apply)
 
-Status: **Docs package — does not authorize apply** of `20260724000000_atomic_capability_cutover.sql`.
+Status: **SQL 240 already applied — do not re-apply.** Docs package does not authorize apply
+of `20260724000000_atomic_capability_cutover.sql` again.
 
 This is not SQL 240, not Realtime, not soak-complete.
 
@@ -43,7 +44,9 @@ sha256sum supabase/migrations/20260724000000_atomic_capability_cutover.sql
 # must match recorded identity for that go SHA
 ```
 
-Confirm not already applied (service_role / SQL editor — read-only):
+Confirm not already applied (historical pre-apply probe; SQL 240 is already
+applied on live — expect `capability_note_import_legacy` present; do not re-apply)
+(service_role / SQL editor — read-only):
 
 ```sql
 SELECT to_regprocedure('public.capability_note_import_legacy(text,text,text,text,text,text,boolean,text,text,integer)');
@@ -115,13 +118,16 @@ SELECT public.capability_runtime_set(false, false);
 
 Do **not** attempt to “undo” 240 by re-GRANT anon policies in production without a new ADR + named go.
 
-## 4. Apply procedure (named go only — placeholder)
+## 4. Historical apply procedure (SQL 240 already applied — do not re-apply)
 
-When Syringa names apply (separate go from this doc):
+SQL 240 is already applied. Do not run this procedure. The steps below are the
+original named-go template only.
+
+When Syringa named apply (historical; separate go from this doc):
 
 1. Re-run §0–§2 same day.
 2. **STOP** unless A′ is live (plain `/slug` → `CutoverNotePage` → LNO RO) **or** Syringa has written accept-break B. A′ is live on `f84183ba`. SQL 240 already applied; do not re-apply from this docs pin.
-3. Apply migration via approved production SQL path (Lovable Cloud / service_role editor) — **one transaction** as written (`pg_advisory_xact_lock(20260724000000)`).
+3. Do **not** apply. SQL 240 is already applied. Historical step was: apply migration via approved production SQL path (Lovable Cloud / service_role editor) — **one transaction** as written (`pg_advisory_xact_lock(20260724000000)`).
 4. Do **not** couple: Worker redeploy, Pages redeploy, `writes_enabled` flip, `private_realtime_enabled`, Edge unrelated deploys.
 5. Immediately run §5 post-verify.
 6. Record apply ICT timestamp + operator + migration sha256.
@@ -176,4 +182,4 @@ Done when:
 3. Sentinel light-reviews docs accuracy vs live pin + migration identity.
 4. Syringa has a clear named-go template for **apply** later (separate from merge of docs).
 
-**NOT done / NOT authorized by this package:** applying SQL 240.
+**NOT done / NOT authorized by this package:** applying SQL 240 again (already applied).
