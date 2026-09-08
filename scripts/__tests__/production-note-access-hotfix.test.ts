@@ -70,6 +70,16 @@ describe("production note access hotfix", () => {
     expect(dispatcher.slice(mdArm, splitArm)).toContain("<RawView");
     expect(dispatcher.slice(splitArm, defaultReturn)).toContain("<SplitView");
 
+    const panel = source("src/components/note/NoteSecurityPanel.tsx");
+    expect(panel).toContain("buildLegacyOptInLocation");
+    expect(panel).toContain("DUPLICATE_SECURELY_AVAILABLE");
+    expect(panel).toContain("legacyBlocked");
+    expect(panel).toContain("security.legacy_helper_capability");
+    expect(source("src/lib/legacy/legacy-opt-in.ts")).toContain(
+      "export const DUPLICATE_SECURELY_AVAILABLE = false",
+    );
+    expect(source("src/pages/SharePage.tsx")).not.toContain("NoteSecurityPanel");
+
     const client = source("src/lib/capability/client.ts");
     const postAt = client.indexOf("const post = async");
     const flagCheckAt = client.indexOf(
@@ -148,13 +158,16 @@ describe("production note access hotfix", () => {
     const staticCreateApi = /import\s*\{[^}]*createCapabilityApi[^}]*\}\s*from\s*["']@\/lib\/capability\/client["']/;
     const shareDialog = source("src/components/note/ShareDialog.tsx");
     const lockButton = source("src/components/note/LockButton.tsx");
+    const securityPanel = source("src/components/note/NoteSecurityPanel.tsx");
     const legacyNotePage = source("src/pages/LegacyNotePage.tsx");
 
     expect(shareDialog).not.toMatch(staticCreateApi);
     expect(lockButton).not.toMatch(staticCreateApi);
+    expect(securityPanel).not.toMatch(staticCreateApi);
     expect(legacyNotePage).not.toMatch(staticCreateApi);
     expect(shareDialog).toContain('import("@/lib/capability/client")');
     expect(lockButton).toContain('import("@/lib/capability/client")');
+    expect(securityPanel).not.toContain('import("@/lib/capability/client")');
     expect(legacyNotePage).not.toContain('import("@/lib/capability/client")');
     expect(legacyNotePage).not.toContain("loadCapabilityApi");
     expectValueImportBehindRoutesGuard(shareDialog, "@/lib/capability/client");

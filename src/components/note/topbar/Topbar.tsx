@@ -17,7 +17,7 @@ import { SceneToggle } from "@/components/SceneToggle";
 import { useSceneTheme } from "@/hooks/use-scene-theme";
 import { PresenceDots, type PresenceUser } from "../PresenceDots";
 import { HistoryDialog } from "../HistoryDialog";
-import { LockButton } from "../LockButton";
+import { NoteSecurityPanel } from "../NoteSecurityPanel";
 import { PinButton } from "../PinButton";
 import { WordGoalDialog } from "../WordGoalDialog";
 import { ShareDialog } from "../ShareDialog";
@@ -57,6 +57,8 @@ interface TopbarProps {
   encryption?: Encryption | null;
   capabilityAccess?: CapabilityAccess | null;
   allowEncryptionTransitions?: boolean;
+  /** True when this view is the `?legacyRo=1` Cutover/LNO path. */
+  legacyOn?: boolean;
   currentShareUrl?: string;
   paginated: boolean;
   onTogglePagination: () => void;
@@ -93,6 +95,7 @@ export function Topbar({
   encryption = null,
   capabilityAccess = null,
   allowEncryptionTransitions = true,
+  legacyOn = false,
   currentShareUrl,
   paginated,
   onTogglePagination,
@@ -112,6 +115,10 @@ export function Topbar({
   const showSceneToggle = !compact && !isMobile;
   const { t } = useI18n();
   const { scene } = useSceneTheme();
+  const canaryOn = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true";
+  const showEncrypt =
+    allowEncryptionTransitions && (!capabilityAccess || capabilityAccess.scope === "owner");
+  const showSecurity = canaryOn || showEncrypt;
   const hasScene = scene !== "none";
   const sceneHeaderStyle = hasScene
     ? { background: "var(--home-chrome-bg)", borderColor: "var(--home-chrome-border)" }
@@ -201,14 +208,16 @@ export function Topbar({
             />
             <PresenceDots users={users} />
             <PinButton slug={slug} />
-            {allowEncryptionTransitions && (!capabilityAccess || capabilityAccess.scope === "owner") && (
-              <LockButton
+            {showSecurity && (
+              <NoteSecurityPanel
                 slug={slug}
                 doc={doc}
                 isEncrypted={isEncrypted}
                 provider={provider}
                 capabilityAccess={capabilityAccess}
                 encryption={encryption}
+                allowEncryptionTransitions={showEncrypt}
+                legacyOn={legacyOn}
               />
             )}
             <ShareDialog
@@ -266,14 +275,16 @@ export function Topbar({
 
             <PinButton slug={slug} />
 
-            {allowEncryptionTransitions && (!capabilityAccess || capabilityAccess.scope === "owner") && (
-              <LockButton
+            {showSecurity && (
+              <NoteSecurityPanel
                 slug={slug}
                 doc={doc}
                 isEncrypted={isEncrypted}
                 provider={provider}
                 capabilityAccess={capabilityAccess}
                 encryption={encryption}
+                allowEncryptionTransitions={showEncrypt}
+                legacyOn={legacyOn}
               />
             )}
 

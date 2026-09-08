@@ -6,6 +6,7 @@ import * as Y from "yjs";
 import { AppShell } from "@/components/app/AppShell";
 import { Preview } from "@/components/note/Preview";
 import { UnlockForm } from "@/components/note/UnlockForm";
+import { LegacyRoBanner, NoteSecurityPanel } from "@/components/note/NoteSecurityPanel";
 import { deriveKey, decryptBytes, encryptBytes, iterationsFor, verifyCheck } from "@/lib/crypto";
 import type { LegacyNote } from "@/lib/legacy/cutover";
 import { isUsableSlug } from "@/lib/slug";
@@ -78,6 +79,7 @@ export default function LegacyNotePage({
 }) {
   const { t } = useI18n();
   const [state, setState] = useState<State>({ kind: "loading" });
+  const [securityOpen, setSecurityOpen] = useState(false);
   const valid = isUsableSlug(slug);
 
   useEffect(() => {
@@ -144,22 +146,44 @@ export default function LegacyNotePage({
     </Helmet>
   );
 
+  const security = (
+    <NoteSecurityPanel
+      slug={slug}
+      doc={state.kind === "ready" ? state.doc : null}
+      isEncrypted={state.kind === "ready" || state.kind === "needs-key" ? state.note.isEncrypted : false}
+      allowEncryptionTransitions={false}
+      legacyOn
+      open={securityOpen}
+      onOpenChange={setSecurityOpen}
+    />
+  );
+
   if (state.kind === "loading") {
     return <>{head}<div className={`flex h-full items-center justify-center ${embed ? "min-h-0" : "min-h-svh"}`} role="status" aria-label={t("common.loading")}><Loader2 className="h-5 w-5 motion-safe:animate-spin" aria-hidden="true" /></div></>;
   }
   if (state.kind === "notfound" || state.kind === "error") {
     return (
-      <>{head}<div className="flex min-h-svh flex-col items-center justify-center gap-3 px-4 text-center">
-        <p className="text-sm text-muted-foreground">
-          {state.kind === "notfound" ? t("legacy.not_found") : t("legacy.unavailable")}
-        </p>
-        <Link to="/" className="text-sm text-primary hover:underline">{t("share.back_home")}</Link>
-      </div></>
+      <>
+        {head}
+        <div className="flex min-h-svh flex-col">
+          <div className="flex min-h-11 items-center justify-end border-b px-3 py-1">{security}</div>
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              {state.kind === "notfound" ? t("legacy.not_found") : t("legacy.unavailable")}
+            </p>
+            <Link to="/" className="text-sm text-primary hover:underline">{t("share.back_home")}</Link>
+          </div>
+        </div>
+      </>
     );
   }
+
   if (state.kind === "needs-key") {
     return (
-      <>{head}<UnlockForm
+      <>{head}
+        <LegacyRoBanner onOpenSecurity={() => setSecurityOpen(true)} />
+        <div className="flex min-h-11 items-center justify-end px-3 py-1">{security}</div>
+        <UnlockForm
         slug={slug}
         salt={state.note.salt!}
         check={state.note.check!}
@@ -180,13 +204,12 @@ export default function LegacyNotePage({
   const content = (
     <>
       {head}
+      <LegacyRoBanner onOpenSecurity={() => setSecurityOpen(true)} />
       <header className="flex min-h-12 flex-wrap items-center gap-2 border-b bg-background px-3 py-2">
         {!embed && <Link to="/" aria-label={t("share.back_home_aria")}><ArrowLeft className="h-4 w-4" /></Link>}
         <Eye className="h-4 w-4 text-muted-foreground" />
         <span className="mr-auto text-xs font-medium text-muted-foreground">{t("legacy.read_only")}</span>
-        <p className="basis-full text-xs text-muted-foreground sm:basis-auto sm:text-right">
-          {t("legacy.duplicate_unavailable")}
-        </p>
+        {security}
       </header>
       <main
         ref={onPrimaryScroller}
