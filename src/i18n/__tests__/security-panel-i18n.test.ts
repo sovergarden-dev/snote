@@ -6,6 +6,7 @@ const SECURITY_KEYS = [
   "security.panel_title",
   "security.encrypt_label",
   "security.encrypt_helper",
+  "security.encrypt_helper_unavailable",
   "security.advanced",
   "security.legacy_label",
   "security.legacy_helper_off",
@@ -31,6 +32,12 @@ describe("Note security panel i18n", () => {
     expect(dict.vi["security.panel_title"]).toBe("Bảo mật note");
     expect(dict.en["security.encrypt_label"]).toBe("Encrypt note");
     expect(dict.vi["security.encrypt_label"]).toBe("Mã hóa note");
+    expect(dict.en["security.encrypt_helper_unavailable"]).toBe(
+      "Encryption isn’t available on this note type. Use an owner link to encrypt.",
+    );
+    expect(dict.vi["security.encrypt_helper_unavailable"]).toBe(
+      "Mã hóa chưa dùng được trên note dạng này. Dùng link owner để mã hóa.",
+    );
     expect(dict.en["security.advanced"]).toBe("Advanced");
     expect(dict.vi["security.advanced"]).toBe("Nâng cao");
     expect(dict.en["security.legacy_label"]).toBe("Legacy format");

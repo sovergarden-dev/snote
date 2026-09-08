@@ -272,6 +272,7 @@ const zh: Dictionary = {
     "security.panel_title": "笔记安全",
     "security.encrypt_label": "加密笔记",
     "security.encrypt_helper": "在浏览器中用 AES-256 加密此笔记。分享带 #key 的 URL 以便他人阅读。",
+    "security.encrypt_helper_unavailable": "此笔记类型无法加密。请使用 owner 链接加密。",
     "security.advanced": "高级",
     "security.legacy_label": "Legacy 格式",
     "security.legacy_helper_off": "在只读 Legacy 查看器中打开此笔记。其他笔记仍使用新版编辑器。",

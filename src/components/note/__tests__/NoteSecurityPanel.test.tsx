@@ -9,8 +9,14 @@ import { legacyOptInConfirmStorageKey, markLegacyOptInConfirmed } from "@/lib/le
 import type { CapabilityAccess } from "@/lib/capability/url";
 
 vi.mock("@/components/note/LockButton", () => ({
-  LockButton: () => (
-    <button type="button" role="switch" aria-labelledby="security-encrypt-label" aria-checked="false">
+  LockButton: ({ disabled }: { disabled?: boolean }) => (
+    <button
+      type="button"
+      role="switch"
+      aria-labelledby="security-encrypt-label"
+      aria-checked="false"
+      disabled={disabled}
+    >
       encrypt-control
     </button>
   ),
@@ -88,21 +94,39 @@ describe("NoteSecurityPanel", () => {
     await openPanel();
 
     expect(screen.getByText("security.encrypt_label")).toBeInTheDocument();
+    expect(screen.getByText("security.encrypt_helper")).toBeInTheDocument();
+    expect(screen.queryByText("security.encrypt_helper_unavailable")).not.toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "security.encrypt_label" })).not.toBeDisabled();
     expect(screen.getByText("security.advanced")).toBeInTheDocument();
     const legacySwitch = screen.getByRole("switch", { name: "security.legacy_label" });
     expect(legacySwitch).toHaveAttribute("aria-checked", "false");
     expect(screen.getByText("security.legacy_helper_off")).toBeInTheDocument();
     expect(screen.getByText("encrypt-control")).toBeInTheDocument();
+    expect(
+      screen.getByText("security.encrypt_label").compareDocumentPosition(screen.getByText("security.advanced"))
+        & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(screen.queryByText("security.duplicate_label")).not.toBeInTheDocument();
     expect(screen.getByTestId("loc")).toHaveTextContent("/daily");
     expect(screen.getByTestId("loc")).not.toHaveTextContent("legacyRo");
   });
 
-  it("hides Encrypt when transitions are not allowed", async () => {
+  it("shows Encrypt disabled with honest copy when transitions are not allowed", async () => {
     renderPanel({ allowEncryptionTransitions: false });
     await openPanel();
-    expect(screen.queryByText("security.encrypt_label")).not.toBeInTheDocument();
+
+    expect(screen.getByText("security.encrypt_label")).toBeInTheDocument();
+    expect(screen.getByText("security.encrypt_helper_unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("security.encrypt_helper")).not.toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "security.encrypt_label" })).toBeDisabled();
+    expect(screen.getByText("encrypt-control")).toBeInTheDocument();
+    expect(screen.getByText("security.advanced")).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "security.legacy_label" })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "security.legacy_label" })).not.toBeDisabled();
+    expect(
+      screen.getByText("security.encrypt_label").compareDocumentPosition(screen.getByText("security.advanced"))
+        & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it("opens a first-time confirm dialog and leaves Legacy off on Cancel, Escape, and backdrop", async () => {
@@ -192,6 +216,7 @@ describe("NoteSecurityPanel", () => {
     renderPanel({ ownerOnly: true });
     await openPanel();
     expect(screen.queryByRole("switch", { name: "security.legacy_label" })).not.toBeInTheDocument();
+    expect(screen.queryByText("security.encrypt_label")).not.toBeInTheDocument();
     expect(screen.getByText("security.owner_only")).toBeInTheDocument();
   });
 

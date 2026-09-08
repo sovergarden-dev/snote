@@ -280,6 +280,7 @@ const en = {
     "security.panel_title": "Note security",
     "security.encrypt_label": "Encrypt note",
     "security.encrypt_helper": "Encrypt this note in the browser with AES-256. Share the URL with #key so others can read it.",
+    "security.encrypt_helper_unavailable": "Encryption isn’t available on this note type. Use an owner link to encrypt.",
     "security.advanced": "Advanced",
     "security.legacy_label": "Legacy format",
     "security.legacy_helper_off": "Open this note in the read-only Legacy viewer. Other notes stay in the modern editor.",
