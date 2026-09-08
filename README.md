@@ -4,21 +4,23 @@ Offline-first realtime Markdown notes with a separately gated capability model.
 
 Production: [note.syrin.online](https://note.syrin.online/)
 
-**Current status:** Production currently runs Choice A canary-on editable `NotePage`
-(Phase C still live; Pixel HIGH UX H1–H6 still on this line; H2 opaque
+**Current status:** Production currently runs A′ Cutover restore (#126) canary-on
+`CutoverNotePage` → `LegacyNotePage` (LNO RO) for plain `/<slug>` and SplitView
+panes (Phase C still live; Pixel HIGH UX H1–H6 still on this line; H2 opaque
 Mode/Export still on this line; Ko-fi + New Version FAB still on this line;
 FAB-primary + Sonner suppress (#113/#116) still on this line; Choice A (#118)
-still on this line; PWA latch (#119) one hard-reload per Update apply still on
-this line; Pixel Legacy opt-in (#122) still on this line; Encrypt disabled+honest
-(#123) live on origin `1e76e2b7`; Pixel visual Encrypt disabled+honest on plain
-`/hage` PASS (evidence encrypt-disabled-1e76e2b7/); Sentinel READY WITH KNOWN RISKS
-(Encrypt primary disabled + honest copy; gate not opened); Duplicate hidden remains
-on this Choice A line; Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this
-line; findings §3e):
+editable-plain default is **superseded** on this line; PWA latch (#119) one
+hard-reload per Update apply still on this line; Pixel Legacy opt-in (#122)
+still on this line; Encrypt omit on plain Legacy RO (#123 `#owner=` Encrypt
+stays active); A′ (#126) live on origin `b4eba5d2`; Pixel visual A′ PASS (plain `/hage`
+Legacy RO + banner + CTA Home; Encrypt omit; Duplicate hidden; mint `#owner=`
+editable; evidence pixel-qa/a-prime-b4eba5d2/); Sentinel READY WITH KNOWN RISKS
+(LOW non-blocking: transient dynamic-import on first `?legacyRo=1`, update
+reminder, SplitView not smoked); Duplicate hidden remains on this A′ line;
+Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e):
 `capabilityRoutesEnabled` true. Plain slug URLs and SplitView panes mount
-editable `NotePage` (not `CutoverNotePage` → `LegacyNotePage` default);
-`#owner`/`#edit` still render `NotePage`. Optional `?legacyRo=1` opt-in
-lazy-loads `CutoverNotePage` → `LegacyNotePage` (Phase B `legacy-note-open`
+`CutoverNotePage` → `LegacyNotePage` (LNO RO); `#owner`/`#edit` still render
+`NotePage`. Optional `?legacyRo=1` still RO + banner (Phase B `legacy-note-open`
 read-only). RawView `/:slug.md` loads via LNO `open`; Home availability uses
 LNO `exists` (empty legacy rows are taken). Duplicate securely is hidden with
 honest unavailable copy. Home mints capabilities when canary is on (fail-closed on idle). Additive SQL 220 and 270
@@ -27,12 +29,12 @@ are applied on production; `writes_enabled=true` and
 soak ≥48h started from the first canary (not soak-complete) — see
 [security findings](docs/security-findings.md).
 
-**SPA source (this tree, not live origin):** A′ restores canary-on plain `/<slug>`
-and SplitView panes to `CutoverNotePage` → `LegacyNotePage` (LNO RO). Choice A
-(#118) editable-plain default is **superseded** for SPA routing. `#owner=`/`#edit=`
-still render `NotePage`. `?legacyRo=1` still RO + banner. Canary stays on. See
-[A′ Cutover restore](docs/security/a-prime-cutover-restore.md). This PR does not
-deploy; live origin remains Choice A `1e76e2b7` until a named Pages go.
+**A′ live (named Pages go of #126):** canary-on plain `/<slug>` and SplitView
+panes are `CutoverNotePage` → `LegacyNotePage` (LNO RO). Choice A (#118)
+editable-plain default is **superseded**. `#owner=`/`#edit=` still render
+`NotePage`. `?legacyRo=1` still RO + banner. Canary stays on. SQL 240 still
+HOLD (A′ is prerequisite, not apply). See
+[A′ Cutover restore](docs/security/a-prime-cutover-restore.md).
 
 ## Product
 

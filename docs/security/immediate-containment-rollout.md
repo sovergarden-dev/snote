@@ -6,8 +6,8 @@ without the explicit checkpoint below.
 **Live status (2026-09-03):** Production Worker `syrin-prerender` is PR #89
 `931430c0` / Cloudflare Version ID `5f94ab6c-fde5-4416-a3aa-74daaa2e6094`.
 Observability and invocation logs are live; traces remain disabled. Staging
-`syrin-prerender-staging` was not deployed. Origin remains `1e76e2b7`
-(canary on; Choice A #118 editable plain `/slug` NotePage + optional `?legacyRo=1` CutoverNotePage + Pixel Legacy opt-in #122 + Encrypt disabled+honest #123 + Phase C RawView/Home LNO + Pixel HIGH UX H1–H6 + H2 opaque Mode/Export + Ko-fi + New Version FAB + FAB-primary + Sonner suppress (#113/#116) + PWA latch #119 one hard-reload per Update apply + Home mint live, fail-closed idle). See `docs/security-findings.md` §1c. This runbook is still
+`syrin-prerender-staging` was not deployed. Origin remains `b4eba5d2`
+(canary on; A′ #126 Cutover Legacy RO plain `/slug` + optional `?legacyRo=1` still RO + banner + Pixel Legacy opt-in #122 + Encrypt omit on plain RO (#123 `#owner=` Encrypt remains) + Phase C RawView/Home LNO + Pixel HIGH UX H1–H6 + H2 opaque Mode/Export + Ko-fi + New Version FAB + FAB-primary + Sonner suppress (#113/#116) + PWA latch #119 one hard-reload per Update apply + Home mint live, fail-closed idle; Choice A #118 superseded). See `docs/security-findings.md` §1c. This runbook is still
 required for any future Worker, cache-purge, or tombstone change.
 
 ## Required checkpoint
