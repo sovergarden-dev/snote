@@ -271,7 +271,7 @@ const es: Dictionary = {
     "security.panel_title": "Seguridad de la nota",
     "security.encrypt_label": "Cifrar nota",
     "security.encrypt_helper": "Cifra esta nota en el navegador con AES-256. Comparte la URL con #key para que otros puedan leerla.",
-    "security.encrypt_helper_unavailable": "El cifrado está disponible en notas con capacidad de owner (#owner=). Esta nota simple conserva la puerta de cifrado anterior.",
+    "security.encrypt_helper_unavailable": "El cifrado no está disponible en este tipo de nota. Usa un enlace de owner para cifrar.",
     "security.advanced": "Avanzado",
     "security.legacy_label": "Formato Legacy",
     "security.legacy_helper_off": "Abre esta nota en el visor Legacy de solo lectura. Las demás notas siguen en el editor moderno.",

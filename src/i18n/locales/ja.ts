@@ -272,7 +272,7 @@ const ja: Dictionary = {
     "security.panel_title": "ノートのセキュリティ",
     "security.encrypt_label": "ノートを暗号化",
     "security.encrypt_helper": "このノートをブラウザ内で AES-256 暗号化します。他の人が読めるように URL に #key を付けて共有してください。",
-    "security.encrypt_helper_unavailable": "暗号化はオーナー権限ノート（#owner=）でのみ利用できます。この通常ノートは従来の暗号化ゲートのままです。",
+    "security.encrypt_helper_unavailable": "この種類のノートでは暗号化できません。暗号化するにはオーナーリンクを使ってください。",
     "security.advanced": "詳細",
     "security.legacy_label": "レガシー形式",
     "security.legacy_helper_off": "このノートを読み取り専用のレガシー表示で開きます。他のノートは現行エディタのままです。",

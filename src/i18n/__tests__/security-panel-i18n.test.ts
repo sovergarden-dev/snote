@@ -33,10 +33,10 @@ describe("Note security panel i18n", () => {
     expect(dict.en["security.encrypt_label"]).toBe("Encrypt note");
     expect(dict.vi["security.encrypt_label"]).toBe("Mã hóa note");
     expect(dict.en["security.encrypt_helper_unavailable"]).toBe(
-      "Encryption is available on owner-capability notes (#owner=). This plain note keeps the previous encryption gate.",
+      "Encryption isn’t available on this note type. Use an owner link to encrypt.",
     );
     expect(dict.vi["security.encrypt_helper_unavailable"]).toBe(
-      "Mã hóa chỉ dùng được trên note có quyền owner (#owner=). Note thường này giữ cổng mã hóa như trước.",
+      "Mã hóa chưa dùng được trên note dạng này. Dùng link owner để mã hóa.",
     );
     expect(dict.en["security.advanced"]).toBe("Advanced");
     expect(dict.vi["security.advanced"]).toBe("Nâng cao");

@@ -268,7 +268,7 @@ const de: Dictionary = {
     "security.panel_title": "Notizsicherheit",
     "security.encrypt_label": "Notiz verschlüsseln",
     "security.encrypt_helper": "Verschlüsselt diese Notiz im Browser mit AES-256. Teile die URL mit #key, damit andere sie lesen können.",
-    "security.encrypt_helper_unavailable": "Verschlüsselung ist nur bei Notizen mit Owner-Capability (#owner=) verfügbar. Diese einfache Notiz behält die bisherige Verschlüsselungssperre.",
+    "security.encrypt_helper_unavailable": "Verschlüsselung ist für diesen Notiztyp nicht verfügbar. Nutze einen Owner-Link zum Verschlüsseln.",
     "security.advanced": "Erweitert",
     "security.legacy_label": "Legacy-Format",
     "security.legacy_helper_off": "Öffnet diese Notiz im schreibgeschützten Legacy-Viewer. Andere Notizen bleiben im modernen Editor.",
