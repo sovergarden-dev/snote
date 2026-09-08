@@ -266,3 +266,31 @@ export async function duplicateLegacyNote(input: {
     input.source.isEncrypted ? input.encryptionSecret : undefined,
   );
 }
+
+const DUPLICATE_SLUG_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+/** Fresh locator for a secure copy. Never reuses the legacy slug. */
+export function allocateDuplicateSlug(): string {
+  let slug = "";
+  for (let i = 0; i < 8; i++) {
+    slug += DUPLICATE_SLUG_CHARS[Math.floor(Math.random() * DUPLICATE_SLUG_CHARS.length)];
+  }
+  return slug;
+}
+
+export type DuplicateFailureKind = "network" | "permission" | "retry" | "slug_unavailable";
+
+export function mapDuplicateFailure(error: unknown): DuplicateFailureKind {
+  if (!error || typeof error !== "object") return "network";
+  const candidate = error as { status?: unknown; code?: unknown };
+  const status = typeof candidate.status === "number" && Number.isSafeInteger(candidate.status)
+    ? candidate.status
+    : null;
+  const code = typeof candidate.code === "string" && /^[a-z][a-z_]{0,63}$/.test(candidate.code)
+    ? candidate.code
+    : null;
+  if (code === "slug_unavailable") return "slug_unavailable";
+  if (code === "unauthorized" || status === 401 || status === 403) return "permission";
+  if (status === null) return "network";
+  return "retry";
+}

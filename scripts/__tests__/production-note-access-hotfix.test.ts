@@ -77,7 +77,7 @@ describe("production note access hotfix", () => {
     expect(panel).toContain("security.legacy_helper_on_plain");
     expect(panel).toContain("security.legacy_banner_cta");
     expect(source("src/lib/legacy/legacy-opt-in.ts")).toContain(
-      "export const DUPLICATE_SECURELY_AVAILABLE = false",
+      "export const DUPLICATE_SECURELY_AVAILABLE = true",
     );
     expect(source("src/pages/LegacyNotePage.tsx")).toContain(
       "allowEncryptionTransitions={false}",
@@ -176,10 +176,11 @@ describe("production note access hotfix", () => {
     expect(shareDialog).toContain('import("@/lib/capability/client")');
     expect(lockButton).toContain('import("@/lib/capability/client")');
     expect(securityPanel).not.toContain('import("@/lib/capability/client")');
-    expect(legacyNotePage).not.toContain('import("@/lib/capability/client")');
-    expect(legacyNotePage).not.toContain("loadCapabilityApi");
+    expect(legacyNotePage).toContain('import("@/lib/capability/client")');
+    expect(legacyNotePage).toContain("loadCapabilityApi");
     expectValueImportBehindRoutesGuard(shareDialog, "@/lib/capability/client");
     expectValueImportBehindRoutesGuard(lockButton, "@/lib/capability/client");
+    expectValueImportBehindRoutesGuard(legacyNotePage, "@/lib/capability/client");
 
     const revokeLink = shareDialog.slice(shareDialog.indexOf("const revokeLink"));
     const capabilityGuardAt = revokeLink.indexOf("if (capabilityAccess)");

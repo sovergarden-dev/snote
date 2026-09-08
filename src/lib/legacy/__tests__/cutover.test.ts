@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import {
+  allocateDuplicateSlug,
   createLegacyNoteApi,
   duplicateLegacyNote,
+  mapDuplicateFailure,
 } from "../cutover";
 import {
   legacyShareCutoffMs,
@@ -353,5 +355,23 @@ describe("atomic capability cutover", () => {
     expect(legacyShareCutoffMs("")).toBe(0);
     expect(legacyShareCutoffMs("not-a-date")).toBe(0);
     expect(legacyShareCutoffMs("2026-08-23T12:00:00.000Z")).toBe(TEST_CUTOFF);
+  });
+});
+
+describe("Duplicate securely client helpers", () => {
+  it("allocates a usable 8-character slug distinct from the source", () => {
+    const slug = allocateDuplicateSlug();
+    expect(slug).toMatch(/^[a-z0-9]{8}$/);
+    expect(slug).not.toBe("daily");
+    expect(slug).not.toBe("note");
+  });
+
+  it("maps network, permission, and slug conflicts without guessing from error text", () => {
+    expect(mapDuplicateFailure(new Error("network lost"))).toBe("network");
+    expect(mapDuplicateFailure({ status: 401, code: "unauthorized" })).toBe("permission");
+    expect(mapDuplicateFailure({ status: 403, code: "unauthorized" })).toBe("permission");
+    expect(mapDuplicateFailure({ status: 409, code: "slug_unavailable" })).toBe("slug_unavailable");
+    expect(mapDuplicateFailure({ status: 503, code: "unavailable" })).toBe("retry");
+    expect(mapDuplicateFailure({ status: 429, code: "rate_limited" })).toBe("retry");
   });
 });

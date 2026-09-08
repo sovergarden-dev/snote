@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   buildLegacyOptInLocation,
+  DUPLICATE_SECURELY_AVAILABLE,
   hasConfirmedLegacyOptIn,
   isLegacyRoSearch,
   legacyOptInConfirmStorageKey,
@@ -42,5 +43,11 @@ describe("legacy opt-in confirm persistence", () => {
     expect(hasConfirmedLegacyOptIn("daily")).toBe(true);
     expect(hasConfirmedLegacyOptIn("other")).toBe(false);
     expect(localStorage.getItem(legacyOptInConfirmStorageKey("daily"))).toBe("1");
+  });
+});
+
+describe("Duplicate securely gate", () => {
+  it("is on so Legacy RO can import via the cutover path", () => {
+    expect(DUPLICATE_SECURELY_AVAILABLE).toBe(true);
   });
 });

@@ -15,6 +15,12 @@ const SECURITY_KEYS = [
   "security.legacy_helper_split",
   "security.duplicate_label",
   "security.duplicate_helper",
+  "security.duplicate_helper_locked",
+  "security.duplicate_busy",
+  "security.duplicate_success",
+  "security.duplicate_fail",
+  "security.duplicate_fail_permission",
+  "security.duplicate_retry",
   "security.legacy_confirm_title",
   "security.legacy_confirm_body",
   "security.legacy_confirm_body_short",
@@ -44,8 +50,20 @@ describe("Note security panel i18n", () => {
     expect(dict.vi["security.legacy_label"]).toBe("Định dạng Legacy");
     expect(dict.en["security.duplicate_label"]).toBe("Duplicate securely");
     expect(dict.vi["security.duplicate_label"]).toBe("Sao chép an toàn");
-    expect(dict.en["security.duplicate_helper"]).toBe("Not available yet…");
-    expect(dict.vi["security.duplicate_helper"]).toBe("Chưa mở…");
+    expect(dict.en["security.duplicate_helper"]).toBe(
+      "Creates a new editable note from this view-only Legacy note.",
+    );
+    expect(dict.vi["security.duplicate_helper"]).toBe(
+      "Tạo note mới có quyền sửa từ bản Legacy chỉ xem này.",
+    );
+    expect(dict.en["security.duplicate_busy"]).toBe("Duplicating…");
+    expect(dict.vi["security.duplicate_busy"]).toBe("Đang sao chép…");
+    expect(dict.en["security.duplicate_success"]).toBe("Copy created. Opening the new note.");
+    expect(dict.vi["security.duplicate_success"]).toBe("Đã tạo bản sao. Đang mở note mới.");
+    expect(dict.en["security.duplicate_fail"]).toMatch(/connection/i);
+    expect(dict.vi["security.duplicate_fail"]).toMatch(/kết nối/i);
+    expect(dict.en["security.duplicate_retry"]).toBe("Retry");
+    expect(dict.vi["security.duplicate_retry"]).toBe("Thử lại");
     expect(dict.en["security.legacy_helper_on_plain"]).toMatch(/view-only/);
     expect(dict.vi["security.legacy_helper_on_plain"]).toMatch(/chỉ xem/);
     expect(dict.en["security.legacy_helper_split"]).toBe(

@@ -1,18 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Eye, Loader2 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
-import { Link, Navigate } from "react-router";
+import { Link, Navigate, useNavigate } from "react-router";
 import * as Y from "yjs";
 import { AppShell } from "@/components/app/AppShell";
 import { Preview } from "@/components/note/Preview";
 import { UnlockForm } from "@/components/note/UnlockForm";
 import { LegacyRoBanner, NoteSecurityPanel } from "@/components/note/NoteSecurityPanel";
+import { toast } from "@/hooks/use-toast";
 import { deriveKey, decryptBytes, encryptBytes, iterationsFor, verifyCheck } from "@/lib/crypto";
-import type { LegacyNote } from "@/lib/legacy/cutover";
+import type { DuplicateFailureKind, LegacyNote } from "@/lib/legacy/cutover";
 import { isUsableSlug } from "@/lib/slug";
 import { base64ToBytes } from "@/lib/yjs/base64";
 import type { Encryption } from "@/lib/yjs/provider";
-import { useI18n } from "@/i18n";
+import { useI18n, type TKey } from "@/i18n";
 
 const PRIVATE_PAGE_ROBOTS = "noindex,nofollow,noarchive,nosnippet";
 
@@ -20,6 +21,12 @@ const loadLegacyCutover = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "tr
   ? () => import("@/lib/legacy/cutover")
   : async () => {
       throw new Error("legacy note API unavailable");
+    };
+
+const loadCapabilityApi = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
+  ? async () => (await import("@/lib/capability/client")).createCapabilityApi()
+  : async () => {
+      throw new Error("capability API unavailable");
     };
 
 type ReadyState = {
@@ -36,6 +43,11 @@ type State =
   | { kind: "error"; message: string }
   | { kind: "needs-key"; note: LegacyNote }
   | ReadyState;
+
+function duplicateFailKey(kind: DuplicateFailureKind): TKey {
+  if (kind === "permission") return "security.duplicate_fail_permission";
+  return "security.duplicate_fail";
+}
 
 function hydratePlaintext(note: LegacyNote) {
   const doc = new Y.Doc();
@@ -78,8 +90,14 @@ export default function LegacyNotePage({
   onPrimaryScroller?: (element: HTMLElement | null) => void;
 }) {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [state, setState] = useState<State>({ kind: "loading" });
   const [securityOpen, setSecurityOpen] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+  const [duplicateFeedback, setDuplicateFeedback] = useState<
+    "network" | "permission" | "retry" | "success" | null
+  >(null);
+  const duplicatingRef = useRef(false);
   const valid = isUsableSlug(slug);
 
   useEffect(() => {
@@ -87,6 +105,9 @@ export default function LegacyNotePage({
     const controller = new AbortController();
     let ownedDoc: Y.Doc | null = null;
     setState({ kind: "loading" });
+    setDuplicateFeedback(null);
+    setDuplicating(false);
+    duplicatingRef.current = false;
     void loadLegacyCutover().then(({ createLegacyNoteApi }) => {
       if (controller.signal.aborted) return;
       return createLegacyNoteApi().open(slug, controller.signal);
@@ -135,6 +156,47 @@ export default function LegacyNotePage({
     };
   }, [slug, valid]);
 
+  const onDuplicateSecurely = async () => {
+    if (state.kind !== "ready" || duplicatingRef.current) return;
+    const ready = state;
+    duplicatingRef.current = true;
+    setDuplicateFeedback(null);
+    setDuplicating(true);
+    try {
+      const cutover = await loadLegacyCutover();
+      const api = await loadCapabilityApi();
+      const run = (targetSlug: string) => cutover.duplicateLegacyNote({
+        api,
+        source: ready.note,
+        doc: ready.doc,
+        targetSlug,
+        encryption: ready.encryption,
+        encryptionSecret: ready.encryptionSecret,
+      });
+      let url: string;
+      try {
+        url = await run(cutover.allocateDuplicateSlug());
+      } catch (error) {
+        if (cutover.mapDuplicateFailure(error) !== "slug_unavailable") throw error;
+        url = await run(cutover.allocateDuplicateSlug());
+      }
+      toast({ title: t("security.duplicate_success") });
+      setDuplicateFeedback("success");
+      setDuplicating(false);
+      const next = new URL(url);
+      navigate(`${next.pathname}${next.hash}`);
+    } catch (error) {
+      const kind = await loadLegacyCutover()
+        .then((cutover) => cutover.mapDuplicateFailure(error))
+        .catch((): DuplicateFailureKind => "network");
+      const feedback = kind === "permission" || kind === "network" ? kind : "retry";
+      setDuplicateFeedback(feedback);
+      toast({ title: t(duplicateFailKey(kind)), variant: "destructive" });
+      duplicatingRef.current = false;
+      setDuplicating(false);
+    }
+  };
+
   if (!valid) return <Navigate to="/" replace />;
 
   const head = (
@@ -155,6 +217,9 @@ export default function LegacyNotePage({
       legacyOn
       open={securityOpen}
       onOpenChange={setSecurityOpen}
+      onDuplicateSecurely={state.kind === "ready" ? onDuplicateSecurely : undefined}
+      duplicateBusy={duplicating}
+      duplicateFeedback={duplicateFeedback}
     />
   );
 
