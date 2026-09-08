@@ -289,7 +289,7 @@ const vi: Dictionary = {
     "security.duplicate_busy": "Đang sao chép…",
     "security.duplicate_success": "Đã tạo bản sao. Đang mở note mới.",
     "security.duplicate_fail": "Không sao chép được note này. Kiểm tra kết nối rồi thử lại.",
-    "security.duplicate_fail_permission": "Không sao chép được note này. Có thể bạn không có quyền.",
+    "security.duplicate_fail_permission": "Không sao chép được. Bạn không có quyền sao chép note này.",
     "security.duplicate_retry": "Thử lại",
     "security.legacy_confirm_title": "Bật định dạng Legacy?",
     "security.legacy_confirm_body": "Định dạng Legacy mở note này ở chế độ chỉ xem. Bạn có thể tắt bất kỳ lúc nào trong Bảo mật note. Việc này không đổi các note khác hay trình soạn mặc định.",

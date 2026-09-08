@@ -67,10 +67,10 @@ describe("Note security panel i18n", () => {
       "Không sao chép được note này. Kiểm tra kết nối rồi thử lại.",
     );
     expect(dict.en["security.duplicate_fail_permission"]).toBe(
-      "Couldn't duplicate this note. You may not have permission.",
+      "Couldn't duplicate. You don't have permission to duplicate this note.",
     );
     expect(dict.vi["security.duplicate_fail_permission"]).toBe(
-      "Không sao chép được note này. Có thể bạn không có quyền.",
+      "Không sao chép được. Bạn không có quyền sao chép note này.",
     );
     expect(dict.en["security.duplicate_retry"]).toBe("Retry");
     expect(dict.vi["security.duplicate_retry"]).toBe("Thử lại");

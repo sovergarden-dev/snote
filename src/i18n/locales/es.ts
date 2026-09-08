@@ -284,7 +284,7 @@ const es: Dictionary = {
     "security.duplicate_busy": "Duplicando…",
     "security.duplicate_success": "Copia creada. Abriendo la nota nueva.",
     "security.duplicate_fail": "No se pudo duplicar esta nota. Comprueba la conexión e inténtalo de nuevo.",
-    "security.duplicate_fail_permission": "No se pudo duplicar esta nota. Puede que no tengas permiso.",
+    "security.duplicate_fail_permission": "No se pudo duplicar. No tienes permiso para duplicar esta nota.",
     "security.duplicate_retry": "Reintentar",
     "security.legacy_confirm_title": "¿Activar el formato Legacy?",
     "security.legacy_confirm_body": "El formato Legacy abre esta nota en solo lectura. Puedes desactivarlo en cualquier momento desde Seguridad de la nota. No cambia otras notas ni el editor predeterminado.",

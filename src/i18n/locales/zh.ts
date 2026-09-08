@@ -285,7 +285,7 @@ const zh: Dictionary = {
     "security.duplicate_busy": "正在复制…",
     "security.duplicate_success": "已创建副本。正在打开新笔记。",
     "security.duplicate_fail": "无法复制此笔记。请检查连接后重试。",
-    "security.duplicate_fail_permission": "无法复制此笔记。你可能没有权限。",
+    "security.duplicate_fail_permission": "无法复制。你没有权限复制此笔记。",
     "security.duplicate_retry": "重试",
     "security.legacy_confirm_title": "开启 Legacy 格式？",
     "security.legacy_confirm_body": "Legacy 格式会以只读方式打开此笔记。你可以随时在笔记安全中关闭。不会改变其他笔记或默认编辑器。",

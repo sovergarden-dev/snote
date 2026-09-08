@@ -281,7 +281,7 @@ const pt: Dictionary = {
     "security.duplicate_busy": "A duplicar…",
     "security.duplicate_success": "Cópia criada. A abrir a nova nota.",
     "security.duplicate_fail": "Não foi possível duplicar esta nota. Verifique a ligação e tente novamente.",
-    "security.duplicate_fail_permission": "Não foi possível duplicar esta nota. Pode não ter permissão.",
+    "security.duplicate_fail_permission": "Não foi possível duplicar. Não tem permissão para duplicar esta nota.",
     "security.duplicate_retry": "Tentar novamente",
     "security.legacy_confirm_title": "Ativar o formato Legacy?",
     "security.legacy_confirm_body": "O formato Legacy abre esta nota só de leitura. Pode desligar a qualquer momento em Segurança da nota. Isto não altera outras notas nem o editor predefinido.",

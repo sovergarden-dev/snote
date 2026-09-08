@@ -293,7 +293,7 @@ const en = {
     "security.duplicate_busy": "Duplicating…",
     "security.duplicate_success": "Copy created. Opening the new note.",
     "security.duplicate_fail": "Couldn't duplicate this note. Check your connection and try again.",
-    "security.duplicate_fail_permission": "Couldn't duplicate this note. You may not have permission.",
+    "security.duplicate_fail_permission": "Couldn't duplicate. You don't have permission to duplicate this note.",
     "security.duplicate_retry": "Retry",
     "security.legacy_confirm_title": "Turn on Legacy format?",
     "security.legacy_confirm_body": "Legacy format opens this note as view-only. You can turn it off anytime from Note security. This does not change other notes or the default editor.",

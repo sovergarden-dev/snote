@@ -285,7 +285,7 @@ const ja: Dictionary = {
     "security.duplicate_busy": "複製しています…",
     "security.duplicate_success": "コピーを作成しました。新しいノートを開いています。",
     "security.duplicate_fail": "このノートを複製できませんでした。接続を確認して再試行してください。",
-    "security.duplicate_fail_permission": "このノートを複製できませんでした。権限がない可能性があります。",
+    "security.duplicate_fail_permission": "複製できませんでした。このノートを複製する権限がありません。",
     "security.duplicate_retry": "再試行",
     "security.legacy_confirm_title": "レガシー形式をオンにしますか？",
     "security.legacy_confirm_body": "レガシー形式はこのノートを閲覧のみで開きます。ノートのセキュリティからいつでもオフにできます。他のノートや既定のエディタは変わりません。",

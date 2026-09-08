@@ -284,7 +284,7 @@ const ko: Dictionary = {
     "security.duplicate_busy": "복제하는 중…",
     "security.duplicate_success": "사본을 만들었습니다. 새 노트를 여는 중.",
     "security.duplicate_fail": "이 노트를 복제하지 못했습니다. 연결을 확인한 뒤 다시 시도하세요.",
-    "security.duplicate_fail_permission": "이 노트를 복제하지 못했습니다. 권한이 없을 수 있습니다.",
+    "security.duplicate_fail_permission": "복제하지 못했습니다. 이 노트를 복제할 권한이 없습니다.",
     "security.duplicate_retry": "다시 시도",
     "security.legacy_confirm_title": "레거시 형식을 켤까요?",
     "security.legacy_confirm_body": "레거시 형식은 이 노트를 읽기 전용으로 엽니다. 노트 보안에서 언제든지 끌 수 있습니다. 다른 노트나 기본 편집기는 바뀌지 않습니다.",

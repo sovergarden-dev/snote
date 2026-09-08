@@ -281,7 +281,7 @@ const de: Dictionary = {
     "security.duplicate_busy": "Wird dupliziert…",
     "security.duplicate_success": "Kopie erstellt. Die neue Notiz wird geöffnet.",
     "security.duplicate_fail": "Notiz konnte nicht dupliziert werden. Verbindung prüfen und erneut versuchen.",
-    "security.duplicate_fail_permission": "Notiz konnte nicht dupliziert werden. Möglicherweise fehlt die Berechtigung.",
+    "security.duplicate_fail_permission": "Duplizieren nicht möglich. Sie haben keine Berechtigung, diese Notiz zu duplizieren.",
     "security.duplicate_retry": "Erneut versuchen",
     "security.legacy_confirm_title": "Legacy-Format aktivieren?",
     "security.legacy_confirm_body": "Das Legacy-Format öffnet diese Notiz schreibgeschützt. Du kannst es jederzeit unter Notizsicherheit ausschalten. Andere Notizen und der Standard-Editor bleiben unverändert.",

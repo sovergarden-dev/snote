@@ -284,7 +284,7 @@ const fr: Dictionary = {
     "security.duplicate_busy": "Duplication…",
     "security.duplicate_success": "Copie créée. Ouverture de la nouvelle note.",
     "security.duplicate_fail": "Impossible de dupliquer cette note. Vérifiez la connexion et réessayez.",
-    "security.duplicate_fail_permission": "Impossible de dupliquer cette note. Vous n’avez peut-être pas l’autorisation.",
+    "security.duplicate_fail_permission": "Impossible de dupliquer. Vous n’avez pas l’autorisation de dupliquer cette note.",
     "security.duplicate_retry": "Réessayer",
     "security.legacy_confirm_title": "Activer le format Legacy ?",
     "security.legacy_confirm_body": "Le format Legacy ouvre cette note en lecture seule. Vous pouvez le désactiver à tout moment dans Sécurité de la note. Cela ne change pas les autres notes ni l’éditeur par défaut.",
