@@ -29,11 +29,11 @@ afterEach(() => {
 });
 
 describe("W1 convert-on-write", () => {
-  it("imports an existing legacy note onto the same slug, not a duplicate locator", async () => {
+  it("converts an existing legacy note onto the same slug, not a duplicate locator", async () => {
     const doc = new Y.Doc();
     doc.getText("content").insert(0, "keep me");
     const api = {
-      importLegacyNote: vi.fn(async (_body: unknown, owner: string) => ({
+      convertLegacyNote: vi.fn(async (_body: unknown, owner: string) => ({
         capabilities: { owner },
       })),
       createNote: vi.fn(),
@@ -56,8 +56,8 @@ describe("W1 convert-on-write", () => {
     });
 
     expect(api.createNote).not.toHaveBeenCalled();
-    expect(api.importLegacyNote).toHaveBeenCalledOnce();
-    const [body, owner] = api.importLegacyNote.mock.calls[0] as [
+    expect(api.convertLegacyNote).toHaveBeenCalledOnce();
+    const [body, owner] = api.convertLegacyNote.mock.calls[0] as [
       { slug: string },
       string,
     ];
@@ -66,10 +66,10 @@ describe("W1 convert-on-write", () => {
     expect(consumeConvertSeed("daily")).toBeInstanceOf(Uint8Array);
   });
 
-  it("mints an empty new note through create, not import-legacy", async () => {
+  it("mints an empty new note through create, not convert-legacy", async () => {
     const doc = new Y.Doc();
     const api = {
-      importLegacyNote: vi.fn(),
+      convertLegacyNote: vi.fn(),
       createNote: vi.fn(async (_slug: string, owner: string) => ({
         capabilities: { owner },
       })),
@@ -83,7 +83,7 @@ describe("W1 convert-on-write", () => {
       pendingOwnerStore: memoryOwnerStore(),
     });
 
-    expect(api.importLegacyNote).not.toHaveBeenCalled();
+    expect(api.convertLegacyNote).not.toHaveBeenCalled();
     expect(api.createNote).toHaveBeenCalledOnce();
     expect(api.createNote.mock.calls[0][0]).toBe("fresh");
     const owner = api.createNote.mock.calls[0][1] as string;
@@ -95,7 +95,7 @@ describe("W1 convert-on-write", () => {
     doc.getText("content").insert(0, "once");
     let release!: (owner: string) => void;
     const api = {
-      importLegacyNote: vi.fn((_body: unknown, owner: string) => new Promise<{
+      convertLegacyNote: vi.fn((_body: unknown, owner: string) => new Promise<{
         capabilities: { owner: string };
       }>((resolve) => {
         release = (nextOwner) => resolve({ capabilities: { owner: nextOwner } });
@@ -127,8 +127,8 @@ describe("W1 convert-on-write", () => {
       api,
       recoveryStore: memoryRecoveryStore(),
     });
-    await vi.waitFor(() => expect(api.importLegacyNote).toHaveBeenCalledOnce());
-    const owner = api.importLegacyNote.mock.calls[0][1] as string;
+    await vi.waitFor(() => expect(api.convertLegacyNote).toHaveBeenCalledOnce());
+    const owner = api.convertLegacyNote.mock.calls[0][1] as string;
     release(owner);
     await expect(Promise.all([first, second])).resolves.toEqual([
       `/daily#owner=${owner}`,
@@ -140,7 +140,7 @@ describe("W1 convert-on-write", () => {
     const doc = new Y.Doc();
     doc.getText("content").insert(0, "retry me");
     const api = {
-      importLegacyNote: vi.fn()
+      convertLegacyNote: vi.fn()
         .mockRejectedValueOnce(new Error("network lost"))
         .mockImplementation(async (_body: unknown, owner: string) => ({
           capabilities: { owner },
@@ -165,7 +165,7 @@ describe("W1 convert-on-write", () => {
 
     await expect(convertPlainNoteOnWrite(input)).rejects.toThrow("network lost");
     const path = await convertPlainNoteOnWrite(input);
-    expect(api.importLegacyNote).toHaveBeenCalledTimes(2);
+    expect(api.convertLegacyNote).toHaveBeenCalledTimes(2);
     expect(path.startsWith("/daily#owner=")).toBe(true);
   });
 });

@@ -18,8 +18,9 @@ describe("W1 convert-on-write contract", () => {
     expect(cutover).toContain("<LegacyNotePage");
   });
 
-  it("converts existing legacy through same-slug import-legacy and empty notes through create", () => {
+  it("converts existing legacy through same-slug convert-legacy and empty notes through create", () => {
     const convert = source("src/lib/legacy/convert-on-write.ts");
+    expect(convert).toContain("convertLegacyNote");
     expect(convert).toContain("duplicateLegacyNote");
     expect(convert).toContain("targetSlug: input.slug");
     expect(convert).toContain("mintCapabilityNote");
@@ -27,6 +28,7 @@ describe("W1 convert-on-write contract", () => {
     expect(convert).not.toContain('from("notes")');
     expect(convert).not.toContain("SupabaseYjsProvider");
     expect(convert).not.toContain("integrations/supabase");
+    expect(convert).not.toContain("capability_note_convert_legacy");
   });
 
   it("keeps canary plain persist off notes-table writes", () => {

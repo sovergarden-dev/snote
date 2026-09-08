@@ -373,6 +373,10 @@ describe("production note access hotfix", () => {
     expect(legacyNotePage).toContain("createCapabilityApi");
     expect(legacyNotePage).toContain("duplicateLegacyNote");
     expect(client).toContain('action: "import-legacy"');
+    expect(client).toContain('action: "convert-legacy"');
+    expect(cutover).not.toContain("convertLegacyNote");
+    expect(legacyNotePage).not.toContain("convertLegacyNote");
+    expect(source("src/lib/legacy/convert-on-write.ts")).toContain("convertLegacyNote");
     expect(client).toContain("Authorization");
     expect(envExample).not.toMatch(/VITE_.*SERVICE/i);
     expect(envExample).not.toMatch(/VITE_.*SECRET/i);

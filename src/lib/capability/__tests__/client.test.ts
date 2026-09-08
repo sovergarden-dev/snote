@@ -135,6 +135,9 @@ describe("capability API client", () => {
     await expect(api.importLegacyNote(LEGACY_IMPORT, TOKEN)).rejects.toThrow(
       "capability API unavailable",
     );
+    await expect(api.convertLegacyNote(LEGACY_IMPORT, TOKEN)).rejects.toThrow(
+      "capability API unavailable",
+    );
     await expect(api.openSession(TOKEN)).rejects.toThrow("capability API unavailable");
     await expect(api.sync(TOKEN, {
       updates: [],
@@ -730,10 +733,11 @@ describe("capability API client", () => {
     await api.openSession(TOKEN);
   });
 
-  it("routes create, import, open, sync, and manage through managed Auth", async () => {
+  it("routes create, import, convert, open, sync, and manage through managed Auth", async () => {
     const source = authSource(
       "auth-create",
       "auth-import",
+      "auth-convert",
       "auth-open",
       "auth-sync",
       "auth-manage",
@@ -748,7 +752,7 @@ describe("capability API client", () => {
         });
       }
       if (name === "note-manage") return Response.json({ ok: true });
-      if (call <= 2) {
+      if (call <= 3) {
         return Response.json({
           session: pollingSession(),
           capabilities: { owner: TOKEN },
@@ -772,6 +776,15 @@ describe("capability API client", () => {
       check: null,
       iterations: null,
     }, TOKEN);
+    await api.convertLegacyNote({
+      slug: "daily",
+      checkpointId: "a".repeat(64),
+      payload: "AQID",
+      isEncrypted: false,
+      salt: null,
+      check: null,
+      iterations: null,
+    }, TOKEN);
     await api.openSession(TOKEN);
     await api.sync(TOKEN, {
       updates: [],
@@ -786,10 +799,12 @@ describe("capability API client", () => {
       [TOKEN, "ensure"],
       [TOKEN, "ensure"],
       [TOKEN, "ensure"],
+      [TOKEN, "ensure"],
     ]);
     expect(fetcher.mock.calls.map(([, init]) => init?.headers)).toEqual([
       expect.objectContaining({ "X-Snote-Auth": "auth-create" }),
       expect.objectContaining({ "X-Snote-Auth": "auth-import" }),
+      expect.objectContaining({ "X-Snote-Auth": "auth-convert" }),
       expect.objectContaining({ "X-Snote-Auth": "auth-open" }),
       expect.objectContaining({ "X-Snote-Auth": "auth-sync" }),
       expect.objectContaining({ "X-Snote-Auth": "auth-manage" }),
@@ -836,6 +851,48 @@ describe("capability API client", () => {
 
     expect(imported.capabilities.owner).toBe(TOKEN);
     expect(imported.session.checkpointPayload).toBe("AQID");
+  });
+
+  it("converts an existing legacy note through note-session convert-legacy", async () => {
+    const initial = {
+      slug: "daily",
+      checkpointId: "a".repeat(64),
+      payload: "AQID",
+      isEncrypted: false,
+      salt: null,
+      check: null,
+      iterations: null,
+    };
+    const fetcher = vi.fn<typeof fetch>(async (_input, init) => {
+      expect(init?.headers).toMatchObject({ Authorization: `Bearer ${TOKEN}` });
+      expect(JSON.parse(String(init?.body))).toEqual({
+        action: "convert-legacy",
+        ...initial,
+      });
+      return Response.json({
+        session: privateSession({
+          slug: "daily",
+          checkpointVersion: 1,
+          checkpointPayload: "AQID",
+          checkpointEncryptionVersion: 0,
+        }),
+        capabilities: {
+          owner: TOKEN,
+          edit: "c".repeat(43),
+          view: "d".repeat(43),
+        },
+      }, { status: 201 });
+    });
+    const api = createCapabilityApi({
+      baseUrl: "https://project.supabase.co",
+      fetcher,
+      authSource: authSource(null),
+    });
+
+    const converted = await api.convertLegacyNote(initial, TOKEN);
+
+    expect(converted.capabilities.owner).toBe(TOKEN);
+    expect(converted.session.checkpointPayload).toBe("AQID");
   });
 
   it("syncs an idempotent update batch without serializing either secret", async () => {

@@ -24,6 +24,7 @@ const capabilityMigrationPaths = [
   "supabase/migrations/20260723000000_capability_checkpoint_compaction.sql",
   "supabase/migrations/20260724000000_atomic_capability_cutover.sql",
   "supabase/migrations/20260727000000_capability_sync_conflict_codes.sql",
+  "supabase/migrations/20260908000000_capability_note_convert_legacy.sql",
 ];
 const allCapabilityMigrations = capabilityMigrationPaths.map(source).join("\n");
 const allCapabilitySources = [
@@ -225,6 +226,7 @@ describe("capability database boundary", () => {
     "capability_note_manage",
     "capability_checkpoint_append",
     "capability_note_import_legacy",
+    "capability_note_convert_legacy",
   ])("%s is fenced by the database runtime row", (functionName) => {
     const body = sqlFunction(allCapabilityMigrations, functionName);
     const gate = body.indexOf("IF NOT public.capability_writes_acquire()");
@@ -534,9 +536,10 @@ describe("Edge capability endpoints", () => {
     expect(createBranch).toContain("created?.session");
     expect(createBranch).toContain("created?.recovered");
 
+    const importAt = endpoint.indexOf('if (body?.action === "import-legacy")');
     const importBranch = endpoint.slice(
-      endpoint.indexOf('if (body?.action === "import-legacy")'),
-      endpoint.indexOf("const tokenHash = await capabilityTokenHash"),
+      importAt,
+      endpoint.indexOf('if (body?.action === "convert-legacy")'),
     );
     expect(importBranch.match(/environment\.client\.rpc\(/g)).toHaveLength(2);
     expect(importBranch).toContain("decodeCapabilityPayload");
@@ -546,6 +549,21 @@ describe("Edge capability endpoints", () => {
     expect(importBranch).toContain("rpcStatus(admitted)");
     expect(importBranch).not.toContain("admitted !== true");
     expect(importBranch).toContain('"capability_note_import_legacy"');
+
+    const convertAt = endpoint.indexOf('if (body?.action === "convert-legacy")');
+    const tokenHashAt = endpoint.indexOf("const tokenHash = await capabilityTokenHash");
+    expect(convertAt).toBeGreaterThan(importAt);
+    expect(tokenHashAt).toBeGreaterThan(convertAt);
+    const convertBranch = endpoint.slice(convertAt, tokenHashAt);
+    expect(convertBranch.match(/environment\.client\.rpc\(/g)).toHaveLength(2);
+    expect(convertBranch).toContain("decodeCapabilityPayload");
+    expect(convertBranch.indexOf('"capability_admission_consume"')).toBeLessThan(
+      convertBranch.indexOf('"capability_note_convert_legacy"'),
+    );
+    expect(convertBranch).toContain("rpcStatus(admitted)");
+    expect(convertBranch).not.toContain("admitted !== true");
+    expect(convertBranch).toContain('"capability_note_convert_legacy"');
+    expect(convertBranch).not.toContain('"capability_note_import_legacy"');
 
     const sql = source("supabase/migrations/20260722000000_capability_backend.sql");
     const createRpc = sql.slice(

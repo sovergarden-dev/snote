@@ -305,6 +305,34 @@ export function createCapabilityApi(options: ApiOptions = {}) {
       };
     },
 
+    async convertLegacyNote(body: {
+      slug: string;
+      checkpointId: string;
+      payload: string;
+      isEncrypted: boolean;
+      salt: string | null;
+      check: string | null;
+      iterations: number | null;
+    }, ownerCandidate: string) {
+      const data = await post("note-session", { action: "convert-legacy", ...body }, ownerCandidate);
+      const capabilities = data.capabilities as Record<string, unknown> | undefined;
+      if (
+        !capabilities
+        || !CAPABILITY_TOKEN_RE.test(String(capabilities.owner ?? ""))
+        || String(capabilities.owner) !== ownerCandidate
+        || !(capabilities.edit === undefined || CAPABILITY_TOKEN_RE.test(String(capabilities.edit)))
+        || !(capabilities.view === undefined || CAPABILITY_TOKEN_RE.test(String(capabilities.view)))
+      ) throw new Error("invalid capabilities");
+      return {
+        session: assertSession(data.session),
+        capabilities: {
+          owner: String(capabilities.owner),
+          ...(capabilities.edit === undefined ? {} : { edit: String(capabilities.edit) }),
+          ...(capabilities.view === undefined ? {} : { view: String(capabilities.view) }),
+        },
+      };
+    },
+
     async openSession(token: string, initialAfterSequence = 0): Promise<NoteSession> {
       let afterSequence = initialAfterSequence;
       let aggregate: NoteSession | null = null;

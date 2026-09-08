@@ -8,7 +8,7 @@ import {
 } from "./cutover";
 
 export type ConvertOnWriteApi = {
-  importLegacyNote: (body: {
+  convertLegacyNote: (body: {
     slug: string;
     checkpointId: string;
     payload: string;
@@ -65,7 +65,7 @@ export function convertPlainNoteOnWrite(input: {
     try {
       if (input.source) {
         const url = await duplicateLegacyNote({
-          api: input.api,
+          api: { importLegacyNote: input.api.convertLegacyNote },
           source: input.source,
           doc: input.doc,
           targetSlug: input.slug,
