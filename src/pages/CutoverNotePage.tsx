@@ -44,7 +44,7 @@ export function CutoverNotePage(props: CutoverNotePageProps) {
     }
   }, [capabilityAccess, slug]);
 
-  if (isLegacyRoSearch(location.search) || !capabilityAccess) {
+  if (isLegacyRoSearch(location.search)) {
     if (!LegacyNotePage) return null;
     return (
       <Suspense fallback={editorFallback}>

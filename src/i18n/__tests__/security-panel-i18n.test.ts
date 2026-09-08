@@ -21,6 +21,9 @@ const SECURITY_KEYS = [
   "security.duplicate_fail",
   "security.duplicate_fail_permission",
   "security.duplicate_retry",
+  "security.convert_busy",
+  "security.convert_fail",
+  "security.convert_retry",
   "security.legacy_confirm_title",
   "security.legacy_confirm_body",
   "security.legacy_confirm_body_short",
@@ -74,6 +77,8 @@ describe("Note security panel i18n", () => {
     );
     expect(dict.en["security.duplicate_retry"]).toBe("Retry");
     expect(dict.vi["security.duplicate_retry"]).toBe("Thử lại");
+    expect(dict.en["security.convert_busy"]).toBe("Saving securely…");
+    expect(dict.vi["security.convert_busy"]).toBe("Đang lưu an toàn…");
     expect(dict.en["security.legacy_helper_on_plain"]).toMatch(/view-only/);
     expect(dict.vi["security.legacy_helper_on_plain"]).toMatch(/chỉ xem/);
     expect(dict.en["security.legacy_helper_split"]).toBe(

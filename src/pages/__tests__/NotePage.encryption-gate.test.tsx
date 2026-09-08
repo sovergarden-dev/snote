@@ -35,6 +35,7 @@ const harness = vi.hoisted(() => ({
   topbarProps: vi.fn(),
   capabilityOpenSession: vi.fn(),
   metaForSlug: vi.fn(),
+  notesFrom: vi.fn(),
   deriveKey: vi.fn(),
   verifyCheck: vi.fn(),
   decryptBytes: vi.fn(),
@@ -103,11 +104,14 @@ vi.mock("@/integrations/supabase/client", () => ({
     functions: {
       invoke: (...args: unknown[]) => harness.shareInvoke(...args),
     },
-    from: () => ({
-      select: () => ({
-        eq: (_column: string, slug: string) => ({ maybeSingle: () => harness.metaForSlug(slug) }),
-      }),
-    }),
+    from: (table: string) => {
+      harness.notesFrom(table);
+      return {
+        select: () => ({
+          eq: (_column: string, slug: string) => ({ maybeSingle: () => harness.metaForSlug(slug) }),
+        }),
+      };
+    },
   },
 }));
 vi.mock("@/lib/capability/client", () => ({
@@ -185,6 +189,63 @@ vi.mock("@/lib/yjs/capability-provider", () => ({
       return Promise.resolve();
     }
   },
+}));
+vi.mock("@/lib/yjs/local-convert-provider", () => ({
+  LocalConvertProvider: class {
+    awareness = {};
+    private destroyed = false;
+
+    constructor(
+      private readonly slug: string,
+      _doc: unknown,
+      _onFirstPersist: unknown,
+    ) {
+      harness.providerConstruct(slug);
+    }
+
+    setEncryption() {}
+    setExpectedEncrypted() {}
+    onAwareness() { return vi.fn(); }
+    onSyncEvent() { return vi.fn(); }
+    connect() {
+      if (this.destroyed) return Promise.resolve();
+      harness.providerConnect(this.slug);
+      return Promise.resolve();
+    }
+    flushBeacon() {}
+    destroy() {
+      this.destroyed = true;
+      harness.providerDestroy(this.slug);
+      return Promise.resolve();
+    }
+  },
+}));
+vi.mock("@/lib/legacy/cutover", () => ({
+  createLegacyNoteApi: () => ({
+    open: async (slug: string) => {
+      const result = await harness.metaForSlug(slug);
+      const data = (result as { data?: Record<string, unknown> | null } | null)?.data;
+      if (!data) {
+        return null;
+      }
+      return {
+        slug,
+        content: typeof data.content === "string" ? data.content : "",
+        ydocState: typeof data.ydoc_state === "string" ? data.ydoc_state : "",
+        isEncrypted: Boolean(data.is_encrypted),
+        salt: typeof data.enc_salt === "string" ? data.enc_salt : null,
+        check: typeof data.enc_check === "string" ? data.enc_check : null,
+        iterations: typeof data.enc_iterations === "number" ? data.enc_iterations : null,
+      };
+    },
+  }),
+  mapDuplicateFailure: () => "retry",
+}));
+vi.mock("@/lib/legacy/convert-on-write", () => ({
+  convertPlainNoteOnWrite: vi.fn(async () => {
+    throw new Error("convert-on-write is mocked in this harness");
+  }),
+  consumeConvertSeed: () => null,
 }));
 vi.mock("@/hooks/use-word-goal", () => ({ useWordGoal: () => ({ goal: null }), consumeGoalReached: () => false }));
 vi.mock("@/hooks/use-toast", () => ({ toast: vi.fn() }));
@@ -423,6 +484,7 @@ describe("NotePage encryption gate", () => {
     harness.capabilityOpenSession.mockResolvedValue(null);
     harness.metaForSlug.mockReset();
     harness.metaForSlug.mockImplementation(() => harness.metaPromise);
+    harness.notesFrom.mockReset();
     harness.deriveKey.mockReset();
     harness.verifyCheck.mockReset();
     harness.decryptBytes.mockReset();
@@ -447,6 +509,7 @@ describe("NotePage encryption gate", () => {
     );
 
     await waitFor(() => expect(harness.metaForSlug).toHaveBeenCalledWith("secret"));
+    expect(harness.notesFrom).toHaveBeenCalledWith("notes");
     expect(harness.capabilityOpenSession).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(harness.topbarProps).toHaveBeenLastCalledWith(
@@ -456,6 +519,7 @@ describe("NotePage encryption gate", () => {
         }),
       ),
     );
+    await waitFor(() => expect(harness.idbConstruct).toHaveBeenCalledWith("note:secret"));
   });
 
   it("disables encryption transitions in the embedded legacy-only workspace", async () => {
@@ -765,7 +829,8 @@ describe("NotePage encryption gate", () => {
     await waitFor(() => expect(view.getByTestId("editor")).toBeInTheDocument());
     expect(harness.docAcquire).toHaveBeenCalledWith("secret");
     expect(harness.providerConstruct).toHaveBeenCalledWith("secret");
-    expect(harness.idbConstruct).toHaveBeenCalledWith("note:secret");
+    expect(harness.idbConstruct).not.toHaveBeenCalled();
+    expect(harness.notesFrom).not.toHaveBeenCalled();
     await waitFor(() => expect(harness.upsertPlaintextNote).toHaveBeenCalled());
     expect(
       harness.upsertPlaintextNote.mock.calls.every(

@@ -49,12 +49,12 @@ describe("CutoverNotePage canary dispatch", () => {
     harness.legacyPage.length = 0;
   });
 
-  it("lazy-loads LegacyNotePage for a plain slug without a capability fragment", async () => {
+  it("lazy-loads editable NotePage for a plain slug without a capability fragment", async () => {
     renderRoute("/daily");
 
-    expect(await screen.findByText("legacy-page:daily")).toBeInTheDocument();
-    expect(screen.queryByText("note-page:route")).not.toBeInTheDocument();
-    expect(harness.notePage).toHaveLength(0);
+    expect(await screen.findByText("note-page:route")).toBeInTheDocument();
+    expect(screen.queryByText(/legacy-page:/)).not.toBeInTheDocument();
+    expect(harness.legacyPage).toHaveLength(0);
   });
 
   it("renders NotePage for a matching #owner fragment", async () => {
@@ -72,30 +72,39 @@ describe("CutoverNotePage canary dispatch", () => {
     expect(screen.queryByText(/legacy-page:/)).not.toBeInTheDocument();
   });
 
-  it("uses LegacyNotePage for an embedded plain slug", async () => {
+  it("uses NotePage for an embedded plain slug", async () => {
     render(
       <MemoryRouter initialEntries={["/alpha+beta"]}>
         <CutoverNotePage embedSlug="alpha" embedNarrow onPrimaryScroller={() => {}} />
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("legacy-page:alpha:embed")).toBeInTheDocument();
-    expect(harness.notePage).toHaveLength(0);
+    expect(await screen.findByText("note-page:alpha")).toBeInTheDocument();
+    expect(harness.legacyPage).toHaveLength(0);
+    expect(harness.notePage[0]?.embedSlug).toBe("alpha");
   });
 
-  it("keeps SplitView embeds on LegacyNotePage even when the shared URL has #owner=", async () => {
+  it("keeps SplitView embeds on NotePage even when the shared URL has #owner=", async () => {
     render(
       <MemoryRouter initialEntries={[`/alpha+beta#owner=${OWNER}`]}>
         <CutoverNotePage embedSlug="alpha" embedNarrow onPrimaryScroller={() => {}} />
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("legacy-page:alpha:embed")).toBeInTheDocument();
-    expect(harness.notePage).toHaveLength(0);
+    expect(await screen.findByText("note-page:alpha")).toBeInTheDocument();
+    expect(harness.legacyPage).toHaveLength(0);
   });
 
   it("keeps ?legacyRo=1 on LegacyNotePage even with a matching #owner fragment", async () => {
     renderRoute(`/daily?legacyRo=1#owner=${OWNER}`);
+
+    expect(await screen.findByText("legacy-page:daily")).toBeInTheDocument();
+    expect(screen.queryByText("note-page:route")).not.toBeInTheDocument();
+    expect(harness.notePage).toHaveLength(0);
+  });
+
+  it("renders LegacyNotePage for ?legacyRo=1 without a capability fragment", async () => {
+    renderRoute("/daily?legacyRo=1");
 
     expect(await screen.findByText("legacy-page:daily")).toBeInTheDocument();
     expect(screen.queryByText("note-page:route")).not.toBeInTheDocument();
