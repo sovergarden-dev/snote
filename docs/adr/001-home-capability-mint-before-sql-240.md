@@ -48,6 +48,7 @@ The [SQL 240 readiness contract](../security/sql-240-readiness-contract.md) and 
 - Forge implements Home create against existing `note-session` contract (`createCapabilityApi().createNote`). No new Edge function.
 - Failures stay existing codes: `slug_unavailable` 409, admission 429/503, missing HMAC 503.
 - Choice A canary-on editable `NotePage` is live on origin `1e76e2b7`; optional `?legacyRo=1` still mounts `CutoverNotePage`; Pixel Legacy opt-in (#122) is live; Encrypt disabled+honest (#123) is live (gate not opened); flag-off builds keep `legacyOnly` `NotePage`. PWA latch (#119) one hard-reload per Update apply is live. Home existence check today is LNO `exists` (canary-on; empty legacy rows are taken) — after mint, capability-managed rows are `exists: false`; Home must not treat that as “slug free” once create can 409 from the RPC.
+- SPA source (this tree, not live origin): A′ restores canary-on plain `/slug` to `CutoverNotePage` → `LegacyNotePage` (LNO RO). Choice A (#118) editable-plain default is superseded for SPA routing. See [A′ Cutover restore](../security/a-prime-cutover-restore.md). Live origin remains Choice A until a named Pages go. This ADR still does not authorize SQL 240.
 - SQL 240, private Realtime, and quen/lạ overlay stay separately named. Worker log deploy is already live (§1c).
 
 ## Open questions (do not guess)

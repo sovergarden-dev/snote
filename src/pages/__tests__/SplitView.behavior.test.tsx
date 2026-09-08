@@ -109,17 +109,17 @@ describe("SplitView responsive behavior", () => {
     vi.stubGlobal("ResizeObserver", ResizeObserverMock);
   });
 
-  it("embeds editable NotePage in each plain pane when capability routes are enabled", async () => {
+  it("embeds CutoverNotePage in each plain pane when capability routes are enabled", async () => {
     renderSplit();
     await screen.findByText("note:alpha");
-    expect(harness.mountedAs.get("alpha")).toBe("NotePage");
-    expect(harness.mountedAs.get("beta")).toBe("NotePage");
-    expect(harness.noteProps.get("alpha")?.legacyOnly).toBe(false);
+    expect(harness.mountedAs.get("alpha")).toBe("CutoverNotePage");
+    expect(harness.mountedAs.get("beta")).toBe("CutoverNotePage");
+    expect(harness.noteProps.get("alpha")?.legacyOnly).toBeUndefined();
     expect(harness.noteProps.get("alpha")?.embedSlug).toBe("alpha");
     expect(harness.noteProps.get("beta")?.embedSlug).toBe("beta");
   });
 
-  it("embeds CutoverNotePage only when ?legacyRo=1", async () => {
+  it("still embeds CutoverNotePage when ?legacyRo=1", async () => {
     renderSplit("/alpha+beta?legacyRo=1");
     await screen.findByText("note:alpha");
     expect(harness.mountedAs.get("alpha")).toBe("CutoverNotePage");

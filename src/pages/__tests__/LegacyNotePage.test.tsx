@@ -31,10 +31,10 @@ vi.mock("@/components/app/AppShell", () => ({
 vi.mock("@/i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock("@/components/note/NoteSecurityPanel", () => ({
   NoteSecurityPanel: () => <button type="button" aria-label="security.panel_title" />,
-  LegacyRoBanner: ({ onOpenSecurity }: { onOpenSecurity: () => void }) => (
-    <div>
+  LegacyRoBanner: () => (
+    <div role="status">
       <span>security.legacy_banner</span>
-      <button type="button" onClick={onOpenSecurity}>security.legacy_banner_open</button>
+      <a href="/">security.legacy_banner_cta</a>
     </div>
   ),
 }));
@@ -62,6 +62,10 @@ describe("LegacyNotePage cutover mode", () => {
 
     await waitFor(() => expect(harness.previewText).toHaveBeenCalledWith("legacy text"));
     expect(screen.getByText("legacy.read_only")).toBeInTheDocument();
+    expect(
+      screen.getByText("legacy.read_only").compareDocumentPosition(screen.getByRole("status"))
+        & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it("does not mount legacy ciphertext before unlock", async () => {
@@ -102,7 +106,7 @@ describe("LegacyNotePage cutover mode", () => {
     expect(screen.getByRole("button", { name: "security.panel_title" })).toBeInTheDocument();
   });
 
-  it("keeps Note security on LNO miss so Legacy opt-in can be turned off", async () => {
+  it("keeps Note security on LNO miss", async () => {
     harness.open.mockResolvedValue(null);
 
     render(<MemoryRouter><LegacyNotePage slug="daily" /></MemoryRouter>);

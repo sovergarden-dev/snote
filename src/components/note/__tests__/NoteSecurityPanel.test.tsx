@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { NoteSecurityPanel } from "../NoteSecurityPanel";
+import { LegacyRoBanner, NoteSecurityPanel } from "../NoteSecurityPanel";
 import { legacyOptInConfirmStorageKey, markLegacyOptInConfirmed } from "@/lib/legacy/legacy-opt-in";
 import type { CapabilityAccess } from "@/lib/capability/url";
 
@@ -193,16 +193,15 @@ describe("NoteSecurityPanel", () => {
     expect(within(dialog).queryByText("security.legacy_confirm_body")).not.toBeInTheDocument();
   });
 
-  it("turns Legacy off immediately without a confirm", async () => {
+  it("keeps plain ?legacyRo=1 RO on and does not reopen the table editor", async () => {
     renderPanel({ path: "/daily?legacyRo=1", legacyOn: true });
     await openPanel();
-    expect(screen.getByText("security.legacy_helper_on")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("switch", { name: "security.legacy_label" }));
+    expect(screen.getByText("security.legacy_helper_on_plain")).toBeInTheDocument();
+    const sw = screen.getByRole("switch", { name: "security.legacy_label" });
+    expect(sw).toBeDisabled();
+    await userEvent.click(sw);
     expect(screen.queryByRole("dialog", { name: "security.legacy_confirm_title" })).not.toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByTestId("loc")).toHaveTextContent("/daily");
-      expect(screen.getByTestId("loc")).not.toHaveTextContent("legacyRo");
-    });
+    expect(screen.getByTestId("loc")).toHaveTextContent("/daily?legacyRo=1");
   });
 
   it("disables switches and shows Loading… while busy", async () => {
@@ -220,17 +219,76 @@ describe("NoteSecurityPanel", () => {
     expect(screen.getByText("security.owner_only")).toBeInTheDocument();
   });
 
-  it("disables Legacy on capability owner/edit links and does not apply ?legacyRo=1", async () => {
+  it("omits Encrypt on plain Legacy RO chrome", async () => {
     renderPanel({
+      path: "/daily",
+      legacyOn: true,
+      allowEncryptionTransitions: false,
+    });
+    await openPanel();
+    expect(screen.queryByText("security.encrypt_label")).not.toBeInTheDocument();
+    expect(screen.queryByText("encrypt-control")).not.toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "security.legacy_label" })).toBeDisabled();
+    expect(screen.getByText("security.legacy_helper_on_plain")).toBeInTheDocument();
+  });
+
+  it("does not turn Legacy off on plain RO (no Choice A table path)", async () => {
+    renderPanel({ path: "/daily", legacyOn: true, allowEncryptionTransitions: false });
+    await openPanel();
+    const sw = screen.getByRole("switch", { name: "security.legacy_label" });
+    expect(sw).toBeDisabled();
+    await userEvent.click(sw);
+    expect(screen.getByTestId("loc")).toHaveTextContent("/daily");
+    expect(screen.getByTestId("loc")).not.toHaveTextContent("legacyRo");
+  });
+
+  it("applies ?legacyRo=1 from #owner= only after Turn on Legacy confirm", async () => {
+    renderPanel({
+      path: "/daily#owner=abc",
       capabilityAccess: { slug: "daily", scope: "owner", token: "a".repeat(43) },
     });
     await openPanel();
     const sw = screen.getByRole("switch", { name: "security.legacy_label" });
-    expect(sw).toBeDisabled();
-    expect(screen.getByText("security.legacy_helper_capability")).toBeInTheDocument();
+    expect(sw).not.toBeDisabled();
+    expect(screen.getByText("security.legacy_helper_off")).toBeInTheDocument();
     await userEvent.click(sw);
-    expect(screen.queryByTestId("legacy-opt-in-confirm")).not.toBeInTheDocument();
-    expect(screen.getByTestId("loc")).not.toHaveTextContent("legacyRo");
+    const dialog = await screen.findByTestId("legacy-opt-in-confirm");
+    await userEvent.click(within(dialog).getByRole("button", { name: "security.legacy_confirm_turn_on" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("loc")).toHaveTextContent("/daily?legacyRo=1#owner=abc");
+    });
+  });
+
+  it("turns Legacy off from #owner= RO without a confirm", async () => {
+    renderPanel({
+      path: "/daily?legacyRo=1#owner=abc",
+      legacyOn: true,
+      capabilityAccess: { slug: "daily", scope: "owner", token: "a".repeat(43) },
+    });
+    await openPanel();
+    expect(screen.getByText("security.legacy_helper_on")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("switch", { name: "security.legacy_label" }));
+    expect(screen.queryByRole("dialog", { name: "security.legacy_confirm_title" })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("loc")).toHaveTextContent("/daily#owner=abc");
+      expect(screen.getByTestId("loc")).not.toHaveTextContent("legacyRo");
+    });
+  });
+
+  it("links the plain RO banner CTA to Home mint, not Duplicate or Enable Edit", () => {
+    render(
+      <MemoryRouter initialEntries={["/daily"]}>
+        <LegacyRoBanner />
+      </MemoryRouter>,
+    );
+    const banner = screen.getByRole("status");
+    expect(banner).toHaveTextContent("security.legacy_banner");
+    const cta = screen.getByRole("link", { name: "security.legacy_banner_cta" });
+    expect(cta).toHaveAttribute("href", "/");
+    expect(cta.className).toMatch(/min-h-11/);
+    expect(cta.className).toMatch(/min-w-11/);
+    expect(screen.queryByText("security.legacy_banner_open")).not.toBeInTheDocument();
+    expect(screen.queryByText("security.duplicate_label")).not.toBeInTheDocument();
   });
 
   it("disables Legacy in split view so the other pane is not converted", async () => {

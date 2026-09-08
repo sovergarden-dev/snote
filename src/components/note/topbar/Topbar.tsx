@@ -57,7 +57,7 @@ interface TopbarProps {
   encryption?: Encryption | null;
   capabilityAccess?: CapabilityAccess | null;
   allowEncryptionTransitions?: boolean;
-  /** True when this view is the `?legacyRo=1` Cutover/LNO path. */
+  /** True when this view is Legacy RO (`?legacyRo=1` or A′ plain Cutover/LNO). */
   legacyOn?: boolean;
   currentShareUrl?: string;
   paginated: boolean;

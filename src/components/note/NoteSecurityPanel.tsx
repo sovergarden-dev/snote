@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Lock, LockOpen } from "lucide-react";
-import { useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import * as Y from "yjs";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,21 +47,16 @@ export interface NoteSecurityPanelProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-export function LegacyRoBanner({ onOpenSecurity }: { onOpenSecurity: () => void }) {
+export function LegacyRoBanner() {
   const { t } = useI18n();
   return (
     <div
       role="status"
-      className="flex min-h-11 flex-wrap items-center gap-2 border-b bg-muted/40 px-3 py-2 text-sm"
+      className="flex min-h-11 flex-wrap items-center gap-2 border-b bg-muted px-3 py-2 text-sm text-foreground"
     >
-      <p className="text-muted-foreground">{t("security.legacy_banner")}</p>
-      <Button
-        type="button"
-        variant="link"
-        className="min-h-11 px-2"
-        onClick={onOpenSecurity}
-      >
-        {t("security.legacy_banner_open")}
+      <p className="flex-1">{t("security.legacy_banner")}</p>
+      <Button asChild size="lg" className="min-h-11 min-w-11 px-4">
+        <Link to="/">{t("security.legacy_banner_cta")}</Link>
       </Button>
     </div>
   );
@@ -91,10 +86,14 @@ export function NoteSecurityPanel({
   const open = openProp ?? uncontrolledOpen;
   const setOpen = onOpenChange ?? setUncontrolledOpen;
   const showLegacy = canaryOn && !ownerOnly;
-  const showEncrypt = !!doc && !ownerOnly && (canaryOn || allowEncryptionTransitions);
+  const showEncrypt = !!doc && !ownerOnly && !legacyOn && (canaryOn || allowEncryptionTransitions);
   const busy = loading;
   const isSplit = location.pathname.includes("+");
-  const legacyBlocked = Boolean(capabilityAccess) || isSplit;
+  const hasCapabilityFragment = Boolean(capabilityAccess) || (() => {
+    const params = new URLSearchParams(location.hash.startsWith("#") ? location.hash.slice(1) : location.hash);
+    return params.has("owner") || params.has("edit");
+  })();
+  const legacyLockedOn = legacyOn && !hasCapabilityFragment;
 
   const applyLegacy = (enabled: boolean) => {
     navigate(
@@ -106,10 +105,11 @@ export function NoteSecurityPanel({
   const requestLegacy = (next: boolean) => {
     if (busy || ownerOnly || !showLegacy) return;
     if (!next) {
+      if (legacyLockedOn || isSplit) return;
       applyLegacy(false);
       return;
     }
-    if (legacyOn || legacyBlocked) return;
+    if (legacyOn || isSplit) return;
     setOpen(false);
     setConfirmKind(hasConfirmedLegacyOptIn(slug) ? "short" : "full");
   };
@@ -180,10 +180,10 @@ export function NoteSecurityPanel({
                 {t("security.legacy_label")}
               </p>
               <p className="text-[11px] text-muted-foreground">
-                {capabilityAccess
-                  ? t("security.legacy_helper_capability")
-                  : isSplit && !legacyOn
-                    ? t("security.legacy_helper_split")
+                {isSplit && !legacyOn
+                  ? t("security.legacy_helper_split")
+                  : legacyLockedOn || isSplit
+                    ? t("security.legacy_helper_on_plain")
                     : legacyOn
                       ? t("security.legacy_helper_on")
                       : t("security.legacy_helper_off")}
@@ -191,7 +191,7 @@ export function NoteSecurityPanel({
             </div>
             <SecuritySwitch
               checked={legacyOn}
-              disabled={busy || (legacyBlocked && !legacyOn)}
+              disabled={busy || isSplit || legacyLockedOn}
               labelledBy="security-legacy-label"
               onCheckedChange={requestLegacy}
             />

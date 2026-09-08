@@ -29,6 +29,8 @@ SQL 240 `REVOKE`s browser grants on `public.notes`. Choice A depends on those gr
 
 Choice A routing contract (`SNOTE-EDITABLE-PLAIN-SLUG-ROUTING-CONTRACT.md`, Aegis artifact name — not a path in this repo; live Choice A is findings §3e / #118) remains valid **until** A′ ships. A′ is a **separate** named origin go **before** 240 apply (or same calendar day only if Atlas sequences SPA → soak smoke → 240).
 
+SPA source (this tree, not live origin): A′ Cutover restore is implemented in GitHub ([a-prime-cutover-restore.md](./a-prime-cutover-restore.md)). Choice A (#118) editable-plain default is **superseded** for SPA routing. Live origin `1e76e2b7` remains Choice A until a named Pages go. This does not authorize apply.
+
 ---
 
 ## 1. Migration identity (verified @ `1e76e2b7`)

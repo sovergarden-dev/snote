@@ -11,7 +11,7 @@ const SECURITY_KEYS = [
   "security.legacy_label",
   "security.legacy_helper_off",
   "security.legacy_helper_on",
-  "security.legacy_helper_capability",
+  "security.legacy_helper_on_plain",
   "security.legacy_helper_split",
   "security.duplicate_label",
   "security.duplicate_helper",
@@ -20,7 +20,7 @@ const SECURITY_KEYS = [
   "security.legacy_confirm_body_short",
   "security.legacy_confirm_turn_on",
   "security.legacy_banner",
-  "security.legacy_banner_open",
+  "security.legacy_banner_cta",
   "security.owner_only",
 ] as const;
 
@@ -46,12 +46,8 @@ describe("Note security panel i18n", () => {
     expect(dict.vi["security.duplicate_label"]).toBe("Sao chép an toàn");
     expect(dict.en["security.duplicate_helper"]).toBe("Not available yet…");
     expect(dict.vi["security.duplicate_helper"]).toBe("Chưa mở…");
-    expect(dict.en["security.legacy_helper_capability"]).toBe(
-      "Not available on owner or edit links. Legacy format only opens table notes.",
-    );
-    expect(dict.vi["security.legacy_helper_capability"]).toBe(
-      "Không dùng được trên link owner hoặc edit. Định dạng Legacy chỉ mở note dạng bảng.",
-    );
+    expect(dict.en["security.legacy_helper_on_plain"]).toMatch(/view-only/);
+    expect(dict.vi["security.legacy_helper_on_plain"]).toMatch(/chỉ xem/);
     expect(dict.en["security.legacy_helper_split"]).toBe(
       "Not available in split view. It would change both notes.",
     );
@@ -62,8 +58,14 @@ describe("Note security panel i18n", () => {
     expect(dict.vi["security.legacy_confirm_title"]).toBe("Bật định dạng Legacy?");
     expect(dict.en["security.legacy_confirm_turn_on"]).toBe("Turn on Legacy");
     expect(dict.vi["security.legacy_confirm_turn_on"]).toBe("Bật Legacy");
-    expect(dict.en["security.legacy_banner"]).toMatch(/^Legacy note — view only/);
-    expect(dict.vi["security.legacy_banner"]).toMatch(/^Note Legacy — chỉ xem/);
+    expect(dict.en["security.legacy_banner"]).toBe(
+      "View only. Create an editable copy from Home.",
+    );
+    expect(dict.vi["security.legacy_banner"]).toBe(
+      "Note chỉ xem. Tạo bản chỉnh sửa từ Trang chủ.",
+    );
+    expect(dict.en["security.legacy_banner_cta"]).toBe("Create editable note");
+    expect(dict.vi["security.legacy_banner_cta"]).toBe("Tạo bản chỉnh sửa");
     expect(dict.en["lock.cancel"]).toBe("Cancel");
     expect(dict.vi["lock.cancel"]).toMatch(/Hủy|Huỷ/);
   });

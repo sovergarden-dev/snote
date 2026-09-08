@@ -167,6 +167,7 @@ export default function LegacyNotePage({
         {head}
         <div className="flex min-h-svh flex-col">
           <div className="flex min-h-11 items-center justify-end border-b px-3 py-1">{security}</div>
+          <LegacyRoBanner />
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
             <p className="text-sm text-muted-foreground">
               {state.kind === "notfound" ? t("legacy.not_found") : t("legacy.unavailable")}
@@ -181,8 +182,8 @@ export default function LegacyNotePage({
   if (state.kind === "needs-key") {
     return (
       <>{head}
-        <LegacyRoBanner onOpenSecurity={() => setSecurityOpen(true)} />
         <div className="flex min-h-11 items-center justify-end px-3 py-1">{security}</div>
+        <LegacyRoBanner />
         <UnlockForm
         slug={slug}
         salt={state.note.salt!}
@@ -204,13 +205,13 @@ export default function LegacyNotePage({
   const content = (
     <>
       {head}
-      <LegacyRoBanner onOpenSecurity={() => setSecurityOpen(true)} />
       <header className="flex min-h-12 flex-wrap items-center gap-2 border-b bg-background px-3 py-2">
         {!embed && <Link to="/" aria-label={t("share.back_home_aria")}><ArrowLeft className="h-4 w-4" /></Link>}
         <Eye className="h-4 w-4 text-muted-foreground" />
         <span className="mr-auto text-xs font-medium text-muted-foreground">{t("legacy.read_only")}</span>
         {security}
       </header>
+      <LegacyRoBanner />
       <main
         ref={onPrimaryScroller}
         className="min-h-0 flex-1 overflow-auto bg-muted/30"

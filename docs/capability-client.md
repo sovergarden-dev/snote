@@ -38,6 +38,13 @@ hidden with honest unavailable copy. Flag-off builds keep `NotePage` with
 is the Phase B read-only exact-match Edge (live; findings §1b). This origin
 attest does not deploy Edge.
 
+**SPA source (this tree, not live origin):** A′ restores canary-on
+`SlugDispatcher` / SplitView to `CutoverNotePage` → `LegacyNotePage` (LNO RO)
+for plain slugs. Choice A (#118) editable-plain default is **superseded** for SPA
+routing. `#owner=`/`#edit=` still render `NotePage`. `?legacyRo=1` still RO.
+Canary stays on. See [A′ Cutover restore](security/a-prime-cutover-restore.md).
+This does not change live origin `1e76e2b7` until a named Pages go.
+
 When that canary is on, Home create waits until LNO `exists` is false
 (`available`; it does not mint while `idle` or `checking`, and
 legacy-`taken` still opens `/<slug>` with no `#owner`). Idle submit re-checks
