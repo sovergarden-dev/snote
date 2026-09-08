@@ -1,0 +1,176 @@
+# SQL 240 ops preflight (docs only — do not apply)
+
+Status: **Docs package — does not authorize apply** of `20260724000000_atomic_capability_cutover.sql`.
+
+This is not SQL 240, not Realtime, not soak-complete.
+
+Owner (ops): Pulse  
+Architecture: Aegis ([sql-240-readiness-contract.md](./sql-240-readiness-contract.md))  
+Named go required: Syringa (apply) / Atlas (coordinate)
+
+## 0. Live baseline (as of 2026-09-08 ~13:00 ICT)
+
+| Surface | Value |
+|---|---|
+| Origin `version.json` | `deployedSha` `1e76e2b7…`, `capabilityRoutesEnabled` true, buildId `1788844987021-wi4mma7n` |
+| Pages | `snote-g4-origin` deploy `49c127f4` |
+| Main tip (docs) | `d31857d5` (#124 attest) — origin may lag docs tip |
+| Walls | SQL **240 HOLD**, Worker HOLD (no redeploy for 240), `writes_enabled` HOLD (do not flip for 240 alone), Edge HOLD for 240 |
+| Product prereqs live | Choice A editable plain `/slug`; Encrypt disabled+honest on plain; Legacy opt-in `?legacyRo=1`; LNO Phase B/C; Home mint fail-closed; canary on |
+
+Re-verify live before any named apply:
+
+```bash
+curl -sS -H 'Cache-Control: no-cache' "https://note.syrin.online/version.json"
+# expect deployedSha prefix matching the go SHA; capabilityRoutesEnabled true
+```
+
+## 1. Migration identity (pre-apply)
+
+File: `supabase/migrations/20260724000000_atomic_capability_cutover.sql`
+
+At origin pin `1e76e2b7`:
+
+- Lines: 245
+- SHA-256: `1043a46844e66859ccb8bec16888d6dd78f5f5e5a04df203f220a9b90302cf2f`
+
+Pre-apply:
+
+```bash
+# from detached go SHA
+sha256sum supabase/migrations/20260724000000_atomic_capability_cutover.sql
+# must match recorded identity for that go SHA
+```
+
+Confirm not already applied (service_role / SQL editor — read-only):
+
+```sql
+SELECT to_regprocedure('public.capability_note_import_legacy(text, text, text, text, text, jsonb, text)');
+
+SELECT polname FROM pg_policy p
+JOIN pg_class c ON c.oid = p.polrelid
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relname = 'notes'
+ORDER BY 1;
+
+SELECT grantee, privilege_type
+FROM information_schema.role_table_grants
+WHERE table_schema = 'public' AND table_name = 'notes'
+  AND grantee IN ('anon', 'authenticated', 'PUBLIC')
+ORDER BY 1, 2;
+```
+
+Also record:
+
+```sql
+SELECT writes_enabled, private_realtime_enabled
+FROM public.capability_runtime
+ORDER BY 1; -- adapt to actual schema/RPC used in prod
+
+SELECT count(*) AS notes_total,
+       count(*) FILTER (WHERE capability_managed) AS capability_managed
+FROM public.notes;
+-- Do NOT reuse stale 61/0 snapshot from 2026-09-01
+```
+
+## 2. Backup / snapshot (Tiny — no PITR)
+
+Facts (see `docs/security-findings.md` §3c, cutover doc):
+
+- Lovable Cloud **Tiny**: **no PITR**
+- Recovery = **daily snapshot** only → worst-case ~24h data loss
+- Staging `snote-g3c-staging` inactive — do not claim staging proof
+
+**Immediate pre-go (human in Lovable dashboard):**
+
+1. Open project backup / daily snapshot panel.
+2. Record: latest snapshot UTC timestamp, status, project id.
+3. If latest snapshot is older than ~24h or missing: **STOP** — do not apply 240.
+4. Prefer waiting until a fresh daily snapshot lands if cutover is same-day high-churn.
+
+Document in tracking issue:
+
+```
+snapshot_verified_at_ict:
+snapshot_latest_utc:
+snapshot_status:
+verifier:
+```
+
+This verify is **not** `capability_runtime_set` and **not** SQL 240 apply.
+
+## 3. Irreversibility & kill switch
+
+- Applying 240 **revokes** browser `notes` (and related) grants/policies.
+- Rollback **never** restores `notes` GRANT/policies.
+- Operational rollback = API read-only via runtime kill switch, e.g.:
+
+```sql
+-- ONLY after named go for rollback; example shape — use repo-canonical RPC
+SELECT public.capability_runtime_set(false, false);
+-- Edge expected to 503 writes; clients fail closed
+```
+
+Do **not** attempt to “undo” 240 by re-GRANT anon policies in production without a new ADR + named go.
+
+## 4. Apply procedure (named go only — placeholder)
+
+When Syringa names apply (separate go from this doc):
+
+1. Re-run §0–§2 same day.
+2. Apply migration via approved production SQL path (Lovable Cloud / service_role editor) — **one transaction** as written (`pg_advisory_xact_lock(20260724000000)`).
+3. Do **not** couple: Worker redeploy, Pages redeploy, `writes_enabled` flip, `private_realtime_enabled`, Edge unrelated deploys.
+4. Immediately run §5 post-verify.
+5. Record apply ICT timestamp + operator + migration sha256.
+
+## 5. Post-apply verification commands
+
+```sql
+SELECT polname FROM pg_policy p
+JOIN pg_class c ON c.oid = p.polrelid
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relname = 'notes';
+
+SELECT grantee, privilege_type
+FROM information_schema.role_table_grants
+WHERE table_schema = 'public' AND table_name = 'notes'
+  AND grantee IN ('anon', 'authenticated', 'PUBLIC');
+
+SELECT to_regprocedure('public.capability_note_import_legacy(text, text, text, text, text, jsonb, text)');
+```
+
+Product smoke (after named go, not part of this docs draft alone):
+
+- Home mint create → `#owner=` path still works via Edge.
+- Plain `/slug` Choice A: no direct table write as anon (expect fail-closed / Edge-only).
+- LNO `exists`/`open` still exact-match read-only.
+- Legacy opt-in `?legacyRo=1` still RO.
+- Encrypt on plain remains disabled+honest; `#owner=` Encrypt active unchanged by 240 UI-wise.
+
+```bash
+curl -sS -H 'Cache-Control: no-cache' "https://note.syrin.online/version.json"
+# origin SHA unchanged unless a separate Pages go was named
+```
+
+## 6. Residual risks (ops view)
+
+| Risk | Note |
+|---|---|
+| No PITR | Snapshot-only rollback window |
+| Irreversible revoke | Kill switch ≠ restore grants |
+| Soak not complete | ADR-001: soak started 2026-09-02; still not soak-complete as of Encrypt loop close |
+| Duplicate securely | Product residual (honest unavailable) — not an ops blocker for docs package |
+| quen/lạ | Parked label-only — must not become write ACL |
+| CF-Connecting-IP | Open question for public create anti-spoof |
+| Worker invocation_logs | Already live; privacy risk; do not couple 240 to Worker ship |
+
+## 7. Acceptance for “readiness package” (this GitHub-only work)
+
+Done when:
+
+1. Aegis checklist/contract references this ops preflight (or merges it).
+2. Forge opens docs-only PR — **no** migration apply, **no** origin/Worker/`writes_enabled` change.
+3. Sentinel light-reviews docs accuracy vs live pin + migration identity.
+4. Syringa has a clear named-go template for **apply** later (separate from merge of docs).
+
+**NOT done / NOT authorized by this package:** applying SQL 240.

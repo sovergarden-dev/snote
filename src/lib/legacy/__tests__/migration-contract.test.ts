@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -30,6 +31,37 @@ const capabilityEdge = readFileSync(resolve(
 ), "utf8");
 
 describe("atomic cutover migration", () => {
+  it("pins documented SQL 240 migration identity at live product SHA 1e76e2b7", () => {
+    const sha256 = createHash("sha256").update(migration, "utf8").digest("hex");
+    const lineCount = migration.endsWith("\n")
+      ? migration.slice(0, -1).split("\n").length
+      : migration.split("\n").length;
+    const contract = readFileSync(resolve(
+      process.cwd(),
+      "docs/security/sql-240-readiness-contract.md",
+    ), "utf8");
+    const preflight = readFileSync(resolve(
+      process.cwd(),
+      "docs/security/sql-240-ops-preflight.md",
+    ), "utf8");
+
+    expect(sha256).toBe(
+      "1043a46844e66859ccb8bec16888d6dd78f5f5e5a04df203f220a9b90302cf2f",
+    );
+    expect(lineCount).toBe(245);
+    expect(contract).toContain(sha256);
+    expect(contract).toContain("245");
+    expect(preflight).toContain(sha256);
+    expect(contract).toContain("does **not** authorize apply");
+    expect(preflight).toContain("does not authorize apply");
+    expect(contract).toContain(
+      "This is not SQL 240, not Realtime, not soak-complete.",
+    );
+    expect(preflight).toContain(
+      "This is not SQL 240, not Realtime, not soak-complete.",
+    );
+  });
+
   it("removes every direct notes policy and privilege in one transaction", () => {
     expect(migration).toMatch(/^BEGIN;/m);
     expect(migration).toMatch(/pg_catalog\.pg_policy/);
