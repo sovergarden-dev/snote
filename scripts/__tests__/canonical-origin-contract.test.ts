@@ -29,21 +29,22 @@ describe("canonical production origin", () => {
     const findings = readFileSync("docs/security-findings.md", "utf8");
 
     expect(readme).toMatch(
-      /Production currently runs Choice A canary-on editable `NotePage`/,
+      /Production currently runs A′ Cutover restore/,
     );
     expect(readme).toContain("`capabilityRoutesEnabled` true");
-    expect(readme).toContain("1e76e2b7");
+    expect(readme).toContain("b4eba5d2");
     expect(readme).toContain("Choice A");
     expect(readme).toContain("#118");
     expect(readme).toContain("#119");
     expect(readme).toContain("#122");
     expect(readme).toContain("#123");
+    expect(readme).toContain("#126");
     expect(readme).toContain("PWA latch");
     expect(readme).toContain("hard-reload");
-    expect(readme).toContain("Encrypt disabled+honest");
-    expect(readme).toContain("encrypt-disabled-1e76e2b7/");
+    expect(readme).toContain("Encrypt omit");
+    expect(readme).toContain("pixel-qa/a-prime-b4eba5d2/");
     expect(readme).toContain("READY WITH KNOWN RISKS");
-    expect(readme).toContain("gate not opened");
+    expect(readme).toContain("CTA Home");
     expect(readme).toContain("legacyRo");
     expect(readme).toContain("findings §3e");
     expect(readme).toContain("Phase C");
@@ -79,6 +80,7 @@ describe("canonical production origin", () => {
     expect(readme).not.toMatch(/origin `9dc0240e`/);
     expect(readme).not.toMatch(/origin `15ec8285`/);
     expect(readme).not.toMatch(/origin `0073d53b`/);
+    expect(readme).not.toMatch(/origin `1e76e2b7`/);
     expect(readme).not.toMatch(/live origin `c5914c8e`/);
     expect(readme).not.toMatch(/live origin `386421e8`/);
     expect(readme).not.toMatch(/live origin `4baa8966`/);
@@ -160,7 +162,8 @@ describe("canonical production origin", () => {
     expect(findings).not.toContain("Origin is `9dc0240e`");
     expect(findings).not.toContain("Origin is `15ec8285`");
     expect(findings).not.toContain("Origin is `0073d53b`");
-    expect(findings).toContain("Origin is `1e76e2b7`");
+    expect(findings).not.toContain("Origin is `1e76e2b7`");
+    expect(findings).toContain("Origin is `b4eba5d2`");
     expect(findings).toContain("capabilityRoutesEnabled` is true");
     expect(findings).toContain("Phase C");
     expect(findings).toContain("Pixel HIGH UX");
@@ -176,6 +179,7 @@ describe("canonical production origin", () => {
     expect(findings).toContain("#119");
     expect(findings).toContain("#122");
     expect(findings).toContain("#123");
+    expect(findings).toContain("#126");
     expect(findings).toContain("Choice A");
     expect(findings).toContain("A′");
     expect(findings).toContain("superseded");
@@ -620,6 +624,21 @@ describe("canonical production origin", () => {
     expect(findings).toContain("encrypt-disabled-1e76e2b7/");
     expect(findings).toContain("34190597619");
     expect(findings).toContain("gate not opened");
+    expect(findings).toContain("2026-09-08 ~16:34 ICT");
+    expect(findings).toContain(
+      "b4eba5d29cb8057c534c13588140bbe5ffa4f19e",
+    );
+    expect(findings).toContain("2026-09-08T09:34:08.672Z");
+    expect(findings).toContain("1788860033092-xa1nnac8");
+    expect(findings).toContain("07cb774d");
+    expect(findings).toContain("e4513a962f72c21b2208e6272466fa65");
+    expect(findings).toContain("#126");
+    expect(findings).toContain("pixel-qa/a-prime-b4eba5d2/");
+    expect(findings).toContain("34211082005");
+    expect(findings).toContain("CTA Home");
+    expect(findings).toContain("Encrypt omit");
+    expect(findings).toContain("dynamic-import");
+    expect(findings).toContain("SplitView not smoked");
     expect(findings).not.toContain("Origin is `9bf5e92b`");
     expect(findings).not.toContain("Origin is `b6824541`");
     expect(findings).not.toContain("Origin is `a8f7eeb8`");
@@ -627,6 +646,7 @@ describe("canonical production origin", () => {
     expect(findings).not.toContain("Origin is `9dc0240e`");
     expect(findings).not.toContain("Origin is `15ec8285`");
     expect(findings).not.toContain("Origin is `0073d53b`");
+    expect(findings).not.toContain("Origin is `1e76e2b7`");
     expect(findings).toContain("CutoverNotePage");
     expect(findings).toContain("LegacyNotePage");
     expect(findings).toContain("Phase B");
@@ -665,15 +685,15 @@ describe("canonical production origin", () => {
     expect(findings).not.toContain("PITR checkpoint is available");
   });
 
-  it("pins leftover client/Worker present-tense surfaces to live origin canary 1e76e2b7", () => {
+  it("pins leftover client/Worker present-tense surfaces to live origin canary b4eba5d2", () => {
     const client = readFileSync("docs/capability-client.md", "utf8");
     const backend = readFileSync("docs/capability-backend.md", "utf8");
     const worker = readFileSync("cloudflare-worker/README.md", "utf8");
 
     expect(client).toContain("`capabilityRoutesEnabled: true`");
     expect(client).toContain("findings §3e");
-    expect(client).toContain("1e76e2b7");
-    expect(client).toContain("This Home mint path is live on origin `1e76e2b7`");
+    expect(client).toContain("b4eba5d2");
+    expect(client).toContain("This Home mint path is live on origin `b4eba5d2`");
     expect(client).toContain("Choice A");
     expect(client).toContain("A′");
     expect(client).toContain("superseded");
@@ -682,6 +702,7 @@ describe("canonical production origin", () => {
     expect(client).toContain("#119");
     expect(client).toContain("#122");
     expect(client).toContain("#123");
+    expect(client).toContain("#126");
     expect(client).toContain("legacyRo");
     expect(client).toContain("Phase C");
     expect(client).toContain("Pixel HIGH UX");
@@ -742,6 +763,8 @@ describe("canonical production origin", () => {
     expect(client).not.toContain("This Home mint path is live on origin `15ec8285`");
     expect(client).not.toContain("live origin `0073d53b`");
     expect(client).not.toContain("This Home mint path is live on origin `0073d53b`");
+    expect(client).not.toContain("live origin `1e76e2b7`");
+    expect(client).not.toContain("This Home mint path is live on origin `1e76e2b7`");
     expect(client).not.toContain(
       "Production builds attest `capabilityRoutesEnabled: false`.",
     );
@@ -752,6 +775,7 @@ describe("canonical production origin", () => {
       /Missing, empty, or any\s+other value keeps both pages `legacyOnly`/,
     );
     expect(client).not.toContain("until a named Pages deploy");
+    expect(client).not.toContain("until a named Pages go");
     expect(client).not.toContain("still serves dual-mode `NotePage`");
     expect(client).toContain("CutoverNotePage");
     expect(client).toContain("Phase B");
@@ -771,6 +795,7 @@ describe("canonical production origin", () => {
     expect(backend).toContain("#119");
     expect(backend).toContain("#122");
     expect(backend).toContain("#123");
+    expect(backend).toContain("#126");
     expect(backend).toContain("Choice A");
     expect(backend).toContain("A′");
     expect(backend).toContain("superseded");
@@ -786,7 +811,7 @@ describe("canonical production origin", () => {
     expect(backend).toContain("Home create mints when canary is on");
     expect(backend).toContain("fail-closed idle");
 
-    expect(worker).toContain("`1e76e2b7`");
+    expect(worker).toContain("`b4eba5d2`");
     expect(worker).not.toContain("Origin SPA hiện là `addeeb29`");
     expect(worker).not.toContain("Origin SPA hiện là `7d00fd52`");
     expect(worker).not.toContain("Origin SPA hiện là `77d791af`");
@@ -798,6 +823,7 @@ describe("canonical production origin", () => {
     expect(worker).not.toContain("Origin SPA hiện là `9dc0240e`");
     expect(worker).not.toContain("Origin SPA hiện là `15ec8285`");
     expect(worker).not.toContain("Origin SPA hiện là `0073d53b`");
+    expect(worker).not.toContain("Origin SPA hiện là `1e76e2b7`");
     expect(worker).toContain("`931430c0`");
     expect(worker).toContain("5f94ab6c");
     expect(worker).not.toContain("`9fcc58bc`");
@@ -820,9 +846,18 @@ describe("canonical production origin", () => {
     expect(worker).not.toContain("Origin SPA hiện là `e05c73ea`");
     expect(worker).not.toContain("Origin SPA vẫn là `fe18302f`");
     expect(worker).toContain("không cho phép một deployment mới");
+
+    const aPrime = readFileSync(
+      "docs/security/a-prime-cutover-restore.md",
+      "utf8",
+    );
+    expect(aPrime).toContain("b4eba5d2");
+    expect(aPrime).toContain("07cb774d");
+    expect(aPrime).toContain("#126");
+    expect(aPrime).not.toContain("remains Choice A until");
   });
 
-  it("records live Worker 931430c0 / 5f94ab6c with logs live, origin now 1e76e2b7", () => {
+  it("records live Worker 931430c0 / 5f94ab6c with logs live, origin now b4eba5d2", () => {
     const findings = readFileSync("docs/security-findings.md", "utf8");
     const worker = readFileSync("cloudflare-worker/README.md", "utf8");
     const rollout = readFileSync(
@@ -872,7 +907,7 @@ describe("canonical production origin", () => {
     expect(findings).toContain("syrin-prerender-staging");
     expect(findings).toContain("G3C staging");
     expect(findings).toContain("2026-08-24");
-    expect(findings).toContain("Origin is `1e76e2b7`");
+    expect(findings).toContain("Origin is `b4eba5d2`");
     expect(findings).not.toContain("Origin is `7d00fd52`");
     expect(findings).not.toContain("Origin is `77d791af`");
     expect(findings).not.toContain("Origin is `9df65d53`");
@@ -883,6 +918,7 @@ describe("canonical production origin", () => {
     expect(findings).not.toContain("Origin is `9dc0240e`");
     expect(findings).not.toContain("Origin is `15ec8285`");
     expect(findings).not.toContain("Origin is `0073d53b`");
+    expect(findings).not.toContain("Origin is `1e76e2b7`");
     expect(findings).toContain("origin was not redeployed");
     expect(findings).toContain("Do not claim origin is `931430c0`");
     expect(findings).toContain("synthetic-probe-token");
@@ -900,7 +936,7 @@ describe("canonical production origin", () => {
     expect(rollout).toContain("`931430c0`");
     expect(rollout).toContain("Observability and invocation logs are live");
     expect(rollout).toContain("traces remain disabled");
-    expect(rollout).toContain("Origin remains `1e76e2b7`");
+    expect(rollout).toContain("Origin remains `b4eba5d2`");
     expect(rollout).not.toContain("Origin remains `7d00fd52`");
     expect(rollout).not.toContain("Origin remains `77d791af`");
     expect(rollout).not.toContain("Origin remains `9df65d53`");
@@ -911,6 +947,7 @@ describe("canonical production origin", () => {
     expect(rollout).not.toContain("Origin remains `9dc0240e`");
     expect(rollout).not.toContain("Origin remains `15ec8285`");
     expect(rollout).not.toContain("Origin remains `0073d53b`");
+    expect(rollout).not.toContain("Origin remains `1e76e2b7`");
     expect(rollout).toContain("Home mint live");
     expect(rollout).toContain("fail-closed idle");
     expect(rollout).toContain("Phase C");
@@ -927,6 +964,7 @@ describe("canonical production origin", () => {
     expect(rollout).toContain("#119");
     expect(rollout).toContain("#122");
     expect(rollout).toContain("#123");
+    expect(rollout).toContain("#126");
     expect(rollout).toContain("Choice A");
     expect(rollout).toContain("Sonner");
     expect(rollout).toContain("FAB-primary");
@@ -945,8 +983,8 @@ describe("canonical production origin", () => {
     expect(adr).toContain("Worker `931430c0` / `5f94ab6c`");
     expect(adr).toContain("5f94ab6c-fde5-4416-a3aa-74daaa2e6094");
     expect(adr).toContain("`invocation_logs` are **live**");
-    expect(adr).toContain("Live origin `1e76e2b7`");
-    expect(adr).toContain("Home mint fail-closed idle live on origin `1e76e2b7`");
+    expect(adr).toContain("Live origin `b4eba5d2`");
+    expect(adr).toContain("Home mint fail-closed idle live on origin `b4eba5d2`");
     expect(adr).toContain("#110");
     expect(adr).toContain("#113");
     expect(adr).toContain("#116");
@@ -954,6 +992,7 @@ describe("canonical production origin", () => {
     expect(adr).toContain("#119");
     expect(adr).toContain("#122");
     expect(adr).toContain("#123");
+    expect(adr).toContain("#126");
     expect(adr).toContain("Choice A");
     expect(adr).toContain("A′");
     expect(adr).toContain("superseded");
@@ -984,6 +1023,8 @@ describe("canonical production origin", () => {
     expect(adr).not.toContain("Home mint fail-closed idle live on origin `15ec8285`");
     expect(adr).not.toContain("Live origin `0073d53b`");
     expect(adr).not.toContain("Home mint fail-closed idle live on origin `0073d53b`");
+    expect(adr).not.toContain("Live origin `1e76e2b7`");
+    expect(adr).not.toContain("Home mint fail-closed idle live on origin `1e76e2b7`");
     expect(adr).not.toContain("Live origin `addeeb29`");
     expect(adr).not.toContain("Home mint fail-closed idle live on origin `addeeb29`");
     expect(adr).not.toContain("Live origin `e05c73ea`");
@@ -1119,6 +1160,10 @@ describe("canonical production origin", () => {
     expect(cutover).toContain(
       "1e76e2b7cb1ee239cb9af1bc8e8a04c229641e7d",
     );
+    expect(cutover).toContain("2026-09-08 ~16:34 ICT");
+    expect(cutover).toContain(
+      "b4eba5d29cb8057c534c13588140bbe5ffa4f19e",
+    );
     expect(cutover).not.toMatch(
       /live `deployedSha` `386421e87f7eac2864f1a40655a2b0255b4332d6`/,
     );
@@ -1191,8 +1236,11 @@ describe("canonical production origin", () => {
     expect(cutover).not.toMatch(
       /live `deployedSha` `0073d53bb2524882eda0c36528f0c25a94346a65`/,
     );
-    expect(cutover).toMatch(
+    expect(cutover).not.toMatch(
       /live `deployedSha` `1e76e2b7cb1ee239cb9af1bc8e8a04c229641e7d`/,
+    );
+    expect(cutover).toMatch(
+      /live `deployedSha` `b4eba5d29cb8057c534c13588140bbe5ffa4f19e`/,
     );
     expect(cutover).toContain("Phase C");
     expect(cutover).toContain("Pixel HIGH UX");
@@ -1208,6 +1256,7 @@ describe("canonical production origin", () => {
     expect(cutover).toContain("#119");
     expect(cutover).toContain("#122");
     expect(cutover).toContain("#123");
+    expect(cutover).toContain("#126");
     expect(cutover).toContain("Choice A");
     expect(cutover).toContain("A′");
     expect(cutover).toContain("superseded");

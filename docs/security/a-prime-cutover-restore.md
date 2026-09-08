@@ -1,6 +1,6 @@
-# A′ Cutover restore — SPA routing (GitHub-only)
+# A′ Cutover restore — SPA routing (live on origin)
 
-- Status: **SPA source in this tree** — does **not** authorize origin/Pages/Worker/Edge deploy
+- Status: **Live on origin** `b4eba5d2` / Pages `07cb774d` (named Pages go of #126)
 - Date: 2026-09-08
 - Owners: Aegis (contract) · Pixel (UX) · Atlas (coord) · Syringa (named go)
 - Canary: keep `VITE_CAPABILITY_ROUTES_ENABLED` / `capabilityRoutesEnabled` **on**
@@ -8,9 +8,9 @@
 Choice A (#118) made canary-on plain `/<slug>` mount editable `NotePage`
 (`notes` table path). That dispatcher default is **superseded by A′**.
 
-Live origin `1e76e2b7` remains Choice A until a **named Pages go**. This document
-does not deploy, does not apply SQL 240, and does not flip `writes_enabled` /
-`private_realtime_enabled`.
+Live origin `b4eba5d2` is A′ Cutover restore: plain `/slug` = Cutover/LNO RO.
+This document does not apply SQL 240 and does not flip `writes_enabled` /
+`private_realtime_enabled`. SQL 240 still HOLD (A′ is prerequisite, not apply).
 
 ## Mount table (canary on)
 
@@ -34,9 +34,13 @@ Flag-off builds keep `NotePage` `legacyOnly` and do not import `CutoverNotePage`
 - On plain RO, turning Legacy off must **not** reopen Choice A editable `NotePage`.
 - Duplicate securely stays hidden (`DUPLICATE_SECURELY_AVAILABLE = false`).
 
+Pixel visual A′ PASS on live `b4eba5d2` (plain `/hage` Legacy RO + banner +
+CTA Home; Encrypt omit; Duplicate hidden; mint `#owner=` editable; evidence
+`pixel-qa/a-prime-b4eba5d2/`).
+
 ## Walls
 
-- No origin / Pages / Worker / Edge deploy from the A′ SPA PR
-- No SQL 240 apply
+- This attest does not deploy origin / Pages / Worker / Edge
+- No SQL 240 apply (A′ is prerequisite, not apply)
 - No `writes_enabled` / `private_realtime_enabled` flip
-- Do not merge that PR from the implementing agent
+- Do not merge the attest PR from the implementing agent

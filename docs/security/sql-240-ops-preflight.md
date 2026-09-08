@@ -8,16 +8,16 @@ Owner (ops): Pulse
 Architecture: Aegis ([sql-240-readiness-contract.md](./sql-240-readiness-contract.md))  
 Named go required: Syringa (apply) / Atlas (coordinate)
 
-## 0. Live baseline (as of 2026-09-08 ~13:00 ICT)
+## 0. Live baseline (as of 2026-09-08 ~16:58 ICT)
 
 | Surface | Value |
 |---|---|
-| Origin `version.json` | `deployedSha` `1e76e2b7…`, `capabilityRoutesEnabled` true, buildId `1788844987021-wi4mma7n` |
-| Pages | `snote-g4-origin` deploy `49c127f4` |
-| Main tip (docs) | `d31857d5` (#124 attest) — origin may lag docs tip |
+| Origin `version.json` | `deployedSha` `b4eba5d2…`, `capabilityRoutesEnabled` true, buildId `1788860033092-xa1nnac8` |
+| Pages | `snote-g4-origin` deploy `07cb774d` |
+| Main tip (product) | `b4eba5d2` (#126 A′ Cutover restore) — this docs attest does not change origin |
 | Walls | SQL **240 HOLD**, Worker HOLD (no redeploy for 240), `writes_enabled` HOLD (do not flip for 240 alone), Edge HOLD for 240 |
-| Live default / apply blocker | Choice A editable plain `/slug` (table sync). **Do not apply** until A′ (plain → `CutoverNotePage` → LNO RO) **or** Syringa written accept-break B. See [sql-240-readiness-contract.md](./sql-240-readiness-contract.md) §0. SPA source A′ restore is in-tree ([a-prime-cutover-restore.md](./a-prime-cutover-restore.md)); live origin remains Choice A until a named Pages go. |
-| Product still live (not a go) | Encrypt disabled+honest on plain; Legacy opt-in `?legacyRo=1`; LNO Phase B/C; Home mint fail-closed; canary on |
+| Live default / apply blocker | A′ live: plain `/slug` → `CutoverNotePage` → LNO RO. Choice A editable table path is **not** the live default. **Do not apply** until Syringa names apply. A′ is prerequisite, not apply. See [sql-240-readiness-contract.md](./sql-240-readiness-contract.md) §0 and [a-prime-cutover-restore.md](./a-prime-cutover-restore.md). |
+| Product still live (not a go) | A′ Cutover/LNO RO; Encrypt omit on plain; Legacy opt-in `?legacyRo=1`; LNO Phase B/C; Home mint fail-closed; canary on |
 
 Re-verify live before any named apply:
 
@@ -30,7 +30,7 @@ curl -sS -H 'Cache-Control: no-cache' "https://note.syrin.online/version.json"
 
 File: `supabase/migrations/20260724000000_atomic_capability_cutover.sql`
 
-At origin pin `1e76e2b7`:
+At origin pin `b4eba5d2`:
 
 - Lines: 245
 - SHA-256: `1043a46844e66859ccb8bec16888d6dd78f5f5e5a04df203f220a9b90302cf2f`
@@ -120,7 +120,7 @@ Do **not** attempt to “undo” 240 by re-GRANT anon policies in production wit
 When Syringa names apply (separate go from this doc):
 
 1. Re-run §0–§2 same day.
-2. **STOP** unless A′ is live (plain `/slug` → `CutoverNotePage` → LNO RO) **or** Syringa has written accept-break B. Do not apply while Choice A editable table path is the live default.
+2. **STOP** unless A′ is live (plain `/slug` → `CutoverNotePage` → LNO RO) **or** Syringa has written accept-break B. A′ is live on `b4eba5d2`. Do not apply until Syringa names apply.
 3. Apply migration via approved production SQL path (Lovable Cloud / service_role editor) — **one transaction** as written (`pg_advisory_xact_lock(20260724000000)`).
 4. Do **not** couple: Worker redeploy, Pages redeploy, `writes_enabled` flip, `private_realtime_enabled`, Edge unrelated deploys.
 5. Immediately run §5 post-verify.
@@ -145,10 +145,10 @@ SELECT to_regprocedure('public.capability_note_import_legacy(text,text,text,text
 Product smoke (after named go, not part of this docs package alone):
 
 - Home mint create → `#owner=` path still works via Edge.
-- Plain `/slug` Choice A: no direct table write as anon (expect fail-closed / Edge-only).
+- Plain `/slug` A′: LNO RO; no direct table write as anon (expect fail-closed / Edge-only).
 - LNO `exists`/`open` still exact-match read-only.
 - Legacy opt-in `?legacyRo=1` still RO.
-- Encrypt on plain remains disabled+honest; `#owner=` Encrypt active unchanged by 240 UI-wise.
+- Encrypt omit on plain RO; `#owner=` Encrypt active unchanged by 240 UI-wise.
 
 ```bash
 curl -sS -H 'Cache-Control: no-cache' "https://note.syrin.online/version.json"

@@ -394,6 +394,7 @@ describe("legacy-note-open docs", () => {
     expect(capability).toContain("#119");
     expect(capability).toContain("#122");
     expect(capability).toContain("#123");
+    expect(capability).toContain("#126");
     expect(capability).toContain("Choice A");
     expect(capability).toContain("A′");
     expect(capability).toContain("superseded");

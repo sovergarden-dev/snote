@@ -15,35 +15,35 @@ throw `capability API unavailable` without fetching, and default Auth
 minting stays off. Ordinary Vite builds follow `.env.example`
 (`VITE_CAPABILITY_ROUTES_ENABLED=false`) and attest
 `capabilityRoutesEnabled: false`. Live production `build:release` attests
-`capabilityRoutesEnabled: true` (findings §3e; live origin `1e76e2b7`).
-Origin `1e76e2b7` is Encrypt disabled+honest (#123) on Choice A plain `/slug`
-on top of Pixel Legacy opt-in (#122) and PWA latch (#119) one hard-reload per
-Update apply. Choice A (#118) remains: canary stays on, and ordinary slugs
-mount editable `NotePage` instead of `CutoverNotePage` → `LegacyNotePage`.
-Phase C is also live: RawView `/:slug.md` loads via LNO `open`,
+`capabilityRoutesEnabled: true` (findings §3e; live origin `b4eba5d2`).
+Origin `b4eba5d2` is A′ Cutover restore (#126): canary-on plain `/slug` mounts
+`CutoverNotePage` → `LegacyNotePage` (LNO RO). Encrypt omit on plain Legacy RO;
+`#owner=` Encrypt stays active. Pixel Legacy opt-in (#122) and PWA latch (#119)
+one hard-reload per Update apply remain. Choice A (#118) editable-plain default
+is **superseded**. Phase C is also live: RawView `/:slug.md` loads via LNO `open`,
 and Home availability uses LNO `exists` (no `public.notes` SELECT; empty
 legacy rows are taken). Pixel HIGH UX H1–H6 is live on this origin. H2 opaque
 Mode/Export is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner
-suppress (#113/#116) is live. Choice A (#118) is live. PWA latch (#119) is live.
-Pixel Legacy opt-in (#122) is live. Encrypt disabled+honest (#123) is live.
+suppress (#113/#116) is live. Choice A (#118) is superseded. PWA latch (#119) is live.
+Pixel Legacy opt-in (#122) is live. A′ (#126) is live. Encrypt disabled+honest (#123) is superseded on plain RO by Encrypt omit; `#owner=` Encrypt stays active.
 
 This origin compiles `SlugDispatcher` and SplitView pane embeds to mount
-editable `NotePage` when that canary is on (lazy; `SlugDispatcher` keeps the
+`CutoverNotePage` → `LegacyNotePage` when that canary is on (lazy; `SlugDispatcher` keeps the
 `EditorSkeleton` fallback). A plain `/<slug>` with no matching `#owner`/`#edit`
-fragment mounts `NotePage` (`notes` table path), not `CutoverNotePage`;
+fragment mounts `CutoverNotePage` (LNO RO), not editable `NotePage`;
 matching owner/edit fragments still render `NotePage`. Optional `?legacyRo=1`
-opt-in lazy-loads `CutoverNotePage` → `LegacyNotePage`. Duplicate securely is
+still RO + banner. Duplicate securely is
 hidden with honest unavailable copy. Flag-off builds keep `NotePage` with
 `legacyOnly` and do not import `CutoverNotePage`. Production `legacy-note-open`
 is the Phase B read-only exact-match Edge (live; findings §1b). This origin
 attest does not deploy Edge.
 
-**SPA source (this tree, not live origin):** A′ restores canary-on
-`SlugDispatcher` / SplitView to `CutoverNotePage` → `LegacyNotePage` (LNO RO)
-for plain slugs. Choice A (#118) editable-plain default is **superseded** for SPA
-routing. `#owner=`/`#edit=` still render `NotePage`. `?legacyRo=1` still RO.
+**A′ live (named Pages go of #126):** canary-on
+`SlugDispatcher` / SplitView mount `CutoverNotePage` → `LegacyNotePage` (LNO RO)
+for plain slugs. Choice A (#118) editable-plain default is **superseded**.
+`#owner=`/`#edit=` still render `NotePage`. `?legacyRo=1` still RO.
 Canary stays on. See [A′ Cutover restore](security/a-prime-cutover-restore.md).
-This does not change live origin `1e76e2b7` until a named Pages go.
+SQL 240 still HOLD (A′ is prerequisite, not apply).
 
 When that canary is on, Home create waits until LNO `exists` is false
 (`available`; it does not mint while `idle` or `checking`, and
@@ -54,7 +54,7 @@ owner candidate in `sessionStorage`, calls `createCapabilityApi().createNote`
 that create succeeds, and navigates to `/<slug>#owner=<token>`. Random-note
 still mints a fresh slug without that wait. See
 [ADR-001](adr/001-home-capability-mint-before-sql-240.md).
-This Home mint path is live on origin `1e76e2b7` (canary on; fail-closed idle; findings §3e).
+This Home mint path is live on origin `b4eba5d2` (canary on; fail-closed idle; findings §3e).
 It is not SQL 240. Recents and
 pins store only the slug, never the owner token. Losing the fragment
 without another copy of the owner capability locks the note out. An

@@ -124,20 +124,23 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    `deployedSha` `0073d53bb2524882eda0c36528f0c25a94346a65`, still
    `capabilityRoutesEnabled` true. Same-canary origin SHA bump
    2026-09-08 ~12:23 ICT:
-   live `deployedSha` `1e76e2b7cb1ee239cb9af1bc8e8a04c229641e7d`, still
-   `capabilityRoutesEnabled` true. Encrypt disabled+honest (#123) is live
-   on Choice A plain `/slug` (gate not opened); Pixel Legacy opt-in (#122)
-   remains live; PWA latch (#119) one hard-reload per Update apply remains
-   live; Choice A (#118) editable plain `/slug` `NotePage` remains live;
-   optional `?legacyRo=1` still mounts `CutoverNotePage`. Phase B LNO and
-   Phase C RawView+Home via LNO remain live on this canary. Pixel HIGH UX
-   H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is
-   live. FAB-primary + Sonner suppress (#113/#116) is live. Home mint
-   fail-closed idle remains live.
-   SPA source (this tree, not live origin): A′ restores Cutover Legacy RO for
-   plain `/slug`. Choice A (#118) editable-plain default is superseded for SPA
-   routing. See [A′ Cutover restore](./a-prime-cutover-restore.md). This does
-   not change live origin until a named Pages go.
+   `deployedSha` `1e76e2b7cb1ee239cb9af1bc8e8a04c229641e7d`, still
+   `capabilityRoutesEnabled` true. Same-canary origin SHA bump
+   2026-09-08 ~16:34 ICT:
+   live `deployedSha` `b4eba5d29cb8057c534c13588140bbe5ffa4f19e`, still
+   `capabilityRoutesEnabled` true. A′ Cutover restore (#126) is live:
+   canary-on plain `/slug` and SplitView panes mount `CutoverNotePage` →
+   `LegacyNotePage` (LNO RO). Choice A (#118) editable-plain default is
+   superseded. Optional `?legacyRo=1` still RO + banner. Encrypt omit on
+   plain Legacy RO; `#owner=` Encrypt stays active (#123). Pixel Legacy opt-in
+   (#122) remains live; PWA latch (#119) one hard-reload per Update apply
+   remains live. Phase B LNO and Phase C RawView+Home via LNO remain live
+   on this canary. Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export is
+   live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress
+   (#113/#116) is live. Home mint fail-closed idle remains live.
+   A′ live (named Pages go of #126): Cutover Legacy RO for plain `/slug`.
+   See [A′ Cutover restore](./a-prime-cutover-restore.md). SQL 240 still
+   HOLD (A′ is prerequisite, not apply).
    This is not soak-complete.
    Do not treat snapshot verify as `capability_runtime_set`.
    This is not `LEGACY_SHARE_CUTOFF`, soak-complete,
