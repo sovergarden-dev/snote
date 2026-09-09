@@ -70,6 +70,16 @@ describe("atomic cutover migration", () => {
     expect(contract).toContain("34306921753");
     expect(contract).toContain("W1 is live");
     expect(contract).toContain("HOLD");
+    expect(contract).toContain("umsg_01m21zhm");
+    expect(contract).toContain("**applied** live");
+    expect(contract).toContain("**published**");
+    expect(contract).not.toContain("not applied/published");
+    expect(contract).not.toContain("GitHub-ready");
+    expect(preflight).toContain("umsg_01m21zhm");
+    expect(preflight).toContain("**applied** live");
+    expect(preflight).toContain("**published**");
+    expect(preflight).not.toContain("not applied/published");
+    expect(preflight).not.toContain("GitHub-ready");
     expect(preflight).toContain("2ae9a230");
     expect(preflight).toContain("fb35474a");
     expect(preflight).toContain("1788924147004-wx705xxn");

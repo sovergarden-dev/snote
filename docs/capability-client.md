@@ -20,8 +20,8 @@ Origin `2ae9a230` is W1 convert-on-write (#130 U1 SPA lineage on #131): canary-o
 plain `/slug` mounts `CutoverNotePage` → editable `NotePage` (no A′ RO banner).
 First persist converts existing legacy via `note-session` `convert-legacy` then
 soft-replaces to `#owner=` with `convert_success` toast; empty notes mint via
-live `create`. U1 SQL `capability_note_convert_legacy` and Edge `convert-legacy`
-are in GitHub (#130) but **not applied/published**. Encrypt + Legacy Advanced
+live `create`. U1 SQL `capability_note_convert_legacy` is **applied** live.
+Edge `note-session` `convert-legacy` is **published** (Pulse `umsg_01m21zhm…`). Encrypt + Legacy Advanced
 remain opt-in on the owner path; Encrypt is disabled+honest on plain
 pre-convert; `#owner=` Encrypt stays active. Pixel Legacy opt-in (#122) and
 PWA latch (#119) one hard-reload per Update apply remain. Choice A (#118)
@@ -52,9 +52,10 @@ attest does not deploy Edge.
 (convert-on-write) for plain slugs. A′ (#126) Cutover/LNO RO default is
 **superseded**. `#owner=`/`#edit=` still render `NotePage`. `?legacyRo=1` still
 RO. Canary stays on. See [A′ Cutover restore](security/a-prime-cutover-restore.md)
-for the remaining Legacy RO path. SQL 240 already applied; Worker /
-`writes_enabled` / Realtime still HOLD. U1 SQL+Edge convert-legacy GitHub-ready
-/ walls HOLD.
+for the remaining Legacy RO path. SQL 240 already applied; U1 SQL
+`capability_note_convert_legacy` applied live; Edge `convert-legacy` published
+(Pulse `umsg_01m21zhm…`). Worker /
+`writes_enabled` / Realtime still HOLD.
 
 When that canary is on, Home create waits until LNO `exists` is false
 (`available`; it does not mint while `idle` or `checking`, and

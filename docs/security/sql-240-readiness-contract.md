@@ -6,7 +6,7 @@
 - Live pin (product): origin `2ae9a230` / Pages `fb35474a` / canary true / smoke `34306921753`
 - Main tip: `2ae9a230` (#130 W1 convert-on-write + #131 lint/lockfile) — this docs attest does not change origin
 - Owners: Aegis (gates) · Pulse (ops) · Forge (docs PR) · Atlas (coord) · Syringa (named apply)
-- Walls: SQL 240 already applied; U1 SQL+Edge convert-legacy not applied/published; Worker HOLD (no redeploy), `writes_enabled` HOLD, Realtime HOLD, no Edge/Pages couple from this PR
+- Walls: SQL 240 already applied; U1 SQL `capability_note_convert_legacy` applied live; Edge `convert-legacy` published (Pulse `umsg_01m21zhm…`); Worker HOLD (no redeploy), `writes_enabled` HOLD, Realtime HOLD; this docs PR does not re-apply SQL U1 or re-publish Edge / couple Pages
 
 This is not SQL 240, not Realtime, not soak-complete.
 
@@ -20,8 +20,8 @@ Ops detail: [sql-240-ops-preflight.md](./sql-240-ops-preflight.md) (Pulse). This
 A′ Cutover/LNO RO default is **superseded**; A′ remains the `?legacyRo=1` / Legacy Advanced path.
 Choice A editable-plain is **not** the live default. SQL 240 already applied.
 Duplicate securely is enabled on Legacy RO only (PR #128; Edge `note-session` `import-legacy`).
-U1 SQL `capability_note_convert_legacy` and Edge `convert-legacy` are in GitHub (#130) but **not applied/published**.
-Worker / `writes_enabled` / Realtime still HOLD. This docs pin does not re-apply.
+U1 SQL `capability_note_convert_legacy` is **applied** live. Edge `note-session` `convert-legacy` is **published** (Pulse `umsg_01m21zhm…`).
+Worker / `writes_enabled` / Realtime still HOLD. This docs pin does not re-apply SQL 240 or U1 and does not re-publish Edge.
 
 SQL 240 `REVOKE`s browser grants on `public.notes`. Choice A depended on those
 grants. Applying 240 while Choice A was live would have instantly broken plain
@@ -98,7 +98,7 @@ Ops SQL (Pulse §5) plus product:
 ## 5. Explicit non-blockers for docs package
 
 - Duplicate securely is enabled on Legacy RO only (PR #128; Edge `note-session` `import-legacy`) — does **not** authorize re-apply
-- U1 SQL `capability_note_convert_legacy` + Edge `convert-legacy` GitHub-ready / **not applied/published** — does **not** authorize that apply from this pin
+- U1 SQL `capability_note_convert_legacy` **applied** live; Edge `convert-legacy` **published** (Pulse `umsg_01m21zhm…`) — this pin does **not** re-apply/republish
 - Soak “≥48h from 2026-09-02” narrative — record as residual; Atlas/Syringa decide if soak is still a soft gate
 - quen/lạ parked (label only — never write ACL)
 - Worker `invocation_logs` privacy — do not couple to 240
@@ -132,4 +132,4 @@ Out of scope for that PR: applying 240, origin ship, Worker, Realtime.
 
 **READY WITH KNOWN RISKS** to open the **docs package**.
 
-**W1 is live** (plain `/slug` = editable convert-on-write; A′ remains `?legacyRo=1`; Duplicate securely enabled on Legacy RO). SQL 240 already applied. U1 SQL+Edge convert-legacy GitHub-ready / **HOLD**. Worker / `writes_enabled` / Realtime still **HOLD**. Not soak-complete.
+**W1 is live** (plain `/slug` = editable convert-on-write; A′ remains `?legacyRo=1`; Duplicate securely enabled on Legacy RO). SQL 240 already applied. U1 SQL `capability_note_convert_legacy` **applied** live; Edge `convert-legacy` **published** (Pulse `umsg_01m21zhm…`). Worker / `writes_enabled` / Realtime still **HOLD**. Not soak-complete.

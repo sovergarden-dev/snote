@@ -14,11 +14,11 @@ Live origin `2ae9a230` is W1 convert-on-write: plain `/slug` = editable
 `NotePage`; first persist converts legacy via `convert-legacy` then
 soft-replaces to `#owner=`. A′ Cutover/LNO RO remains only for `?legacyRo=1`
 / Legacy Advanced. Duplicate securely stays on that Legacy RO path.
-U1 SQL `capability_note_convert_legacy` and Edge `convert-legacy` are in
-GitHub (#130) but **not applied/published**.
+U1 SQL `capability_note_convert_legacy` is **applied** live. Edge
+`convert-legacy` is **published** (Pulse `umsg_01m21zhm…`).
 This document does not re-apply SQL 240 and does not flip `writes_enabled` /
 `private_realtime_enabled`. SQL 240 already applied; Worker / writes_enabled /
-Realtime still HOLD. U1 SQL+Edge walls HOLD.
+Realtime still HOLD.
 
 ## Mount table (canary on) — A′ design; live default is W1
 
@@ -75,9 +75,10 @@ hard-reload.
 
 ## Walls
 
-- This attest does not deploy origin / Pages / Worker / Edge
+- This attest does not deploy origin / Pages / Worker
 - SQL 240 already applied; this attest does not re-apply
-- U1 SQL `capability_note_convert_legacy` + Edge `convert-legacy` not
-  applied/published
+- U1 SQL `capability_note_convert_legacy` applied live; Edge `convert-legacy`
+  published (Pulse `umsg_01m21zhm…`); this attest does not re-apply/republish
 - No `writes_enabled` / `private_realtime_enabled` flip
+- Worker / Realtime / `writes_enabled` still HOLD
 - Do not merge the attest PR from the implementing agent

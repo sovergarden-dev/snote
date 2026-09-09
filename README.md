@@ -22,9 +22,8 @@ IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e):
 `CutoverNotePage` → editable `NotePage`; first persist converts existing
 legacy via `note-session` `convert-legacy` then soft-replaces to `#owner=`
 with `convert_success` toast (empty notes mint via live `create`). U1 SQL
-`capability_note_convert_legacy` and Edge `convert-legacy` are in GitHub
-(#130) but **not applied/published** — convert-on-write first persist on
-existing legacy assumes that Edge action. `#owner`/`#edit` still render
+`capability_note_convert_legacy` is **applied** live. Edge `note-session`
+`convert-legacy` is **published** (Pulse `umsg_01m21zhm…`). `#owner`/`#edit` still render
 `NotePage`. Optional `?legacyRo=1` still RO + banner (`LegacyNotePage`; Phase B `legacy-note-open`
 read-only). RawView `/:slug.md` loads via LNO `open`; Home availability uses
 LNO `exists` (empty legacy rows are taken). Duplicate securely is enabled on
@@ -52,8 +51,8 @@ hard-reload. Not soak-complete.
 SplitView panes are editable `NotePage` (convert-on-write). A′ (#126)
 Cutover/LNO RO default is **superseded**. `#owner=`/`#edit=` still render
 `NotePage`. `?legacyRo=1` still RO + banner. Canary stays on. SQL 240 already
-applied; Worker / `writes_enabled` / Realtime still HOLD. U1 SQL+Edge
-convert-legacy GitHub-ready / walls HOLD. See
+applied; U1 SQL `capability_note_convert_legacy` applied live; Edge `convert-legacy`
+published (Pulse `umsg_01m21zhm…`). Worker / `writes_enabled` / Realtime still HOLD. See
 [A′ Cutover restore](docs/security/a-prime-cutover-restore.md) for the remaining
 Legacy RO path.
 

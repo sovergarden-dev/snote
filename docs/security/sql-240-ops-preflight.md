@@ -16,9 +16,9 @@ Named go required: Syringa (apply) / Atlas (coordinate)
 | Origin `version.json` | `deployedSha` `2ae9a230…`, `capabilityRoutesEnabled` true, buildId `1788924147004-wx705xxn` |
 | Pages | `snote-g4-origin` deploy `fb35474a` |
 | Main tip (product) | `2ae9a230` (#130 W1 convert-on-write + #131 lint/lockfile) — this docs attest does not change origin |
-| Walls | SQL **240 already applied**, U1 SQL+Edge convert-legacy **not applied/published**, Worker HOLD (no redeploy), `writes_enabled` HOLD, Edge HOLD from this PR |
+| Walls | SQL **240 already applied**; U1 SQL `capability_note_convert_legacy` **applied** live; Edge `convert-legacy` **published** (Pulse `umsg_01m21zhm…`); Worker HOLD (no redeploy), `writes_enabled` HOLD, Realtime HOLD. This docs PR does not re-apply SQL U1 or re-publish Edge |
 | Live default / apply blocker | W1 live: plain `/slug` → `CutoverNotePage` → editable `NotePage` (convert-on-write). A′ RO default superseded. Duplicate securely enabled on Legacy RO only. Choice A editable table path is **not** the live default. **Do not re-apply** 240 from this docs pin. See [sql-240-readiness-contract.md](./sql-240-readiness-contract.md) §0 and [a-prime-cutover-restore.md](./a-prime-cutover-restore.md). |
-| Product still live (not a go) | W1 convert-on-write; A′ live as Legacy RO (`?legacyRo=1`); Duplicate securely enabled on Legacy RO; Encrypt + Legacy Advanced opt-in on owner path; LNO Phase B/C; Home mint fail-closed; canary on; U1 SQL+Edge GitHub-ready / HOLD |
+| Product still live (not a go) | W1 convert-on-write; A′ live as Legacy RO (`?legacyRo=1`); Duplicate securely enabled on Legacy RO; Encrypt + Legacy Advanced opt-in on owner path; LNO Phase B/C; Home mint fail-closed; canary on; U1 SQL applied live; Edge convert-legacy published (Pulse `umsg_01m21zhm…`); Worker / `writes_enabled` / Realtime still HOLD |
 
 Re-verify live before any named apply:
 

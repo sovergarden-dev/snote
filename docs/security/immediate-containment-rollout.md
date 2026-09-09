@@ -7,7 +7,7 @@ without the explicit checkpoint below.
 `931430c0` / Cloudflare Version ID `5f94ab6c-fde5-4416-a3aa-74daaa2e6094`.
 Observability and invocation logs are live; traces remain disabled. Staging
 `syrin-prerender-staging` was not deployed. Origin remains `2ae9a230`
-(canary on; W1 #130 convert-on-write plain `/slug` + U1 SQL/Edge convert-legacy GitHub-ready not applied/published + Duplicate securely #128 on Legacy RO only + optional `?legacyRo=1` still RO + banner + Pixel Legacy opt-in #122 + Encrypt + Legacy Advanced opt-in on owner path (#123 `#owner=` Encrypt remains) + A′ #126 RO default superseded + Phase C RawView/Home LNO + Pixel HIGH UX H1–H6 + H2 opaque Mode/Export + Ko-fi + New Version FAB + FAB-primary + Sonner suppress (#113/#116) + PWA latch #119 one hard-reload per Update apply + Home mint live, fail-closed idle; Choice A #118 superseded). See `docs/security-findings.md` §1c. This runbook is still
+(canary on; W1 #130 convert-on-write plain `/slug` + U1 SQL `capability_note_convert_legacy` applied live + Edge `convert-legacy` published (Pulse `umsg_01m21zhm…`) + Duplicate securely #128 on Legacy RO only + optional `?legacyRo=1` still RO + banner + Pixel Legacy opt-in #122 + Encrypt + Legacy Advanced opt-in on owner path (#123 `#owner=` Encrypt remains) + A′ #126 RO default superseded + Phase C RawView/Home LNO + Pixel HIGH UX H1–H6 + H2 opaque Mode/Export + Ko-fi + New Version FAB + FAB-primary + Sonner suppress (#113/#116) + PWA latch #119 one hard-reload per Update apply + Home mint live, fail-closed idle; Choice A #118 superseded). See `docs/security-findings.md` §1c. This runbook is still
 required for any future Worker, cache-purge, or tombstone change.
 
 ## Required checkpoint

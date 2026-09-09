@@ -152,8 +152,9 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    `CutoverNotePage` → editable `NotePage` (no A′ RO banner). First persist
    converts existing legacy via `note-session` `convert-legacy` then
    soft-replaces to `#owner=` with `convert_success` toast; empty notes mint
-   via live `create`. U1 SQL `capability_note_convert_legacy` and Edge
-   `convert-legacy` are in GitHub (#130) but **not applied/published**.
+   via live `create`. U1 SQL `capability_note_convert_legacy` is **applied**
+   live. Edge `note-session` `convert-legacy` is **published** (Pulse
+   `umsg_01m21zhm…`).
    Duplicate securely (#128) remains on Legacy RO only (`import-legacy`).
    A′ (#126) RO default is superseded; `?legacyRo=1` still RO + banner.
    Encrypt + Legacy Advanced remain opt-in on the owner path; Encrypt
@@ -166,8 +167,10 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    idle remains live.
    W1 live (named Pages go of #130/#131): convert-on-write for plain `/slug`.
    See [A′ Cutover restore](./a-prime-cutover-restore.md). SQL 240 already
-   applied; Worker / `writes_enabled` / Realtime still HOLD. U1 SQL+Edge
-   convert-legacy GitHub-ready / walls HOLD.
+   applied; U1 SQL `capability_note_convert_legacy` applied live; Edge
+   `convert-legacy` published (Pulse `umsg_01m21zhm…`). Worker /
+   `writes_enabled` / Realtime still HOLD. This docs PR still does not
+   re-apply SQL U1 or re-publish Edge.
    This is not soak-complete.
    Do not treat snapshot verify as `capability_runtime_set`.
    This is not `LEGACY_SHARE_CUTOFF`, soak-complete,
