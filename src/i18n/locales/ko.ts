@@ -287,6 +287,7 @@ const ko: Dictionary = {
     "security.duplicate_fail_permission": "복제하지 못했습니다. 이 노트를 복제할 권한이 없습니다.",
     "security.duplicate_retry": "다시 시도",
     "security.convert_busy": "안전하게 저장하는 중…",
+    "security.convert_success": "안전한 편집 가능 노트로 전환했습니다",
     "security.convert_fail": "이 노트를 안전하게 저장하지 못했습니다. 연결을 확인한 뒤 다시 시도하세요.",
     "security.convert_retry": "다시 시도",
     "security.legacy_confirm_title": "레거시 형식을 켤까요?",

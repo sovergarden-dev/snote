@@ -288,6 +288,7 @@ const zh: Dictionary = {
     "security.duplicate_fail_permission": "无法复制。你没有权限复制此笔记。",
     "security.duplicate_retry": "重试",
     "security.convert_busy": "正在安全保存…",
+    "security.convert_success": "已切换到安全可编辑笔记",
     "security.convert_fail": "无法安全保存此笔记。请检查连接后重试。",
     "security.convert_retry": "重试",
     "security.legacy_confirm_title": "开启 Legacy 格式？",

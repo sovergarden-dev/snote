@@ -54,6 +54,13 @@ describe("W1 convert-on-write contract", () => {
     expect(notePage).toContain("createLegacyNoteApi().open");
     expect(notePage).toContain("convertPlainNoteOnWrite");
     expect(notePage).not.toContain("onDuplicateSecurely");
+
+    const navigateAt = notePage.indexOf("navigate(path, { replace: true })");
+    const successAt = notePage.indexOf('tRef.current("security.convert_success")');
+    const failAt = notePage.indexOf('tRef.current("security.convert_fail")');
+    expect(navigateAt).toBeGreaterThan(0);
+    expect(successAt).toBeGreaterThan(navigateAt);
+    expect(failAt).toBeGreaterThan(successAt);
   });
 
   it("shows Duplicate securely only on Legacy RO and lets Legacy off return to W1", () => {

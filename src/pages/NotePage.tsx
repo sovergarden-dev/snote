@@ -336,6 +336,9 @@ export default function NotePage({
         encryptionSecret: readEncryptionSecret(window.location.hash),
       });
       navigate(path, { replace: true });
+      toast({
+        title: tRef.current("security.convert_success"),
+      });
     } catch (error) {
       const kind = (plainRuntime ?? await loadPlainRuntime()).mapDuplicateFailure(error);
       const feedback = kind === "permission" || kind === "network" ? kind : "retry";

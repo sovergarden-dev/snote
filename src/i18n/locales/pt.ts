@@ -284,6 +284,7 @@ const pt: Dictionary = {
     "security.duplicate_fail_permission": "Não foi possível duplicar. Não tem permissão para duplicar esta nota.",
     "security.duplicate_retry": "Tentar novamente",
     "security.convert_busy": "A guardar de forma segura…",
+    "security.convert_success": "Mudou para uma nota segura e editável",
     "security.convert_fail": "Não foi possível guardar esta nota de forma segura. Verifique a ligação e tente novamente.",
     "security.convert_retry": "Tentar novamente",
     "security.legacy_confirm_title": "Ativar o formato Legacy?",

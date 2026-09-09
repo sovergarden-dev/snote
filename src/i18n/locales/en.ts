@@ -296,6 +296,7 @@ const en = {
     "security.duplicate_fail_permission": "Couldn't duplicate. You don't have permission to duplicate this note.",
     "security.duplicate_retry": "Retry",
     "security.convert_busy": "Saving securely…",
+    "security.convert_success": "Switched to a secure editable note",
     "security.convert_fail": "Couldn't save this note securely. Check your connection and try again.",
     "security.convert_retry": "Retry",
     "security.legacy_confirm_title": "Turn on Legacy format?",

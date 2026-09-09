@@ -287,6 +287,7 @@ const fr: Dictionary = {
     "security.duplicate_fail_permission": "Impossible de dupliquer. Vous n’avez pas l’autorisation de dupliquer cette note.",
     "security.duplicate_retry": "Réessayer",
     "security.convert_busy": "Enregistrement sécurisé…",
+    "security.convert_success": "Passage à une note sécurisée et modifiable",
     "security.convert_fail": "Impossible d’enregistrer cette note de façon sécurisée. Vérifiez la connexion et réessayez.",
     "security.convert_retry": "Réessayer",
     "security.legacy_confirm_title": "Activer le format Legacy ?",

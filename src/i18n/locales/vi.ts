@@ -292,6 +292,7 @@ const vi: Dictionary = {
     "security.duplicate_fail_permission": "Không sao chép được. Bạn không có quyền sao chép note này.",
     "security.duplicate_retry": "Thử lại",
     "security.convert_busy": "Đang lưu an toàn…",
+    "security.convert_success": "Đã chuyển sang note an toàn",
     "security.convert_fail": "Không lưu được note này an toàn. Kiểm tra kết nối rồi thử lại.",
     "security.convert_retry": "Thử lại",
     "security.legacy_confirm_title": "Bật định dạng Legacy?",

@@ -1,6 +1,6 @@
-import { act, fireEvent, render, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Suspense, type ReactNode } from "react";
-import { BrowserRouter, MemoryRouter, Route, Routes, useNavigate } from "react-router";
+import { BrowserRouter, MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import NotePage from "../NotePage";
@@ -40,6 +40,11 @@ const harness = vi.hoisted(() => ({
   verifyCheck: vi.fn(),
   decryptBytes: vi.fn(),
   shareInvoke: vi.fn(),
+  toast: vi.fn(),
+  persistPlain: null as null | (() => void),
+  convertPlainNoteOnWrite: vi.fn<(...args: unknown[]) => Promise<string>>(async () => {
+    throw new Error("convert-on-write is mocked in this harness");
+  }),
   translate: (key: string) => key,
   metaPromise: Promise.resolve({ data: null as Record<string, unknown> | null }),
 }));
@@ -198,9 +203,10 @@ vi.mock("@/lib/yjs/local-convert-provider", () => ({
     constructor(
       private readonly slug: string,
       _doc: unknown,
-      _onFirstPersist: unknown,
+      onFirstPersist: () => void,
     ) {
       harness.providerConstruct(slug);
+      harness.persistPlain = onFirstPersist;
     }
 
     setEncryption() {}
@@ -245,13 +251,11 @@ vi.mock("@/lib/legacy/cutover", () => ({
   mapDuplicateFailure: () => "retry",
 }));
 vi.mock("@/lib/legacy/convert-on-write", () => ({
-  convertPlainNoteOnWrite: vi.fn(async () => {
-    throw new Error("convert-on-write is mocked in this harness");
-  }),
+  convertPlainNoteOnWrite: (...args: unknown[]) => harness.convertPlainNoteOnWrite(...args),
   consumeConvertSeed: () => null,
 }));
 vi.mock("@/hooks/use-word-goal", () => ({ useWordGoal: () => ({ goal: null }), consumeGoalReached: () => false }));
-vi.mock("@/hooks/use-toast", () => ({ toast: vi.fn() }));
+vi.mock("@/hooks/use-toast", () => ({ toast: (...args: unknown[]) => harness.toast(...args) }));
 vi.mock("@/hooks/use-zen-mode", () => ({ useZenMode: () => ({ zen: false, toggle: vi.fn() }) }));
 vi.mock("@/hooks/use-typewriter-mode", () => ({ useTypewriterMode: () => ({ typewriter: false, toggle: vi.fn() }) }));
 vi.mock("@/hooks/use-preview-visible", () => ({ usePreviewVisible: () => ({ visible: true, setVisible: vi.fn() }) }));
@@ -492,6 +496,12 @@ describe("NotePage encryption gate", () => {
     harness.verifyCheck.mockReset();
     harness.decryptBytes.mockReset();
     harness.shareInvoke.mockReset();
+    harness.toast.mockReset();
+    harness.persistPlain = null;
+    harness.convertPlainNoteOnWrite.mockReset();
+    harness.convertPlainNoteOnWrite.mockImplementation(async () => {
+      throw new Error("convert-on-write is mocked in this harness");
+    });
     harness.translate = (key: string) => key;
     localStorage.clear();
     window.history.replaceState(null, "", window.location.pathname);
@@ -848,6 +858,56 @@ describe("NotePage encryption gate", () => {
           currentShareUrl: `${window.location.origin}/secret`,
         }),
       ),
+    );
+  });
+
+  it.each([
+    ["existing LNO source", {
+      data: {
+        is_encrypted: false,
+        content: "keep me",
+        ydoc_state: "",
+        enc_salt: null,
+        enc_check: null,
+        enc_iterations: null,
+      },
+      error: null,
+    }],
+    ["empty new note", { data: null, error: null }],
+  ])("toasts convert_success after %s soft-replaces #owner=", async (_label, meta) => {
+    harness.metaForSlug.mockResolvedValue(meta);
+    const owner = "c".repeat(43);
+    harness.convertPlainNoteOnWrite.mockResolvedValue(`/secret#owner=${owner}`);
+    harness.capabilityOpenSession.mockResolvedValue(pollingSession());
+
+    function ConvertLocationProbe() {
+      const loc = useLocation();
+      return <div data-testid="loc">{`${loc.pathname}${loc.hash}`}</div>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <Routes>
+          <Route path="/:slug" element={<><ConvertLocationProbe /><NotePage /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(harness.persistPlain).toEqual(expect.any(Function)));
+    expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
+    expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
+
+    await act(async () => {
+      harness.persistPlain?.();
+    });
+
+    await waitFor(() => {
+      expect(harness.toast).toHaveBeenCalledWith({ title: "security.convert_success" });
+    });
+    expect(harness.convertPlainNoteOnWrite).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("loc")).toHaveTextContent(`/secret#owner=${owner}`);
+    expect(harness.toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "security.convert_fail" }),
     );
   });
 

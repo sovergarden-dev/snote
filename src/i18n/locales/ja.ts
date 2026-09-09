@@ -288,6 +288,7 @@ const ja: Dictionary = {
     "security.duplicate_fail_permission": "複製できませんでした。このノートを複製する権限がありません。",
     "security.duplicate_retry": "再試行",
     "security.convert_busy": "安全に保存しています…",
+    "security.convert_success": "安全な編集可能なノートに切り替えました",
     "security.convert_fail": "このノートを安全に保存できませんでした。接続を確認して再試行してください。",
     "security.convert_retry": "再試行",
     "security.legacy_confirm_title": "レガシー形式をオンにしますか？",

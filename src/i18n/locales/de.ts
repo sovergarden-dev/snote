@@ -284,6 +284,7 @@ const de: Dictionary = {
     "security.duplicate_fail_permission": "Duplizieren nicht möglich. Sie haben keine Berechtigung, diese Notiz zu duplizieren.",
     "security.duplicate_retry": "Erneut versuchen",
     "security.convert_busy": "Sicher speichern…",
+    "security.convert_success": "Zu einer sicheren, bearbeitbaren Notiz gewechselt",
     "security.convert_fail": "Diese Notiz konnte nicht sicher gespeichert werden. Prüfe die Verbindung und versuche es erneut.",
     "security.convert_retry": "Erneut versuchen",
     "security.legacy_confirm_title": "Legacy-Format aktivieren?",
