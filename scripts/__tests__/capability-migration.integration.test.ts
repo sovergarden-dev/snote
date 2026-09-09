@@ -961,11 +961,15 @@ it("executes capability isolation, sync, management, and Realtime RLS in Postgre
       "SELECT count(*)::integer AS count FROM public.notes",
     )).rows[0].count;
     const convertBytes = Buffer.alloc(60, 29);
+    const convertOwner = hash([201]);
+    const convertEdit = hash([202]);
+    const convertView = hash([203]);
+    const convertConflictOwner = hash([204]);
     const convertArgs = [
       "legacy-row",
-      tokenHash("p"),
-      tokenHash("q"),
-      tokenHash("r"),
+      convertOwner,
+      convertEdit,
+      convertView,
       createHash("sha256").update(convertBytes).digest("hex"),
       convertBytes.toString("base64url"),
       false,
@@ -999,9 +1003,9 @@ it("executes capability isolation, sync, management, and Realtime RLS in Postgre
     });
     expect((await rpc(db, "capability_note_convert_legacy", [
       "legacy-row",
-      tokenHash("z"),
-      tokenHash("q"),
-      tokenHash("r"),
+      convertConflictOwner,
+      convertEdit,
+      convertView,
       createHash("sha256").update(convertBytes).digest("hex"),
       convertBytes.toString("base64url"),
       false,
@@ -1011,9 +1015,9 @@ it("executes capability isolation, sync, management, and Realtime RLS in Postgre
     ], convertRpcTypes)).status).toBe("slug_unavailable");
     expect((await rpc(db, "capability_note_convert_legacy", [
       "no-such-legacy-slug",
-      tokenHash("p"),
-      tokenHash("q"),
-      tokenHash("r"),
+      convertOwner,
+      convertEdit,
+      convertView,
       createHash("sha256").update(convertBytes).digest("hex"),
       convertBytes.toString("base64url"),
       false,
@@ -1158,9 +1162,9 @@ it("executes capability isolation, sync, management, and Realtime RLS in Postgre
       .toBe("writes_disabled");
     expect((await rpc(db, "capability_note_convert_legacy", [
       "disabled-convert",
-      tokenHash("p"),
-      tokenHash("q"),
-      tokenHash("r"),
+      convertOwner,
+      convertEdit,
+      convertView,
       createHash("sha256").update(convertBytes).digest("hex"),
       convertBytes.toString("base64url"),
       false,
