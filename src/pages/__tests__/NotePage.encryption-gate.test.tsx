@@ -248,11 +248,20 @@ vi.mock("@/lib/legacy/cutover", () => ({
       };
     },
   }),
-  mapDuplicateFailure: () => "retry",
+  mapDuplicateFailure: (error: unknown) => {
+    const code = error && typeof error === "object" && "code" in error
+      ? (error as { code?: unknown }).code
+      : null;
+    if (code === "slug_unavailable" || code === "converted_slug_unrecoverable") {
+      return "converted";
+    }
+    return "retry";
+  },
 }));
 vi.mock("@/lib/legacy/convert-on-write", () => ({
   convertPlainNoteOnWrite: (...args: unknown[]) => harness.convertPlainNoteOnWrite(...args),
   consumeConvertSeed: () => null,
+  hasStoredConvertRecovery: () => false,
 }));
 vi.mock("@/hooks/use-word-goal", () => ({ useWordGoal: () => ({ goal: null }), consumeGoalReached: () => false }));
 vi.mock("@/hooks/use-toast", () => ({ toast: (...args: unknown[]) => harness.toast(...args) }));
@@ -909,6 +918,53 @@ describe("NotePage encryption gate", () => {
     expect(harness.toast).not.toHaveBeenCalledWith(
       expect.objectContaining({ title: "security.convert_fail" }),
     );
+  });
+
+  it("shows an honest reopen banner instead of Sync/409 after converted slug_unavailable", async () => {
+    harness.metaForSlug.mockResolvedValue({ data: null, error: null });
+    harness.convertPlainNoteOnWrite.mockRejectedValue({
+      status: 409,
+      code: "converted_slug_unrecoverable",
+    });
+
+    function ConvertLocationProbe() {
+      const loc = useLocation();
+      return <div data-testid="loc">{`${loc.pathname}${loc.hash}`}</div>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <Routes>
+          <Route path="/" element={<div>home</div>} />
+          <Route path="/:slug" element={<><ConvertLocationProbe /><NotePage /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(harness.persistPlain).toEqual(expect.any(Function)));
+
+    await act(async () => {
+      harness.persistPlain?.();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("security.convert_reopen_banner");
+    });
+    expect(screen.getByRole("button", { name: "security.convert_reopen_cta" })).toBeInTheDocument();
+    expect(screen.queryByTestId("editor")).not.toBeInTheDocument();
+    expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
+    expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
+    expect(harness.toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "security.convert_fail" }),
+    );
+    expect(harness.toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "security.convert_success" }),
+    );
+
+    await act(async () => {
+      screen.getByRole("button", { name: "security.convert_reopen_cta" }).click();
+    });
+    await waitFor(() => expect(screen.getByText("home")).toBeInTheDocument());
   });
 
   it("immediately closes a live plaintext note when another local flow pins it", async () => {

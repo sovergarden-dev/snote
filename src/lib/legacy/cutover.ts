@@ -158,6 +158,19 @@ function browserRecoveryStore(): LegacyImportRecoveryStore {
   };
 }
 
+export function loadLegacyImportRecovery(
+  slug: string,
+  store?: LegacyImportRecoveryStore,
+): LegacyImportRecovery | null {
+  if (!isUsableSlug(slug)) return null;
+  try {
+    const loaded = (store ?? browserRecoveryStore()).load(slug);
+    return isRecovery(loaded) ? loaded : null;
+  } catch {
+    return null;
+  }
+}
+
 async function legacySourceFingerprint(source: LegacyNote): Promise<string> {
   const canonicalSource = JSON.stringify([
     source.slug,
@@ -278,7 +291,12 @@ export function allocateDuplicateSlug(): string {
   return slug;
 }
 
-export type DuplicateFailureKind = "network" | "permission" | "retry" | "slug_unavailable";
+export type DuplicateFailureKind =
+  | "network"
+  | "permission"
+  | "retry"
+  | "slug_unavailable"
+  | "converted";
 
 export function mapDuplicateFailure(error: unknown): DuplicateFailureKind {
   if (!error || typeof error !== "object") return "network";
@@ -289,6 +307,7 @@ export function mapDuplicateFailure(error: unknown): DuplicateFailureKind {
   const code = typeof candidate.code === "string" && /^[a-z][a-z_]{0,63}$/.test(candidate.code)
     ? candidate.code
     : null;
+  if (code === "converted_slug_unrecoverable") return "converted";
   if (code === "slug_unavailable") return "slug_unavailable";
   if (code === "unauthorized" || status === 401 || status === 403) return "permission";
   if (status === null) return "network";

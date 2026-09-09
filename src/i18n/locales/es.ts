@@ -290,6 +290,8 @@ const es: Dictionary = {
     "security.convert_success": "Cambiado a una nota segura y editable",
     "security.convert_fail": "No se pudo guardar esta nota de forma segura. Comprueba la conexión e inténtalo de nuevo.",
     "security.convert_retry": "Reintentar",
+    "security.convert_reopen_banner": "Esta nota se actualizó a una copia segura. Ábrela de nuevo con tu enlace owner (`#owner=`).",
+    "security.convert_reopen_cta": "Inicio",
     "security.legacy_confirm_title": "¿Activar el formato Legacy?",
     "security.legacy_confirm_body": "El formato Legacy abre esta nota en solo lectura. Puedes desactivarlo en cualquier momento desde Seguridad de la nota. No cambia otras notas ni el editor predeterminado.",
     "security.legacy_confirm_body_short": "¿Abrir esta nota en formato Legacy de solo lectura?",

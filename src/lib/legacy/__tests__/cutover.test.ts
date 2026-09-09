@@ -371,6 +371,7 @@ describe("Duplicate securely client helpers", () => {
     expect(mapDuplicateFailure({ status: 401, code: "unauthorized" })).toBe("permission");
     expect(mapDuplicateFailure({ status: 403, code: "unauthorized" })).toBe("permission");
     expect(mapDuplicateFailure({ status: 409, code: "slug_unavailable" })).toBe("slug_unavailable");
+    expect(mapDuplicateFailure({ status: 409, code: "converted_slug_unrecoverable" })).toBe("converted");
     expect(mapDuplicateFailure({ status: 503, code: "unavailable" })).toBe("retry");
     expect(mapDuplicateFailure({ status: 429, code: "rate_limited" })).toBe("retry");
   });

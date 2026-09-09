@@ -290,6 +290,8 @@ const ko: Dictionary = {
     "security.convert_success": "안전한 편집 가능 노트로 전환했습니다",
     "security.convert_fail": "이 노트를 안전하게 저장하지 못했습니다. 연결을 확인한 뒤 다시 시도하세요.",
     "security.convert_retry": "다시 시도",
+    "security.convert_reopen_banner": "이 노트는 안전한 사본으로 전환되었습니다. owner 링크(`#owner=`)로 다시 여세요.",
+    "security.convert_reopen_cta": "홈",
     "security.legacy_confirm_title": "레거시 형식을 켤까요?",
     "security.legacy_confirm_body": "레거시 형식은 이 노트를 읽기 전용으로 엽니다. 노트 보안에서 언제든지 끌 수 있습니다. 다른 노트나 기본 편집기는 바뀌지 않습니다.",
     "security.legacy_confirm_body_short": "이 노트를 읽기 전용 레거시 형식으로 열까요?",

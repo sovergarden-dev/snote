@@ -287,6 +287,8 @@ const de: Dictionary = {
     "security.convert_success": "Zu einer sicheren, bearbeitbaren Notiz gewechselt",
     "security.convert_fail": "Diese Notiz konnte nicht sicher gespeichert werden. Prüfe die Verbindung und versuche es erneut.",
     "security.convert_retry": "Erneut versuchen",
+    "security.convert_reopen_banner": "Diese Notiz wurde auf eine sichere Kopie umgestellt. Öffne sie erneut mit deinem Owner-Link (`#owner=`).",
+    "security.convert_reopen_cta": "Start",
     "security.legacy_confirm_title": "Legacy-Format aktivieren?",
     "security.legacy_confirm_body": "Das Legacy-Format öffnet diese Notiz schreibgeschützt. Du kannst es jederzeit unter Notizsicherheit ausschalten. Andere Notizen und der Standard-Editor bleiben unverändert.",
     "security.legacy_confirm_body_short": "Diese Notiz im schreibgeschützten Legacy-Format öffnen?",

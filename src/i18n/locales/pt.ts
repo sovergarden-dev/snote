@@ -287,6 +287,8 @@ const pt: Dictionary = {
     "security.convert_success": "Mudou para uma nota segura e editável",
     "security.convert_fail": "Não foi possível guardar esta nota de forma segura. Verifique a ligação e tente novamente.",
     "security.convert_retry": "Tentar novamente",
+    "security.convert_reopen_banner": "Esta nota foi atualizada para uma cópia segura. Abre-a novamente com o teu link owner (`#owner=`).",
+    "security.convert_reopen_cta": "Início",
     "security.legacy_confirm_title": "Ativar o formato Legacy?",
     "security.legacy_confirm_body": "O formato Legacy abre esta nota só de leitura. Pode desligar a qualquer momento em Segurança da nota. Isto não altera outras notas nem o editor predefinido.",
     "security.legacy_confirm_body_short": "Abrir esta nota no formato Legacy só de leitura?",

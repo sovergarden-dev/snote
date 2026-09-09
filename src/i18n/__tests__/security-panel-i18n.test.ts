@@ -25,6 +25,8 @@ const SECURITY_KEYS = [
   "security.convert_success",
   "security.convert_fail",
   "security.convert_retry",
+  "security.convert_reopen_banner",
+  "security.convert_reopen_cta",
   "security.legacy_confirm_title",
   "security.legacy_confirm_body",
   "security.legacy_confirm_body_short",
@@ -82,6 +84,14 @@ describe("Note security panel i18n", () => {
     expect(dict.vi["security.convert_busy"]).toBe("Đang lưu an toàn…");
     expect(dict.en["security.convert_success"]).toBe("Switched to a secure editable note");
     expect(dict.vi["security.convert_success"]).toBe("Đã chuyển sang note an toàn");
+    expect(dict.en["security.convert_reopen_banner"]).toBe(
+      "This note was upgraded to a secure copy. Reopen it with your owner link (`#owner=`).",
+    );
+    expect(dict.vi["security.convert_reopen_banner"]).toBe(
+      "Note này đã chuyển sang bản an toàn. Mở lại từ link owner (`#owner=`).",
+    );
+    expect(dict.en["security.convert_reopen_cta"]).toBe("Home");
+    expect(dict.vi["security.convert_reopen_cta"]).toBe("Trang chủ");
     expect(dict.en["security.legacy_helper_on_plain"]).toMatch(/view-only/);
     expect(dict.vi["security.legacy_helper_on_plain"]).toMatch(/chỉ xem/);
     expect(dict.en["security.legacy_helper_split"]).toBe(
