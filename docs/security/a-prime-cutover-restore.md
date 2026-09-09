@@ -1,47 +1,71 @@
-# A′ Cutover restore — SPA routing (live on origin)
+# A′ Cutover restore — SPA routing (superseded as live default by W1)
 
-- Status: **Live on origin** `f84183ba` / Pages `74637d87` (named Pages go of #128 Duplicate securely on A′ #126)
-- Date: 2026-09-08
+- Status: **Superseded as live default** by W1 convert-on-write on origin `2ae9a230` / Pages `fb35474a` (named Pages go of #130/#131). Remaining live path: `?legacyRo=1` / Legacy Advanced → Cutover/LNO RO. Prior A′+Duplicate pin was `f84183ba` / Pages `74637d87` (#128 on #126).
+- Date: 2026-09-08 (A′ ship); superseded 2026-09-09
 - Owners: Aegis (contract) · Pixel (UX) · Atlas (coord) · Syringa (named go)
 - Canary: keep `VITE_CAPABILITY_ROUTES_ENABLED` / `capabilityRoutesEnabled` **on**
 
 Choice A (#118) made canary-on plain `/<slug>` mount editable `NotePage`
-(`notes` table path). That dispatcher default is **superseded by A′**.
+(`notes` table path). That dispatcher default was **superseded by A′**, then
+**A′ was superseded by W1** (#130): plain `/slug` is editable convert-on-write
+again, without the Choice A table path.
 
-Live origin `f84183ba` is A′ Cutover restore plus Duplicate securely: plain `/slug` = Cutover/LNO RO.
+Live origin `2ae9a230` is W1 convert-on-write: plain `/slug` = editable
+`NotePage`; first persist converts legacy via `convert-legacy` then
+soft-replaces to `#owner=`. A′ Cutover/LNO RO remains only for `?legacyRo=1`
+/ Legacy Advanced. Duplicate securely stays on that Legacy RO path.
+U1 SQL `capability_note_convert_legacy` and Edge `convert-legacy` are in
+GitHub (#130) but **not applied/published**.
 This document does not re-apply SQL 240 and does not flip `writes_enabled` /
 `private_realtime_enabled`. SQL 240 already applied; Worker / writes_enabled /
-Realtime still HOLD.
+Realtime still HOLD. U1 SQL+Edge walls HOLD.
 
-## Mount table (canary on)
+## Mount table (canary on) — A′ design; live default is W1
+
+W1 live default (origin `2ae9a230`):
+
+| URL | Mount |
+|---|---|
+| `/<slug>` no fragment | `CutoverNotePage` → editable `NotePage` (convert-on-write; no A′ RO banner) |
+| `/<slug>?legacyRo=1` | `LegacyNotePage` RO (same chrome + banner) — A′ path still used |
+| `/<slug>#owner=` / `#edit=` | Capability `NotePage` (unchanged editable) |
+| `/<slug>?legacyRo=1#owner=` | Legacy RO (Advanced Legacy ON from `#owner=`) |
+| SplitView `/a+b` panes | W1 editable via Cutover (`+` pathnames cannot carry a matching `#owner=`/`#edit=` fragment) |
+| `/:slug.md` | RawView unchanged (Phase C LNO `open`) |
+
+Historical A′ default (live on `f84183ba` / `b4eba5d2`, not current):
 
 | URL | Mount |
 |---|---|
 | `/<slug>` no fragment | `CutoverNotePage` → `LegacyNotePage` (LNO RO) |
-| `/<slug>?legacyRo=1` | `LegacyNotePage` RO (same chrome + banner) |
-| `/<slug>#owner=` / `#edit=` | Capability `NotePage` (unchanged editable) |
-| `/<slug>?legacyRo=1#owner=` | Legacy RO (Advanced Legacy ON from `#owner=`) |
-| SplitView `/a+b` panes | Legacy RO via Cutover (`+` pathnames cannot carry a matching `#owner=`/`#edit=` fragment; fail-closed LNO) |
-| `/:slug.md` | RawView unchanged (Phase C LNO `open`) |
+| SplitView `/a+b` panes | Legacy RO via Cutover |
 
 Flag-off builds keep `NotePage` `legacyOnly` and do not import `CutoverNotePage`.
 
 ## Pixel UX
 
-- Persistent `role="status"` banner **below** the topbar on Legacy RO chrome.
-- CTA goes to **Home mint**, not Duplicate securely, not a fake Enable Edit.
-- Plain Legacy RO **omits** the Encrypt row. `#owner=` Encrypt stays **active**.
+- W1 default has **no** A′ RO banner. Persistent `role="status"` banner
+  **below** the topbar remains on Legacy RO chrome (`?legacyRo=1`).
+- CTA on Legacy RO goes to **Home mint**, not Duplicate securely, not a fake
+  Enable Edit.
+- Plain pre-convert Encrypt is **disabled+honest**. `#owner=` Encrypt stays
+  **active**. Legacy Advanced remains opt-in.
 - Do **not** reopen `allowEncryptionTransitions` on the plain table path.
-- On plain RO, turning Legacy off must **not** reopen Choice A editable `NotePage`.
-- Duplicate securely is enabled (`DUPLICATE_SECURELY_AVAILABLE = true`; Edge `note-session` `import-legacy`). Hidden on pure `#owner=` editable `NotePage`.
+- Duplicate securely is enabled on Legacy RO only
+  (`DUPLICATE_SECURELY_AVAILABLE = true`; Edge `note-session` `import-legacy`).
+  Hidden on default W1 plain editable and pure `#owner=` editable `NotePage`.
 
-Pixel visual A′ PASS on prior live `b4eba5d2` (plain `/hage` Legacy RO + banner +
-CTA Home; Encrypt omit; mint `#owner=` editable; evidence
-`pixel-qa/a-prime-b4eba5d2/`). Duplicate securely is now enabled on this A′ line.
+Pixel visual A′ PASS remains historical evidence on prior live `b4eba5d2`
+(plain `/hage` Legacy RO + banner + CTA Home; Encrypt omit; mint `#owner=`
+editable; evidence `pixel-qa/a-prime-b4eba5d2/`). Pixel/Sentinel live verify
+for W1 `2ae9a230` may still be in flight; this attest does not record a
+Pixel or Sentinel verdict for that SHA.
 
 ## Walls
 
 - This attest does not deploy origin / Pages / Worker / Edge
 - SQL 240 already applied; this attest does not re-apply
+- U1 SQL `capability_note_convert_legacy` + Edge `convert-legacy` not
+  applied/published
 - No `writes_enabled` / `private_realtime_enabled` flip
 - Do not merge the attest PR from the implementing agent

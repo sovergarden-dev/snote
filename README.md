@@ -4,37 +4,46 @@ Offline-first realtime Markdown notes with a separately gated capability model.
 
 Production: [note.syrin.online](https://note.syrin.online/)
 
-**Current status:** Production currently runs A′ Cutover restore (#126) canary-on
-`CutoverNotePage` → `LegacyNotePage` (LNO RO) for plain `/<slug>` and SplitView
-panes (Phase C still live; Pixel HIGH UX H1–H6 still on this line; H2 opaque
-Mode/Export still on this line; Ko-fi + New Version FAB still on this line;
-FAB-primary + Sonner suppress (#113/#116) still on this line; Choice A (#118)
-editable-plain default is **superseded** on this line; PWA latch (#119) one
-hard-reload per Update apply still on this line; Pixel Legacy opt-in (#122)
-still on this line; Encrypt omit on plain Legacy RO (#123 `#owner=` Encrypt
-stays active); A′ (#126) + Duplicate securely (#128) live on origin `f84183ba`; Pixel visual A′ PASS (plain `/hage`
-Legacy RO + banner + CTA Home; Encrypt omit; mint `#owner=`
-editable; evidence pixel-qa/a-prime-b4eba5d2/); Pixel PASS; Sentinel READY WITH KNOWN RISKS
-(LOW: fail-path not smoke-tested live); Duplicate securely is enabled on this A′ line
-(Edge `note-session` `import-legacy`);
-Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e):
+**Current status:** Production currently runs W1 convert-on-write (#130 U1 SPA
+lineage on #131 tip) canary-on `CutoverNotePage` → editable `NotePage` for
+plain `/<slug>` and SplitView panes (no A′ RO banner; Phase C still live;
+Pixel HIGH UX H1–H6 still on this line; H2 opaque Mode/Export still on this
+line; Ko-fi + New Version FAB still on this line; FAB-primary + Sonner
+suppress (#113/#116) still on this line; Choice A (#118) editable-plain
+default remains **superseded** on this line; PWA latch (#119) one hard-reload
+per Update apply still on this line; Pixel Legacy opt-in (#122) still on this
+line as `?legacyRo=1` / Legacy Advanced; Encrypt + Legacy Advanced remain
+opt-in on the owner path; Encrypt disabled+honest (#123) on plain pre-convert,
+`#owner=` Encrypt stays active; A′ (#126) RO default is **superseded**;
+Duplicate securely (#128) remains enabled on Legacy RO only (Edge
+`note-session` `import-legacy`); W1 + U1 SPA live on origin `2ae9a230`; Pixel
+IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e):
 `capabilityRoutesEnabled` true. Plain slug URLs and SplitView panes mount
-`CutoverNotePage` → `LegacyNotePage` (LNO RO); `#owner`/`#edit` still render
-`NotePage`. Optional `?legacyRo=1` still RO + banner (Phase B `legacy-note-open`
+`CutoverNotePage` → editable `NotePage`; first persist converts existing
+legacy via `note-session` `convert-legacy` then soft-replaces to `#owner=`
+with `convert_success` toast (empty notes mint via live `create`). U1 SQL
+`capability_note_convert_legacy` and Edge `convert-legacy` are in GitHub
+(#130) but **not applied/published** — convert-on-write first persist on
+existing legacy assumes that Edge action. `#owner`/`#edit` still render
+`NotePage`. Optional `?legacyRo=1` still RO + banner (`LegacyNotePage`; Phase B `legacy-note-open`
 read-only). RawView `/:slug.md` loads via LNO `open`; Home availability uses
-LNO `exists` (empty legacy rows are taken). Duplicate securely is enabled
-(PR #128; Edge `note-session` `import-legacy`). Home mints capabilities when canary is on (fail-closed on idle). Additive SQL 220 and 270
+LNO `exists` (empty legacy rows are taken). Duplicate securely is enabled on
+Legacy RO only (PR #128; Edge `note-session` `import-legacy`). Home mints capabilities when canary is on (fail-closed on idle). Additive SQL 220 and 270
 are applied on production; `writes_enabled=true` and
 `private_realtime_enabled=false` (findings §3d). SQL 240 is already applied;
 soak ≥48h started from the first canary (not soak-complete) — see
-[security findings](docs/security-findings.md).
+[security findings](docs/security-findings.md). Pixel/Sentinel live verify for
+this SHA may still be in flight; this attest does not record a Pixel or
+Sentinel verdict.
 
-**A′ live (named Pages go of #126) plus Duplicate securely (#128):** canary-on plain `/<slug>` and SplitView
-panes are `CutoverNotePage` → `LegacyNotePage` (LNO RO). Choice A (#118)
-editable-plain default is **superseded**. `#owner=`/`#edit=` still render
+**W1 live (named Pages go of #130/#131):** canary-on plain `/<slug>` and
+SplitView panes are editable `NotePage` (convert-on-write). A′ (#126)
+Cutover/LNO RO default is **superseded**. `#owner=`/`#edit=` still render
 `NotePage`. `?legacyRo=1` still RO + banner. Canary stays on. SQL 240 already
-applied; Worker / `writes_enabled` / Realtime still HOLD. See
-[A′ Cutover restore](docs/security/a-prime-cutover-restore.md).
+applied; Worker / `writes_enabled` / Realtime still HOLD. U1 SQL+Edge
+convert-legacy GitHub-ready / walls HOLD. See
+[A′ Cutover restore](docs/security/a-prime-cutover-restore.md) for the remaining
+Legacy RO path.
 
 ## Product
 
@@ -52,9 +61,9 @@ applied; Worker / `writes_enabled` / Realtime still HOLD. See
 ## Security model
 
 SQL 240 is already applied: browser roles no longer have direct `notes` table
-access. Dual-mode canary, A′ LNO read-only for plain `/slug`, Home mint, and
-Duplicate securely are live. Soak is not complete; `private_realtime_enabled`
-remains false. The capability model below is the live table-access architecture.
+access. Dual-mode canary, W1 convert-on-write for plain `/slug`, Home mint, and
+Duplicate securely (Legacy RO) are live. Soak is not complete;
+`private_realtime_enabled` remains false. The capability model below is the live table-access architecture.
 
 After cutover, a slug locates a note but never grants access. New notes use
 32-byte random capabilities:
@@ -68,8 +77,9 @@ Backend clients send capabilities in `Authorization`, never in a query or path.
 The database stores keyed hashes, not raw capabilities. The atomic cutover
 revokes direct anonymous table access; SQL 240 is already applied.
 
-After cutover, legacy notes become exact-match read-only and can be copied into
-a new secure note. They never acquire an owner implicitly. The planned rollback
+After cutover, legacy notes stay exact-match until W1 first persist converts
+them in place (same slug) or Duplicate securely copies them onto a new slug
+from Legacy RO. They never acquire an owner implicitly. The planned rollback
 keeps APIs read-only; it never restores public table policies.
 
 Do not log note content, slugs, capabilities, share tokens or raw IP addresses.

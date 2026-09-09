@@ -59,8 +59,8 @@ would write; do not invent Turnstile. Do not restore a dump.
 Production Edge is this Phase B reader (see [security findings §1b](security-findings.md)).
 This document does not authorize an Edge deploy, origin Pages, Worker, SQL 240, or
 Realtime flip.
-SPA A′ (#126) is live: canary-on plain slug and SplitView panes mount `CutoverNotePage` → `LegacyNotePage` (LNO RO; dual-mode canary on, findings §3e). Optional `?legacyRo=1` still RO + banner. Pixel Legacy opt-in (#122) is live. Encrypt omit on plain Legacy RO; `#owner=` Encrypt stays active (#123 lineage). Duplicate securely is enabled (PR #128; Edge `note-session` `import-legacy`). Phase C is live: RawView `/:slug.md` uses LNO `open`; Home availability uses LNO `exists`. Pixel HIGH UX H1–H6 is live on this origin. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress (#113/#116) is live. PWA latch (#119) one hard-reload per Update apply is live. Home create mints when canary is on (fail-closed idle). SQL 240 is already applied.
-A′ live (named Pages go of #126) plus Duplicate securely (#128): canary-on plain slug and SplitView panes are `CutoverNotePage` → `LegacyNotePage` (LNO RO). Choice A (#118) editable-plain default is superseded. Canary stays on. See [A′ Cutover restore](security/a-prime-cutover-restore.md). SQL 240 already applied; Worker / `writes_enabled` / Realtime still HOLD. This does not deploy origin or re-apply SQL 240.
+SPA W1 (#130) is live: canary-on plain slug and SplitView panes mount `CutoverNotePage` → editable `NotePage` (convert-on-write; dual-mode canary on, findings §3e). Optional `?legacyRo=1` still RO + banner. Pixel Legacy opt-in (#122) is live as Legacy Advanced. Encrypt + Legacy Advanced remain opt-in on the owner path; Encrypt disabled+honest on plain pre-convert; `#owner=` Encrypt stays active (#123 lineage). Duplicate securely is enabled on Legacy RO only (PR #128; Edge `note-session` `import-legacy`). Phase C is live: RawView `/:slug.md` uses LNO `open`; Home availability uses LNO `exists`. Pixel HIGH UX H1–H6 is live on this origin. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress (#113/#116) is live. PWA latch (#119) one hard-reload per Update apply is live. Home create mints when canary is on (fail-closed idle). SQL 240 is already applied. U1 SQL `capability_note_convert_legacy` and Edge `note-session` `convert-legacy` are in GitHub (#130) but **not applied/published**.
+W1 live (named Pages go of #130/#131): canary-on plain slug and SplitView panes are editable `NotePage` (convert-on-write). A′ (#126) Cutover/LNO RO default is superseded. Choice A (#118) editable-plain default is superseded. Canary stays on. See [A′ Cutover restore](security/a-prime-cutover-restore.md) for the remaining Legacy RO path. SQL 240 already applied; Worker / `writes_enabled` / Realtime still HOLD. U1 SQL+Edge convert-legacy GitHub-ready / walls HOLD. This does not deploy origin or re-apply SQL 240.
 After the atomic cutover, browser roles still have no table grants; rollback keeps
 this read-only LNO and must never restore `anon`/`authenticated` `notes` GRANTs.
 See [the cutover runbook](security/atomic-capability-cutover.md)
@@ -83,6 +83,15 @@ inserts the note, capability hashes, and initial checkpoint in one database
 transaction. The client persists a fresh owner candidate before sending it as
 the Bearer credential; retrying the same owner + checkpoint recovers a commit
 whose response was lost instead of leaving an unowned slug.
+Live Duplicate securely uses this action on Legacy RO only (new slug).
+
+`POST { "action": "convert-legacy", ...initialCheckpoint }` is the W1 same-slug
+convert path (U1). GitHub has the Edge action and SQL
+`capability_note_convert_legacy` (#130). They are **not applied/published**
+yet. Live SPA first persist on existing legacy will call this action; convert
+cannot complete until a named SQL+Edge go. Empty new notes still use
+`action: "create"` (already live). This document does not authorize that apply
+or Edge publish.
 
 Otherwise, send `Authorization: Bearer <capability>` and optionally
 `{ "afterSequence": 42 }`. The response contains a `NoteSession`:

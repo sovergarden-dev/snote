@@ -9,16 +9,16 @@ Owner (ops): Pulse
 Architecture: Aegis ([sql-240-readiness-contract.md](./sql-240-readiness-contract.md))  
 Named go required: Syringa (apply) / Atlas (coordinate)
 
-## 0. Live baseline (as of 2026-09-08 ~23:58 ICT)
+## 0. Live baseline (as of 2026-09-09 ~10:27 ICT)
 
 | Surface | Value |
 |---|---|
-| Origin `version.json` | `deployedSha` `f84183ba…`, `capabilityRoutesEnabled` true, buildId `1788884922635-dbv60j3l` |
-| Pages | `snote-g4-origin` deploy `74637d87` |
-| Main tip (product) | `f84183ba` (#128 Duplicate securely on A′ #126) — this docs attest does not change origin |
-| Walls | SQL **240 already applied**, Worker HOLD (no redeploy), `writes_enabled` HOLD, Edge HOLD from this PR |
-| Live default / apply blocker | A′ live: plain `/slug` → `CutoverNotePage` → LNO RO. Duplicate securely enabled. Choice A editable table path is **not** the live default. **Do not re-apply** 240 from this docs pin. See [sql-240-readiness-contract.md](./sql-240-readiness-contract.md) §0 and [a-prime-cutover-restore.md](./a-prime-cutover-restore.md). |
-| Product still live (not a go) | A′ Cutover/LNO RO; Duplicate securely enabled; Encrypt omit on plain; Legacy opt-in `?legacyRo=1`; LNO Phase B/C; Home mint fail-closed; canary on |
+| Origin `version.json` | `deployedSha` `2ae9a230…`, `capabilityRoutesEnabled` true, buildId `1788924147004-wx705xxn` |
+| Pages | `snote-g4-origin` deploy `fb35474a` |
+| Main tip (product) | `2ae9a230` (#130 W1 convert-on-write + #131 lint/lockfile) — this docs attest does not change origin |
+| Walls | SQL **240 already applied**, U1 SQL+Edge convert-legacy **not applied/published**, Worker HOLD (no redeploy), `writes_enabled` HOLD, Edge HOLD from this PR |
+| Live default / apply blocker | W1 live: plain `/slug` → `CutoverNotePage` → editable `NotePage` (convert-on-write). A′ RO default superseded. Duplicate securely enabled on Legacy RO only. Choice A editable table path is **not** the live default. **Do not re-apply** 240 from this docs pin. See [sql-240-readiness-contract.md](./sql-240-readiness-contract.md) §0 and [a-prime-cutover-restore.md](./a-prime-cutover-restore.md). |
+| Product still live (not a go) | W1 convert-on-write; A′ live as Legacy RO (`?legacyRo=1`); Duplicate securely enabled on Legacy RO; Encrypt + Legacy Advanced opt-in on owner path; LNO Phase B/C; Home mint fail-closed; canary on; U1 SQL+Edge GitHub-ready / HOLD |
 
 Re-verify live before any named apply:
 
@@ -31,7 +31,7 @@ curl -sS -H 'Cache-Control: no-cache' "https://note.syrin.online/version.json"
 
 File: `supabase/migrations/20260724000000_atomic_capability_cutover.sql`
 
-At origin pin `f84183ba`:
+At origin pin `2ae9a230`:
 
 - Lines: 245
 - SHA-256: `1043a46844e66859ccb8bec16888d6dd78f5f5e5a04df203f220a9b90302cf2f`
@@ -126,7 +126,7 @@ original named-go template only.
 When Syringa named apply (historical; separate go from this doc):
 
 1. Re-run §0–§2 same day.
-2. **STOP** unless A′ is live (plain `/slug` → `CutoverNotePage` → LNO RO) **or** Syringa has written accept-break B. A′ is live on `f84183ba`. SQL 240 already applied; do not re-apply from this docs pin.
+2. **STOP** unless A′ is live (plain `/slug` → `CutoverNotePage` → LNO RO) **or** Syringa has written accept-break B **or** W1 convert-on-write is the live default (plain `/slug` is not the Choice A table path). W1 is live on `2ae9a230`; A′ remains the `?legacyRo=1` path. SQL 240 already applied; do not re-apply from this docs pin.
 3. Do **not** apply. SQL 240 is already applied. Historical step was: apply migration via approved production SQL path (Lovable Cloud / service_role editor) — **one transaction** as written (`pg_advisory_xact_lock(20260724000000)`).
 4. Do **not** couple: Worker redeploy, Pages redeploy, `writes_enabled` flip, `private_realtime_enabled`, Edge unrelated deploys.
 5. Immediately run §5 post-verify.
@@ -151,10 +151,10 @@ SELECT to_regprocedure('public.capability_note_import_legacy(text,text,text,text
 Product smoke (after named go, not part of this docs package alone):
 
 - Home mint create → `#owner=` path still works via Edge.
-- Plain `/slug` A′: LNO RO; no direct table write as anon (expect fail-closed / Edge-only).
+- Plain `/slug` W1: convert-on-write via Edge; no direct table write as anon (expect fail-closed / Edge-only). A′ LNO RO remains on `?legacyRo=1`.
 - LNO `exists`/`open` still exact-match read-only.
 - Legacy opt-in `?legacyRo=1` still RO.
-- Encrypt omit on plain RO; `#owner=` Encrypt active unchanged by 240 UI-wise.
+- Encrypt disabled+honest on plain pre-convert; `#owner=` Encrypt active unchanged by 240 UI-wise.
 
 ```bash
 curl -sS -H 'Cache-Control: no-cache' "https://note.syrin.online/version.json"
