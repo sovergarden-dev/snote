@@ -221,15 +221,15 @@ describe("LegacyNotePage cutover mode", () => {
     expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
   });
 
-  it("shows convert reopen banner on LNO miss instead of Legacy does-not-exist chrome", async () => {
+  it("keeps Note security on vacant LNO miss, without converted copy", async () => {
     harness.open.mockResolvedValue(null);
 
     renderPage();
 
-    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("security.convert_reopen_banner"));
-    expect(screen.getByRole("button", { name: "security.convert_reopen_cta" })).toBeInTheDocument();
-    expect(screen.queryByText("legacy.not_found")).not.toBeInTheDocument();
-    expect(screen.queryByText("security.legacy_banner")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("legacy.not_found")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "security.panel_title" })).toBeInTheDocument();
+    expect(screen.queryByText("security.convert_reopen_banner")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "security.convert_reopen_cta" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "security.duplicate_label" })).not.toBeInTheDocument();
   });
 

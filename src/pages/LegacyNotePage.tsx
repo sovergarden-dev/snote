@@ -10,6 +10,7 @@ import { UnlockForm } from "@/components/note/UnlockForm";
 import { LegacyRoBanner, NoteSecurityPanel } from "@/components/note/NoteSecurityPanel";
 import { toast } from "@/hooks/use-toast";
 import { deriveKey, decryptBytes, encryptBytes, iterationsFor, verifyCheck } from "@/lib/crypto";
+import { readEncryptionSecret } from "@/lib/capability/url";
 import type { DuplicateFailureKind, LegacyNote } from "@/lib/legacy/cutover";
 import { isUsableSlug } from "@/lib/slug";
 import { base64ToBytes } from "@/lib/yjs/base64";
@@ -110,16 +111,15 @@ export default function LegacyNotePage({
     setDuplicateFeedback(null);
     setDuplicating(false);
     duplicatingRef.current = false;
-    void loadLegacyCutover().then(({ createLegacyNoteApi }) => {
+    void loadLegacyCutover().then(async (cutover) => {
       if (controller.signal.aborted) return;
-      return createLegacyNoteApi().open(slug, controller.signal);
-    }).then(async (note) => {
+      const note = await cutover.createLegacyNoteApi().open(slug, controller.signal);
       if (controller.signal.aborted) return;
       if (!note) {
         const convert = await import("@/lib/legacy/convert-on-write");
         if (controller.signal.aborted) return;
         if (!convert.hasStoredConvertRecovery(slug)) {
-          setState({ kind: "converted" });
+          setState({ kind: "notfound" });
           return;
         }
         const recoverDoc = new Y.Doc();
@@ -131,12 +131,19 @@ export default function LegacyNotePage({
             doc: recoverDoc,
             source: null,
             api,
+            encryptionSecret: readEncryptionSecret(window.location.hash) || undefined,
           });
           if (controller.signal.aborted) return;
           const next = new URL(path, window.location.origin);
           navigate(`${next.pathname}${next.hash}`, { replace: true });
-        } catch {
-          if (!controller.signal.aborted) setState({ kind: "converted" });
+        } catch (error) {
+          if (controller.signal.aborted) return;
+          const kind = cutover.mapDuplicateFailure(error);
+          setState(
+            kind === "converted" || kind === "slug_unavailable"
+              ? { kind: "converted" }
+              : { kind: "error", message: error instanceof Error ? error.message : String(error) },
+          );
         } finally {
           recoverDoc.destroy();
         }

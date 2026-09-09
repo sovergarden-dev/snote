@@ -23,11 +23,11 @@ describe("W1 convert-on-write contract", () => {
     expect(convert).toContain("convertLegacyNote");
     expect(convert).toContain("duplicateLegacyNote");
     expect(convert).toContain("targetSlug: input.slug");
+    expect(convert).toContain("mintCapabilityNote");
+    expect(convert).toContain("input.api.createNote");
     expect(convert).toContain("ConvertedSlugUnrecoverableError");
     expect(convert).toContain("loadStoredConvertRecovery");
     expect(convert).toContain("loadPendingOwnerCandidate");
-    expect(convert).not.toContain("mintCapabilityNote");
-    expect(convert).not.toContain("input.api.createNote");
     expect(convert).not.toContain('from("notes")');
     expect(convert).not.toContain("SupabaseYjsProvider");
     expect(convert).not.toContain("integrations/supabase");
@@ -57,7 +57,8 @@ describe("W1 convert-on-write contract", () => {
     expect(notePage).toContain("createLegacyNoteApi().open");
     expect(notePage).toContain("convertPlainNoteOnWrite");
     expect(notePage).toContain("hasStoredConvertRecovery");
-    expect(notePage).toContain("!encMeta.rowExists");
+    expect(notePage).toContain("rowExists: encMeta.rowExists");
+    expect(notePage).not.toContain("(!plainProviderCtor || !encMeta.rowExists)");
     expect(notePage).toContain("admittedCapability ? plainRuntime?.consumeConvertSeed");
     expect(notePage).toContain("security.convert_reopen_banner");
     expect(notePage).toContain("security.convert_reopen_cta");

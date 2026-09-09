@@ -794,17 +794,15 @@ describe("NotePage encryption gate", () => {
     expect(harness.previewRender).not.toHaveBeenCalled();
   });
 
-  it("shows convert reopen banner when a previously encrypted note disappears from metadata", async () => {
+  it("fails closed when a previously encrypted note disappears from metadata", async () => {
     expect(markNoteEncrypted("secret")).toBe(true);
     harness.metaForSlug.mockResolvedValue({ data: null, error: null });
 
     const view = renderEmbedded();
 
     await waitFor(() =>
-      expect(view.getByRole("status")).toHaveTextContent("security.convert_reopen_banner"),
+      expect(view.getByRole("alert")).toHaveTextContent("unlock.metadata_conflict"),
     );
-    expect(view.queryByRole("alert")).not.toBeInTheDocument();
-    expect(view.queryByTestId("editor")).not.toBeInTheDocument();
     expect(view.queryByRole("button", { name: "common.retry" })).not.toBeInTheDocument();
     expect(harness.docAcquire).not.toHaveBeenCalled();
     expect(harness.providerConstruct).not.toHaveBeenCalled();
@@ -933,7 +931,7 @@ describe("NotePage encryption gate", () => {
     );
   });
 
-  it("shows an honest reopen banner on LNO miss without recovery, without mounting convert shell", async () => {
+  it("mounts an idle vacant W1 shell on LNO miss without recovery, and does not banner", async () => {
     harness.metaForSlug.mockResolvedValue({ data: null, error: null });
 
     function ConvertLocationProbe() {
@@ -950,12 +948,53 @@ describe("NotePage encryption gate", () => {
       </MemoryRouter>,
     );
 
+    await waitFor(() => expect(screen.getByTestId("editor")).toBeInTheDocument());
+    expect(harness.convertPlainNoteOnWrite).not.toHaveBeenCalled();
+    expect(harness.providerConstruct).toHaveBeenCalledWith("secret");
+    expect(harness.persistPlain).toEqual(expect.any(Function));
+    expect(screen.queryByText("security.convert_reopen_banner")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "security.convert_reopen_cta" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
+    expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
+    expect(harness.toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "security.convert_fail" }),
+    );
+    expect(harness.toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "security.convert_success" }),
+    );
+  });
+
+  it("shows an honest reopen banner instead of Sync/409 after converted slug_unavailable", async () => {
+    harness.metaForSlug.mockResolvedValue({ data: null, error: null });
+    harness.convertPlainNoteOnWrite.mockRejectedValue({
+      status: 409,
+      code: "converted_slug_unrecoverable",
+    });
+
+    function ConvertLocationProbe() {
+      const loc = useLocation();
+      return <div data-testid="loc">{`${loc.pathname}${loc.hash}`}</div>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <Routes>
+          <Route path="/" element={<div>home</div>} />
+          <Route path="/:slug" element={<><ConvertLocationProbe /><NotePage /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(harness.persistPlain).toEqual(expect.any(Function)));
+
+    await act(async () => {
+      harness.persistPlain?.();
+    });
+
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent("security.convert_reopen_banner");
     });
-    expect(harness.convertPlainNoteOnWrite).not.toHaveBeenCalled();
-    expect(harness.providerConstruct).not.toHaveBeenCalled();
-    expect(harness.persistPlain).toBeNull();
+    expect(harness.convertPlainNoteOnWrite).toHaveBeenCalledOnce();
     expect(screen.getByRole("button", { name: "security.convert_reopen_cta" })).toBeInTheDocument();
     expect(screen.queryByTestId("editor")).not.toBeInTheDocument();
     expect(screen.getByTestId("loc")).toHaveTextContent("/secret");

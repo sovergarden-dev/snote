@@ -420,8 +420,8 @@ export default function NotePage({
       || (
         !capabilityAccess
         && !legacyOnly
+        && !plainProviderCtor
         && import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
-        && (!plainProviderCtor || !encMeta.rowExists)
       )
     ) return;
     const docCacheKey = admittedCapability
@@ -554,7 +554,7 @@ export default function NotePage({
           const note = await runtime.createLegacyNoteApi().open(slug);
           if (!isCurrentRequest()) return;
           legacySourceRef.current = note;
-          recoveringConverted = !note;
+          recoveringConverted = !note && runtime.hasStoredConvertRecovery(slug);
           if (!note) {
             if (runtime.hasStoredConvertRecovery(slug)) {
               const capability = capabilityRuntime ?? await loadCapabilityRuntime();
@@ -579,12 +579,10 @@ export default function NotePage({
                 if (kind !== "converted" && kind !== "slug_unavailable") throw error;
                 convertErrorRef.current = "converted";
                 setConvertError("converted");
+                return;
               } finally {
                 recoverDoc.destroy();
               }
-            } else {
-              convertErrorRef.current = "converted";
-              setConvertError("converted");
             }
             if (!isCurrentRequest()) return;
             data = {
@@ -967,6 +965,30 @@ export default function NotePage({
 
   if (!validSlug) return <Navigate to="/" replace />;
 
+  if (convertError === "converted" && !capabilityAccess) {
+    const body = (
+      <div className="mx-auto max-w-md space-y-3 px-6 text-center" role="status">
+        <p className="text-sm text-foreground">{t("security.convert_reopen_banner")}</p>
+        <Button
+          type="button"
+          size="lg"
+          className="min-h-11 min-w-11 px-4"
+          onClick={() => navigate("/")}
+        >
+          {t("security.convert_reopen_cta")}
+        </Button>
+      </div>
+    );
+    if (embedSlug) {
+      return <div className="h-full min-h-0 bg-background">{body}</div>;
+    }
+    return (
+      <AppShell className="flex h-svh flex-col">
+        <main className="flex flex-1 min-h-0 items-center justify-center">{body}</main>
+      </AppShell>
+    );
+  }
+
   // This gate deliberately precedes both render branches. In particular,
   // SplitView's embedded branch must never mount Editor/Preview behind an
   // overlay while encryption metadata or a decryption key is unavailable.
@@ -1039,30 +1061,6 @@ export default function NotePage({
     return (
       <AppShell className="flex h-svh flex-col">
         <main className="flex flex-1 min-h-0 items-center justify-center">{gate}</main>
-      </AppShell>
-    );
-  }
-
-  if (convertError === "converted" && !capabilityAccess) {
-    const body = (
-      <div className="mx-auto max-w-md space-y-3 px-6 text-center" role="status">
-        <p className="text-sm text-foreground">{t("security.convert_reopen_banner")}</p>
-        <Button
-          type="button"
-          size="lg"
-          className="min-h-11 min-w-11 px-4"
-          onClick={() => navigate("/")}
-        >
-          {t("security.convert_reopen_cta")}
-        </Button>
-      </div>
-    );
-    if (embedSlug) {
-      return <div className="h-full min-h-0 bg-background">{body}</div>;
-    }
-    return (
-      <AppShell className="flex h-svh flex-col">
-        <main className="flex flex-1 min-h-0 items-center justify-center">{body}</main>
       </AppShell>
     );
   }

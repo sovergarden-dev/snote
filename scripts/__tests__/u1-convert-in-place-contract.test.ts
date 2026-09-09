@@ -80,7 +80,7 @@ describe("U1 convert-in-place contract", () => {
 
     expect(convert).toContain("convertLegacyNote");
     expect(convert).toContain("targetSlug: input.slug");
-    expect(convert).not.toContain("input.api.createNote");
+    expect(convert).toContain("input.api.createNote");
     expect(client).toContain('action: "convert-legacy"');
     expect(client).toContain('action: "import-legacy"');
     expect(spa).not.toContain("capability_note_convert_legacy");
