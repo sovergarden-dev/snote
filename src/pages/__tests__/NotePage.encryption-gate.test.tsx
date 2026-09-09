@@ -45,6 +45,7 @@ const harness = vi.hoisted(() => ({
   convertPlainNoteOnWrite: vi.fn<(...args: unknown[]) => Promise<string>>(async () => {
     throw new Error("convert-on-write is mocked in this harness");
   }),
+  consumeConvertSeed: vi.fn<(...args: unknown[]) => Uint8Array | null>(() => null),
   hasStoredConvertRecovery: vi.fn<(...args: unknown[]) => boolean>(() => false),
   translate: (key: string) => key,
   metaPromise: Promise.resolve({ data: null as Record<string, unknown> | null }),
@@ -261,7 +262,7 @@ vi.mock("@/lib/legacy/cutover", () => ({
 }));
 vi.mock("@/lib/legacy/convert-on-write", () => ({
   convertPlainNoteOnWrite: (...args: unknown[]) => harness.convertPlainNoteOnWrite(...args),
-  consumeConvertSeed: () => null,
+  consumeConvertSeed: (...args: unknown[]) => harness.consumeConvertSeed(...args),
   hasStoredConvertRecovery: (...args: unknown[]) => harness.hasStoredConvertRecovery(...args),
 }));
 vi.mock("@/hooks/use-word-goal", () => ({ useWordGoal: () => ({ goal: null }), consumeGoalReached: () => false }));
@@ -512,6 +513,8 @@ describe("NotePage encryption gate", () => {
     harness.convertPlainNoteOnWrite.mockImplementation(async () => {
       throw new Error("convert-on-write is mocked in this harness");
     });
+    harness.consumeConvertSeed.mockReset();
+    harness.consumeConvertSeed.mockReturnValue(null);
     harness.hasStoredConvertRecovery.mockReset();
     harness.hasStoredConvertRecovery.mockReturnValue(false);
     harness.translate = (key: string) => key;
@@ -590,6 +593,13 @@ describe("NotePage encryption gate", () => {
       expect(harness.recordOnSuddenDelete).not.toHaveBeenCalled();
       expect(harness.docAcquire).toHaveBeenCalledWith(
         `capability:${NOTE_ID}:${scope}:1`,
+      );
+      expect(harness.consumeConvertSeed).toHaveBeenCalledWith("secret");
+      expect(harness.consumeConvertSeed.mock.invocationCallOrder[0]).toBeLessThan(
+        harness.capabilityProviderConstruct.mock.invocationCallOrder[0],
+      );
+      expect(harness.consumeConvertSeed.mock.invocationCallOrder[0]).toBeLessThan(
+        harness.capabilityProviderConnect.mock.invocationCallOrder[0],
       );
       const capabilityDoc = harness.capabilityProviderConstruct.mock.calls[0]?.[2];
       expect(capabilityDoc).toEqual(
@@ -784,15 +794,17 @@ describe("NotePage encryption gate", () => {
     expect(harness.previewRender).not.toHaveBeenCalled();
   });
 
-  it("fails closed when a previously encrypted note disappears from metadata", async () => {
+  it("shows convert reopen banner when a previously encrypted note disappears from metadata", async () => {
     expect(markNoteEncrypted("secret")).toBe(true);
     harness.metaForSlug.mockResolvedValue({ data: null, error: null });
 
     const view = renderEmbedded();
 
     await waitFor(() =>
-      expect(view.getByRole("alert")).toHaveTextContent("unlock.metadata_conflict"),
+      expect(view.getByRole("status")).toHaveTextContent("security.convert_reopen_banner"),
     );
+    expect(view.queryByRole("alert")).not.toBeInTheDocument();
+    expect(view.queryByTestId("editor")).not.toBeInTheDocument();
     expect(view.queryByRole("button", { name: "common.retry" })).not.toBeInTheDocument();
     expect(harness.docAcquire).not.toHaveBeenCalled();
     expect(harness.providerConstruct).not.toHaveBeenCalled();
@@ -873,8 +885,8 @@ describe("NotePage encryption gate", () => {
     );
   });
 
-  it.each([
-    ["existing LNO source", {
+  it("toasts convert_success after existing LNO source soft-replaces #owner=", async () => {
+    const meta = {
       data: {
         is_encrypted: false,
         content: "keep me",
@@ -884,9 +896,7 @@ describe("NotePage encryption gate", () => {
         enc_iterations: null,
       },
       error: null,
-    }],
-    ["empty new note", { data: null, error: null }],
-  ])("toasts convert_success after %s soft-replaces #owner=", async (_label, meta) => {
+    };
     harness.metaForSlug.mockResolvedValue(meta);
     const owner = "c".repeat(43);
     harness.convertPlainNoteOnWrite.mockResolvedValue(`/secret#owner=${owner}`);
@@ -923,12 +933,8 @@ describe("NotePage encryption gate", () => {
     );
   });
 
-  it("shows an honest reopen banner instead of Sync/409 after converted slug_unavailable", async () => {
+  it("shows an honest reopen banner on LNO miss without recovery, without mounting convert shell", async () => {
     harness.metaForSlug.mockResolvedValue({ data: null, error: null });
-    harness.convertPlainNoteOnWrite.mockRejectedValue({
-      status: 409,
-      code: "converted_slug_unrecoverable",
-    });
 
     function ConvertLocationProbe() {
       const loc = useLocation();
@@ -944,15 +950,12 @@ describe("NotePage encryption gate", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(harness.persistPlain).toEqual(expect.any(Function)));
-
-    await act(async () => {
-      harness.persistPlain?.();
-    });
-
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent("security.convert_reopen_banner");
     });
+    expect(harness.convertPlainNoteOnWrite).not.toHaveBeenCalled();
+    expect(harness.providerConstruct).not.toHaveBeenCalled();
+    expect(harness.persistPlain).toBeNull();
     expect(screen.getByRole("button", { name: "security.convert_reopen_cta" })).toBeInTheDocument();
     expect(screen.queryByTestId("editor")).not.toBeInTheDocument();
     expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
@@ -996,6 +999,7 @@ describe("NotePage encryption gate", () => {
     await waitFor(() => {
       expect(harness.toast).toHaveBeenCalledWith({ title: "security.convert_success" });
     });
+    expect(harness.providerConstruct).not.toHaveBeenCalled();
     expect(screen.getByTestId("loc")).toHaveTextContent(`/secret#owner=${owner}`);
     expect(harness.toast).not.toHaveBeenCalledWith(
       expect.objectContaining({ title: "security.convert_fail" }),

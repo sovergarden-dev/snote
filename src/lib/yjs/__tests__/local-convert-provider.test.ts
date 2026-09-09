@@ -20,9 +20,9 @@ describe("LocalConvertProvider", () => {
 
     expect(doc.getText("content").toString()).toBe("from lno");
     expect(onFirstPersist).not.toHaveBeenCalled();
-    expect(provider.getPendingBytes()).toBeGreaterThan(0);
+    expect(provider.getPendingBytes()).toBe(0);
     expect(events).not.toContain("synced-durable");
-    expect(provider.hasUnflushedLocalChanges()).toBe(true);
+    expect(provider.hasUnflushedLocalChanges()).toBe(false);
 
     const early = new Y.Doc();
     const earlyPersist = vi.fn();
@@ -35,6 +35,8 @@ describe("LocalConvertProvider", () => {
 
     doc.getText("content").insert(8, "!");
     expect(onFirstPersist).toHaveBeenCalledOnce();
+    expect(provider.getPendingBytes()).toBeGreaterThan(0);
+    expect(provider.hasUnflushedLocalChanges()).toBe(true);
     doc.getText("content").insert(9, "!");
     expect(onFirstPersist).toHaveBeenCalledOnce();
 

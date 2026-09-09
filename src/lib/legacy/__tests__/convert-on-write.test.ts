@@ -5,6 +5,7 @@ import {
   consumeConvertSeed,
   convertPlainNoteOnWrite,
   ConvertedSlugUnrecoverableError,
+  hasStoredConvertRecovery,
   resetConvertOnWriteForTests,
 } from "../convert-on-write";
 import type { LegacyImportRecovery } from "../cutover";
@@ -88,28 +89,33 @@ describe("W1 convert-on-write", () => {
     expect(consumeConvertSeed("daily")).toBeInstanceOf(Uint8Array);
   });
 
-  it("mints an empty new note through create, not convert-legacy", async () => {
+  it("treats an LNO miss without recovery as unrecoverable, never create", async () => {
     const doc = new Y.Doc();
     const api = {
       convertLegacyNote: vi.fn(),
-      createNote: vi.fn(async (_slug: string, owner: string) => ({
-        capabilities: { owner },
-      })),
+      createNote: vi.fn(),
     };
 
-    const path = await convertPlainNoteOnWrite({
+    await expect(convertPlainNoteOnWrite({
       slug: "fresh",
       doc,
       source: null,
       api,
       pendingOwnerStore: memoryOwnerStore(),
-    });
+    })).rejects.toBeInstanceOf(ConvertedSlugUnrecoverableError);
 
     expect(api.convertLegacyNote).not.toHaveBeenCalled();
-    expect(api.createNote).toHaveBeenCalledOnce();
-    expect(api.createNote.mock.calls[0][0]).toBe("fresh");
-    const owner = api.createNote.mock.calls[0][1] as string;
-    expect(path).toBe(`/fresh#owner=${owner}`);
+    expect(api.createNote).not.toHaveBeenCalled();
+  });
+
+  it("treats a session pending owner as reopen recovery", () => {
+    const owner = "c".repeat(43);
+    expect(hasStoredConvertRecovery("daily", {
+      pendingOwnerStore: memoryOwnerStore(owner),
+    })).toBe(true);
+    expect(hasStoredConvertRecovery("daily", {
+      pendingOwnerStore: memoryOwnerStore(),
+    })).toBe(false);
   });
 
   it("single-flights overlapping converts for the same slug", async () => {
@@ -265,13 +271,11 @@ describe("W1 convert-on-write", () => {
     );
   });
 
-  it("reopens with a session owner through convert-legacy before create", async () => {
+  it("reopens with a session owner by restoring #owner=, never create", async () => {
     const doc = new Y.Doc();
     const owner = "c".repeat(43);
     const api = {
-      convertLegacyNote: vi.fn(async (_body: unknown, candidate: string) => ({
-        capabilities: { owner: candidate },
-      })),
+      convertLegacyNote: vi.fn(),
       createNote: vi.fn(),
     };
 
@@ -284,21 +288,20 @@ describe("W1 convert-on-write", () => {
     });
 
     expect(api.createNote).not.toHaveBeenCalled();
-    expect(api.convertLegacyNote).toHaveBeenCalledOnce();
-    expect(api.convertLegacyNote.mock.calls[0][1]).toBe(owner);
+    expect(api.convertLegacyNote).not.toHaveBeenCalled();
     expect(path).toBe(`/daily#owner=${owner}`);
   });
 
-  it("falls back to create when session-owner convert-legacy cannot recover", async () => {
+  it("soft-replaces #owner= when stored convert-legacy cannot match the live checkpoint", async () => {
     const doc = new Y.Doc();
-    const owner = "c".repeat(43);
+    const recovery = storedRecovery();
+    const recoveryStore = memoryRecoveryStore();
+    recoveryStore.save("daily", recovery);
     const api = {
       convertLegacyNote: vi.fn(async () => {
         throw slugUnavailable();
       }),
-      createNote: vi.fn(async (_slug: string, candidate: string) => ({
-        capabilities: { owner: candidate },
-      })),
+      createNote: vi.fn(),
     };
 
     const path = await convertPlainNoteOnWrite({
@@ -306,16 +309,15 @@ describe("W1 convert-on-write", () => {
       doc,
       source: null,
       api,
-      pendingOwnerStore: memoryOwnerStore(owner),
+      recoveryStore,
     });
 
     expect(api.convertLegacyNote).toHaveBeenCalledOnce();
-    expect(api.createNote).toHaveBeenCalledOnce();
-    expect(api.createNote.mock.calls[0][1]).toBe(owner);
-    expect(path).toBe(`/daily#owner=${owner}`);
+    expect(api.createNote).not.toHaveBeenCalled();
+    expect(path).toBe(`/daily#owner=${recovery.owner}`);
   });
 
-  it("does not retry create after slug_unavailable when recover is impossible", async () => {
+  it("does not create after slug_unavailable when recover is impossible", async () => {
     const doc = new Y.Doc();
     const api = {
       convertLegacyNote: vi.fn(),
@@ -331,7 +333,50 @@ describe("W1 convert-on-write", () => {
       api,
       pendingOwnerStore: memoryOwnerStore(),
     })).rejects.toBeInstanceOf(ConvertedSlugUnrecoverableError);
-    expect(api.createNote).toHaveBeenCalledOnce();
+    expect(api.createNote).not.toHaveBeenCalled();
     expect(api.convertLegacyNote).not.toHaveBeenCalled();
+  });
+
+  it("does not overwrite a convert seed with an empty reopen doc", async () => {
+    const doc = new Y.Doc();
+    doc.getText("content").insert(0, "keep me");
+    const recoveryStore = memoryRecoveryStore();
+    const api = {
+      convertLegacyNote: vi.fn(async (_body: unknown, owner: string) => ({
+        capabilities: { owner },
+      })),
+      createNote: vi.fn(),
+    };
+
+    await convertPlainNoteOnWrite({
+      slug: "daily",
+      doc,
+      source: {
+        slug: "daily",
+        content: "keep me",
+        ydocState: "",
+        isEncrypted: false,
+        salt: null,
+        check: null,
+        iterations: null,
+      },
+      api,
+      recoveryStore,
+    });
+
+    const empty = new Y.Doc();
+    await convertPlainNoteOnWrite({
+      slug: "daily",
+      doc: empty,
+      source: null,
+      api,
+      recoveryStore,
+    });
+
+    const seed = consumeConvertSeed("daily");
+    expect(seed).toBeInstanceOf(Uint8Array);
+    const roundtrip = new Y.Doc();
+    Y.applyUpdate(roundtrip, seed!);
+    expect(roundtrip.getText("content").toString()).toBe("keep me");
   });
 });

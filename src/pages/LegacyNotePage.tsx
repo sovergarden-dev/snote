@@ -4,6 +4,7 @@ import { Helmet } from "react-helmet-async";
 import { Link, Navigate, useNavigate } from "react-router";
 import * as Y from "yjs";
 import { AppShell } from "@/components/app/AppShell";
+import { Button } from "@/components/ui/button";
 import { Preview } from "@/components/note/Preview";
 import { UnlockForm } from "@/components/note/UnlockForm";
 import { LegacyRoBanner, NoteSecurityPanel } from "@/components/note/NoteSecurityPanel";
@@ -40,6 +41,7 @@ type ReadyState = {
 type State =
   | { kind: "loading" }
   | { kind: "notfound" }
+  | { kind: "converted" }
   | { kind: "error"; message: string }
   | { kind: "needs-key"; note: LegacyNote }
   | ReadyState;
@@ -114,7 +116,30 @@ export default function LegacyNotePage({
     }).then(async (note) => {
       if (controller.signal.aborted) return;
       if (!note) {
-        setState({ kind: "notfound" });
+        const convert = await import("@/lib/legacy/convert-on-write");
+        if (controller.signal.aborted) return;
+        if (!convert.hasStoredConvertRecovery(slug)) {
+          setState({ kind: "converted" });
+          return;
+        }
+        const recoverDoc = new Y.Doc();
+        try {
+          const api = await loadCapabilityApi();
+          if (controller.signal.aborted) return;
+          const path = await convert.convertPlainNoteOnWrite({
+            slug,
+            doc: recoverDoc,
+            source: null,
+            api,
+          });
+          if (controller.signal.aborted) return;
+          const next = new URL(path, window.location.origin);
+          navigate(`${next.pathname}${next.hash}`, { replace: true });
+        } catch {
+          if (!controller.signal.aborted) setState({ kind: "converted" });
+        } finally {
+          recoverDoc.destroy();
+        }
         return;
       }
       if (!note.isEncrypted) {
@@ -154,7 +179,7 @@ export default function LegacyNotePage({
       controller.abort();
       ownedDoc?.destroy();
     };
-  }, [slug, valid]);
+  }, [slug, valid, navigate]);
 
   const onDuplicateSecurely = async () => {
     if (state.kind !== "ready" || duplicatingRef.current) return;
@@ -225,6 +250,30 @@ export default function LegacyNotePage({
 
   if (state.kind === "loading") {
     return <>{head}<div className={`flex h-full items-center justify-center ${embed ? "min-h-0" : "min-h-svh"}`} role="status" aria-label={t("common.loading")}><Loader2 className="h-5 w-5 motion-safe:animate-spin" aria-hidden="true" /></div></>;
+  }
+  if (state.kind === "converted") {
+    const body = (
+      <div className="mx-auto max-w-md space-y-3 px-6 text-center" role="status">
+        <p className="text-sm text-foreground">{t("security.convert_reopen_banner")}</p>
+        <Button
+          type="button"
+          size="lg"
+          className="min-h-11 min-w-11 px-4"
+          onClick={() => navigate("/")}
+        >
+          {t("security.convert_reopen_cta")}
+        </Button>
+      </div>
+    );
+    if (embed) return <>{head}<div className="h-full min-h-0 bg-background">{body}</div></>;
+    return (
+      <>
+        {head}
+        <AppShell className="flex h-svh flex-col">
+          <main className="flex flex-1 min-h-0 items-center justify-center">{body}</main>
+        </AppShell>
+      </>
+    );
   }
   if (state.kind === "notfound" || state.kind === "error") {
     return (

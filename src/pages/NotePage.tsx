@@ -47,6 +47,7 @@ import {
   encryptionPinStorageKey,
   getEncryptionPinState,
   markNoteEncrypted,
+  clearNoteEncryptionPin,
 } from "@/lib/encryption-pin";
 
 const SLUG_RE = /^[a-zA-Z0-9_-]{1,64}$/;
@@ -345,6 +346,7 @@ export default function NotePage({
         || currentEncTargetRef.current.metaVersion !== startedMeta
       ) return;
       navigate(path, { replace: true });
+      clearNoteEncryptionPin(startedSlug);
       toast({
         title: tRef.current("security.convert_success"),
       });
@@ -384,18 +386,6 @@ export default function NotePage({
   }, [slug]);
 
   useEffect(() => {
-    if (
-      !doc
-      || capabilityAccess
-      || convertBusyRef.current
-      || convertErrorRef.current === "converted"
-    ) return;
-    const plain = plainRuntime;
-    if (!plain?.hasStoredConvertRecovery(slug)) return;
-    void runConvert();
-  }, [capabilityAccess, doc, runConvert, slug]);
-
-  useEffect(() => {
     setWriteFenced(false);
     if (!provider || !("onWriteFence" in provider)) return;
     const transitionProvider = provider as YjsProviderLike & {
@@ -430,15 +420,15 @@ export default function NotePage({
       || (
         !capabilityAccess
         && !legacyOnly
-        && !plainProviderCtor
         && import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
+        && (!plainProviderCtor || !encMeta.rowExists)
       )
     ) return;
     const docCacheKey = admittedCapability
       ? `capability:${admittedCapability.session.noteId}:${admittedCapability.session.scope}:${admittedCapability.session.generation}`
       : slug;
     const ownedDoc = acquireDoc(docCacheKey);
-    const seed = plainRuntime?.consumeConvertSeed(slug);
+    const seed = admittedCapability ? plainRuntime?.consumeConvertSeed(slug) : null;
     if (seed) Y.applyUpdate(ownedDoc, seed);
     const CapabilityYjsProvider = admittedCapability?.YjsProvider;
     const ownedProvider: YjsProviderLike = admittedCapability && CapabilityYjsProvider
@@ -474,6 +464,7 @@ export default function NotePage({
     admittedCapability,
     legacyOnly,
     plainProviderCtor,
+    encMeta.rowExists,
   ]);
 
   useLayoutEffect(() => {
@@ -531,6 +522,8 @@ export default function NotePage({
         let recoveringConverted = false;
         if (capabilityAccess) {
           const runtime = capabilityRuntime ?? await loadCapabilityRuntime();
+          await loadPlainRuntime();
+          if (!isCurrentRequest()) return;
           const session = await runtime.createCapabilityApi().openSession(capabilityAccess.token);
           if (!isCurrentRequest()) return;
           if (
@@ -561,8 +554,39 @@ export default function NotePage({
           const note = await runtime.createLegacyNoteApi().open(slug);
           if (!isCurrentRequest()) return;
           legacySourceRef.current = note;
-          recoveringConverted = !note && runtime.hasStoredConvertRecovery(slug);
+          recoveringConverted = !note;
           if (!note) {
+            if (runtime.hasStoredConvertRecovery(slug)) {
+              const capability = capabilityRuntime ?? await loadCapabilityRuntime();
+              const recoverDoc = new Y.Doc();
+              try {
+                const path = await runtime.convertPlainNoteOnWrite({
+                  slug,
+                  doc: recoverDoc,
+                  source: null,
+                  api: capability.createCapabilityApi(),
+                  encryptionSecret: readEncryptionSecret(window.location.hash),
+                });
+                if (!isCurrentRequest()) return;
+                navigate(path, { replace: true });
+                clearNoteEncryptionPin(slug);
+                toast({
+                  title: tRef.current("security.convert_success"),
+                });
+                return;
+              } catch (error) {
+                const kind = runtime.mapDuplicateFailure(error);
+                if (kind !== "converted" && kind !== "slug_unavailable") throw error;
+                convertErrorRef.current = "converted";
+                setConvertError("converted");
+              } finally {
+                recoverDoc.destroy();
+              }
+            } else {
+              convertErrorRef.current = "converted";
+              setConvertError("converted");
+            }
+            if (!isCurrentRequest()) return;
             data = {
               is_encrypted: false,
               enc_salt: null,
@@ -678,6 +702,7 @@ export default function NotePage({
     capabilityToken,
     legacyOnly,
     routerTarget,
+    navigate,
   ]);
 
   // A sibling tab (native storage event) or a same-tab lock/decrypt flow

@@ -20,7 +20,7 @@ export class LocalConvertProvider implements YjsProviderLike {
   slug: string;
   connected = false;
 
-  private pendingBytes = 1;
+  private pendingBytes = 0;
   private destroyed = false;
   private persistEnabled = false;
   private persistArmed = false;
@@ -66,7 +66,7 @@ export class LocalConvertProvider implements YjsProviderLike {
   }
 
   hasUnflushedLocalChanges() {
-    return true;
+    return this.pendingBytes > 0;
   }
 
   async connect(

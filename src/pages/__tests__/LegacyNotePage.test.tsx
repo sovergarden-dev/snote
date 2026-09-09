@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { persistPendingOwnerCandidate } from "@/lib/capability/owner-candidate";
 import LegacyNotePage from "../LegacyNotePage";
 
 const harness = vi.hoisted(() => ({
@@ -104,6 +105,7 @@ describe("LegacyNotePage cutover mode", () => {
     vi.clearAllMocks();
     window.history.replaceState(null, "", "/daily");
     localStorage.clear();
+    sessionStorage.clear();
   });
 
   it("hydrates exact-match content into preview without mounting an editor", async () => {
@@ -219,13 +221,26 @@ describe("LegacyNotePage cutover mode", () => {
     expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
   });
 
-  it("keeps Note security on LNO miss", async () => {
+  it("shows convert reopen banner on LNO miss instead of Legacy does-not-exist chrome", async () => {
     harness.open.mockResolvedValue(null);
 
     renderPage();
 
-    await waitFor(() => expect(screen.getByText("legacy.not_found")).toBeInTheDocument());
-    expect(screen.getByRole("button", { name: "security.panel_title" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("security.convert_reopen_banner"));
+    expect(screen.getByRole("button", { name: "security.convert_reopen_cta" })).toBeInTheDocument();
+    expect(screen.queryByText("legacy.not_found")).not.toBeInTheDocument();
+    expect(screen.queryByText("security.legacy_banner")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "security.duplicate_label" })).not.toBeInTheDocument();
+  });
+
+  it("recovers a converted LNO miss through stored owner instead of Legacy not-found", async () => {
+    const owner = "c".repeat(43);
+    persistPendingOwnerCandidate("daily", owner);
+    harness.open.mockResolvedValue(null);
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByTestId("loc")).toHaveTextContent(`/daily#owner=${owner}`));
+    expect(screen.queryByText("legacy.not_found")).not.toBeInTheDocument();
   });
 });

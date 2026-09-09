@@ -2,12 +2,11 @@ import * as Y from "yjs";
 import {
   loadPendingOwnerCandidate,
   mapMintFailure,
-  mintCapabilityNote,
   persistPendingOwnerCandidate,
   type PendingOwnerStore,
 } from "@/lib/capability/owner-candidate";
-import { capabilityPayloadId, encodeCapabilityPayload } from "@/lib/capability/encoding";
 import { buildCapabilityUrl, parseCapabilityLocation } from "@/lib/capability/url";
+import { decodeCapabilityPayload } from "@/lib/capability/encoding";
 import type { Encryption } from "@/lib/yjs/provider";
 import {
   duplicateLegacyNote,
@@ -62,8 +61,25 @@ function ownerFromCapabilityPath(path: string): string | null {
   return parsed?.scope === "owner" ? parsed.token : null;
 }
 
+function stashPayloadSeed(slug: string, payload: string): void {
+  try {
+    const bytes = decodeCapabilityPayload(payload);
+    if (bytes.byteLength === 0) return;
+    const existing = seeds.get(slug);
+    if (existing && existing.byteLength >= bytes.byteLength) return;
+    seeds.set(slug, bytes);
+  } catch {
+    // Reopen can still soft-replace #owner= without a local seed.
+  }
+}
+
 function stashConvertSeed(slug: string, doc: Y.Doc): void {
-  seeds.set(slug, Y.encodeStateAsUpdate(doc));
+  const update = Y.encodeStateAsUpdate(doc);
+  const empty = Y.encodeStateAsUpdate(new Y.Doc());
+  if (update.byteLength <= empty.byteLength) return;
+  const existing = seeds.get(slug);
+  if (existing && existing.byteLength >= update.byteLength) return;
+  seeds.set(slug, update);
 }
 
 function browserConvertRecoveryStore(): LegacyImportRecoveryStore {
@@ -151,9 +167,11 @@ export function hasStoredConvertRecovery(
   stores?: {
     recoveryStore?: LegacyImportRecoveryStore;
     convertRecoveryStore?: LegacyImportRecoveryStore;
+    pendingOwnerStore?: PendingOwnerStore;
   },
 ): boolean {
-  return loadStoredConvertRecovery(slug, stores?.recoveryStore, stores?.convertRecoveryStore) !== null;
+  return loadStoredConvertRecovery(slug, stores?.recoveryStore, stores?.convertRecoveryStore) !== null
+    || loadPendingOwnerCandidate(slug, stores?.pendingOwnerStore) !== null;
 }
 
 async function convertFromRecovery(input: {
@@ -183,6 +201,7 @@ async function convertFromRecovery(input: {
     input.pendingOwnerStore,
     input.convertRecoveryStore,
   );
+  stashPayloadSeed(input.slug, input.recovery.payload);
   stashConvertSeed(input.slug, input.doc);
   return capabilityUrlToPath(buildCapabilityUrl(
     "owner",
@@ -192,35 +211,8 @@ async function convertFromRecovery(input: {
   ));
 }
 
-async function convertFromOwnerCandidate(input: {
-  slug: string;
-  doc: Y.Doc;
-  owner: string;
-  api: ConvertOnWriteApi;
-  encryption?: Encryption | null;
-  pendingOwnerStore?: PendingOwnerStore;
-}): Promise<string> {
-  if (input.encryption) throw new ConvertedSlugUnrecoverableError();
-  const state = Y.encodeStateAsUpdate(input.doc);
-  const checkpointId = await capabilityPayloadId(state);
-  const payload = encodeCapabilityPayload(state);
-  const created = await input.api.convertLegacyNote({
-    slug: input.slug,
-    checkpointId,
-    payload,
-    isEncrypted: false,
-    salt: null,
-    check: null,
-    iterations: null,
-  }, input.owner);
-  if (created.capabilities.owner !== input.owner) throw new Error("invalid recovered owner capability");
-  try {
-    persistPendingOwnerCandidate(input.slug, input.owner, input.pendingOwnerStore);
-  } catch {
-    // The owner is already in the returned fragment.
-  }
-  stashConvertSeed(input.slug, input.doc);
-  return capabilityUrlToPath(buildCapabilityUrl("owner", input.owner, input.slug));
+function reopenOwnerPath(slug: string, owner: string, encryptionSecret?: string): string {
+  return capabilityUrlToPath(buildCapabilityUrl("owner", owner, slug, encryptionSecret));
 }
 
 export function convertPlainNoteOnWrite(input: {
@@ -285,43 +277,38 @@ export function convertPlainNoteOnWrite(input: {
             convertRecoveryStore: input.convertRecoveryStore,
           });
         } catch (error) {
-          if (mapMintFailure(error).kind === "slug_unavailable") {
-            throw new ConvertedSlugUnrecoverableError();
-          }
-          if (!isLegacyNotFound(error)) throw error;
-        }
-      }
-
-      const ownerBefore = loadPendingOwnerCandidate(input.slug, input.pendingOwnerStore);
-      if (ownerBefore && !input.encryption) {
-        try {
-          return await convertFromOwnerCandidate({
-            slug: input.slug,
-            doc: input.doc,
-            owner: ownerBefore,
-            api: input.api,
-            pendingOwnerStore: input.pendingOwnerStore,
-          });
-        } catch (error) {
           if (
             mapMintFailure(error).kind !== "slug_unavailable"
             && !isLegacyNotFound(error)
           ) throw error;
+          rememberConvertRecovery(
+            input.slug,
+            stored,
+            input.pendingOwnerStore,
+            input.convertRecoveryStore,
+          );
+          stashPayloadSeed(input.slug, stored.payload);
+          stashConvertSeed(input.slug, input.doc);
+          return reopenOwnerPath(
+            input.slug,
+            stored.owner,
+            stored.isEncrypted ? input.encryptionSecret : undefined,
+          );
         }
       }
 
-      try {
-        const minted = await mintCapabilityNote(
-          input.slug,
-          (slug, owner) => input.api.createNote(slug, owner),
-          { store: input.pendingOwnerStore },
-        );
+      const ownerBefore = loadPendingOwnerCandidate(input.slug, input.pendingOwnerStore);
+      if (ownerBefore) {
+        try {
+          persistPendingOwnerCandidate(input.slug, ownerBefore, input.pendingOwnerStore);
+        } catch {
+          // The owner is already in the returned fragment.
+        }
         stashConvertSeed(input.slug, input.doc);
-        return minted.path;
-      } catch (error) {
-        if (mapMintFailure(error).kind !== "slug_unavailable") throw error;
-        throw new ConvertedSlugUnrecoverableError();
+        return reopenOwnerPath(input.slug, ownerBefore);
       }
+
+      throw new ConvertedSlugUnrecoverableError();
     } finally {
       inflight.delete(input.slug);
     }
