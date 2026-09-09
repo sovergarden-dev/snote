@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+const staleU1NotLive = ["not ", "applied/published"].join("");
+const staleGithubReady = ["GitHub", "-ready"].join("");
+
 const migration = readFileSync(resolve(
   process.cwd(),
   "supabase/migrations/20260724000000_atomic_capability_cutover.sql",
@@ -31,7 +34,7 @@ const capabilityEdge = readFileSync(resolve(
 ), "utf8");
 
 describe("atomic cutover migration", () => {
-  it("pins documented SQL 240 migration identity at live product SHA f84183ba", () => {
+  it("pins documented SQL 240 migration identity at live product SHA 2ae9a230", () => {
     const sha256 = createHash("sha256").update(migration, "utf8").digest("hex");
     const lineCount = migration.endsWith("\n")
       ? migration.slice(0, -1).split("\n").length
@@ -65,14 +68,24 @@ describe("atomic cutover migration", () => {
     expect(contract).toContain("does **not** authorize apply");
     expect(preflight).toContain("does not authorize apply");
     expect(preflight).toContain("apply blocker");
-    expect(contract).toContain("f84183ba");
-    expect(contract).toContain("74637d87");
-    expect(contract).toContain("34251814023");
-    expect(contract).toContain("A′ is live");
+    expect(contract).toContain("2ae9a230");
+    expect(contract).toContain("fb35474a");
+    expect(contract).toContain("34306921753");
+    expect(contract).toContain("W1 is live");
     expect(contract).toContain("HOLD");
-    expect(preflight).toContain("f84183ba");
-    expect(preflight).toContain("74637d87");
-    expect(preflight).toContain("1788884922635-dbv60j3l");
+    expect(contract).toContain("umsg_01m21zhm");
+    expect(contract).toContain("**applied** live");
+    expect(contract).toContain("**published**");
+    expect(contract).not.toContain(staleU1NotLive);
+    expect(contract).not.toContain(staleGithubReady);
+    expect(preflight).toContain("umsg_01m21zhm");
+    expect(preflight).toContain("**applied** live");
+    expect(preflight).toContain("**published**");
+    expect(preflight).not.toContain(staleU1NotLive);
+    expect(preflight).not.toContain(staleGithubReady);
+    expect(preflight).toContain("2ae9a230");
+    expect(preflight).toContain("fb35474a");
+    expect(preflight).toContain("1788924147004-wx705xxn");
     expect(preflight).toContain("A′ live");
     expect(contract).toContain(
       "This is not SQL 240, not Realtime, not soak-complete.",
