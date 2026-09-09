@@ -25,6 +25,8 @@ describe("W1 convert-on-write contract", () => {
     expect(convert).toContain("targetSlug: input.slug");
     expect(convert).toContain("mintCapabilityNote");
     expect(convert).toContain("input.api.createNote");
+    expect(convert).toContain("ConvertedSlugUnrecoverableError");
+    expect(convert).toContain("loadStoredConvertRecovery");
     expect(convert).not.toContain('from("notes")');
     expect(convert).not.toContain("SupabaseYjsProvider");
     expect(convert).not.toContain("integrations/supabase");
@@ -53,6 +55,9 @@ describe("W1 convert-on-write contract", () => {
     expect(supabaseProviderAt).toBeGreaterThan(localProviderAt);
     expect(notePage).toContain("createLegacyNoteApi().open");
     expect(notePage).toContain("convertPlainNoteOnWrite");
+    expect(notePage).toContain("hasStoredConvertRecovery");
+    expect(notePage).toContain("security.convert_reopen_banner");
+    expect(notePage).toContain("security.convert_reopen_cta");
     expect(notePage).not.toContain("onDuplicateSecurely");
 
     const navigateAt = notePage.indexOf("navigate(path, { replace: true })");

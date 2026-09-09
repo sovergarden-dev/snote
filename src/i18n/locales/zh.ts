@@ -291,6 +291,8 @@ const zh: Dictionary = {
     "security.convert_success": "已切换到安全可编辑笔记",
     "security.convert_fail": "无法安全保存此笔记。请检查连接后重试。",
     "security.convert_retry": "重试",
+    "security.convert_reopen_banner": "此笔记已升级为安全副本。请使用 owner 链接（`#owner=`）重新打开。",
+    "security.convert_reopen_cta": "首页",
     "security.legacy_confirm_title": "开启 Legacy 格式？",
     "security.legacy_confirm_body": "Legacy 格式会以只读方式打开此笔记。你可以随时在笔记安全中关闭。不会改变其他笔记或默认编辑器。",
     "security.legacy_confirm_body_short": "以只读 Legacy 格式打开此笔记？",

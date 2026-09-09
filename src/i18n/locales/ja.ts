@@ -291,6 +291,8 @@ const ja: Dictionary = {
     "security.convert_success": "安全な編集可能なノートに切り替えました",
     "security.convert_fail": "このノートを安全に保存できませんでした。接続を確認して再試行してください。",
     "security.convert_retry": "再試行",
+    "security.convert_reopen_banner": "このノートは安全なコピーに切り替わりました。owner リンク（`#owner=`）から開き直してください。",
+    "security.convert_reopen_cta": "ホーム",
     "security.legacy_confirm_title": "レガシー形式をオンにしますか？",
     "security.legacy_confirm_body": "レガシー形式はこのノートを閲覧のみで開きます。ノートのセキュリティからいつでもオフにできます。他のノートや既定のエディタは変わりません。",
     "security.legacy_confirm_body_short": "このノートを閲覧のみのレガシー形式で開きますか？",

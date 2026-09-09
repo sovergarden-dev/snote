@@ -299,6 +299,8 @@ const en = {
     "security.convert_success": "Switched to a secure editable note",
     "security.convert_fail": "Couldn't save this note securely. Check your connection and try again.",
     "security.convert_retry": "Retry",
+    "security.convert_reopen_banner": "This note was upgraded to a secure copy. Reopen it with your owner link (`#owner=`).",
+    "security.convert_reopen_cta": "Home",
     "security.legacy_confirm_title": "Turn on Legacy format?",
     "security.legacy_confirm_body": "Legacy format opens this note as view-only. You can turn it off anytime from Note security. This does not change other notes or the default editor.",
     "security.legacy_confirm_body_short": "Open this note as view-only Legacy format?",

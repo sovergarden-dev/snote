@@ -104,6 +104,7 @@ type PlainRuntime = {
   mapDuplicateFailure: (typeof import("@/lib/legacy/cutover"))["mapDuplicateFailure"];
   convertPlainNoteOnWrite: (typeof import("@/lib/legacy/convert-on-write"))["convertPlainNoteOnWrite"];
   consumeConvertSeed: (typeof import("@/lib/legacy/convert-on-write"))["consumeConvertSeed"];
+  hasStoredConvertRecovery: (typeof import("@/lib/legacy/convert-on-write"))["hasStoredConvertRecovery"];
   LocalConvertProvider: typeof import("@/lib/yjs/local-convert-provider").LocalConvertProvider;
 };
 
@@ -143,6 +144,7 @@ const loadPlainRuntime = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "tru
           mapDuplicateFailure: cutover.mapDuplicateFailure,
           convertPlainNoteOnWrite: convert.convertPlainNoteOnWrite,
           consumeConvertSeed: convert.consumeConvertSeed,
+          hasStoredConvertRecovery: convert.hasStoredConvertRecovery,
           LocalConvertProvider: local.LocalConvertProvider,
         };
         plainRuntime = runtime;
@@ -295,8 +297,9 @@ export default function NotePage({
   const legacySourceRef = useRef<LegacyNote | null>(null);
   const [plainProviderCtor, setPlainProviderCtor] = useState<PlainRuntime["LocalConvertProvider"] | null>(null);
   const [convertBusy, setConvertBusy] = useState(false);
-  const [convertError, setConvertError] = useState<"network" | "permission" | "retry" | null>(null);
+  const [convertError, setConvertError] = useState<"network" | "permission" | "retry" | "converted" | null>(null);
   const convertBusyRef = useRef(false);
+  const convertErrorRef = useRef<"network" | "permission" | "retry" | "converted" | null>(null);
   const persistPlainRef = useRef<() => void>(() => {});
 
   // Bumped by the hashchange listener (lock/unlock) and by Retry on the
@@ -320,7 +323,9 @@ export default function NotePage({
   const [writeFenced, setWriteFenced] = useState(false);
 
   const runConvert = useCallback(async () => {
-    if (!doc || convertBusyRef.current || capabilityAccess) return;
+    if (!doc || convertBusyRef.current || capabilityAccess || convertErrorRef.current === "converted") return;
+    const startedSlug = slug;
+    const startedMeta = metaVersion;
     convertBusyRef.current = true;
     setConvertBusy(true);
     setConvertError(null);
@@ -328,20 +333,34 @@ export default function NotePage({
       const runtime = capabilityRuntime ?? await loadCapabilityRuntime();
       const plain = plainRuntime ?? await loadPlainRuntime();
       const path = await plain.convertPlainNoteOnWrite({
-        slug,
+        slug: startedSlug,
         doc,
         source: legacySourceRef.current,
         api: runtime.createCapabilityApi(),
         encryption,
         encryptionSecret: readEncryptionSecret(window.location.hash),
       });
+      if (
+        currentEncTargetRef.current.slug !== startedSlug
+        || currentEncTargetRef.current.metaVersion !== startedMeta
+      ) return;
       navigate(path, { replace: true });
       toast({
         title: tRef.current("security.convert_success"),
       });
     } catch (error) {
+      if (
+        currentEncTargetRef.current.slug !== startedSlug
+        || currentEncTargetRef.current.metaVersion !== startedMeta
+      ) return;
       const kind = (plainRuntime ?? await loadPlainRuntime()).mapDuplicateFailure(error);
+      if (kind === "converted" || kind === "slug_unavailable") {
+        convertErrorRef.current = "converted";
+        setConvertError("converted");
+        return;
+      }
       const feedback = kind === "permission" || kind === "network" ? kind : "retry";
+      convertErrorRef.current = feedback;
       setConvertError(feedback);
       if (provider && "emitConvertError" in provider) {
         (provider as { emitConvertError: (message: string) => void }).emitConvertError(feedback);
@@ -354,8 +373,27 @@ export default function NotePage({
       convertBusyRef.current = false;
       setConvertBusy(false);
     }
-  }, [capabilityAccess, doc, encryption, navigate, provider, slug]);
+  }, [capabilityAccess, doc, encryption, metaVersion, navigate, provider, slug]);
   persistPlainRef.current = () => { void runConvert(); };
+
+  useEffect(() => {
+    convertErrorRef.current = null;
+    convertBusyRef.current = false;
+    setConvertError(null);
+    setConvertBusy(false);
+  }, [slug]);
+
+  useEffect(() => {
+    if (
+      !doc
+      || capabilityAccess
+      || convertBusyRef.current
+      || convertErrorRef.current === "converted"
+    ) return;
+    const plain = plainRuntime;
+    if (!plain?.hasStoredConvertRecovery(slug)) return;
+    void runConvert();
+  }, [capabilityAccess, doc, runConvert, slug]);
 
   useEffect(() => {
     setWriteFenced(false);
@@ -490,6 +528,7 @@ export default function NotePage({
           ydoc_state?: string | null;
         } | null = null;
         let rowExists = false;
+        let recoveringConverted = false;
         if (capabilityAccess) {
           const runtime = capabilityRuntime ?? await loadCapabilityRuntime();
           const session = await runtime.createCapabilityApi().openSession(capabilityAccess.token);
@@ -522,6 +561,7 @@ export default function NotePage({
           const note = await runtime.createLegacyNoteApi().open(slug);
           if (!isCurrentRequest()) return;
           legacySourceRef.current = note;
+          recoveringConverted = !note && runtime.hasStoredConvertRecovery(slug);
           if (!note) {
             data = {
               is_encrypted: false,
@@ -576,9 +616,10 @@ export default function NotePage({
         // localStorage is synchronous, so the pin is committed before any
         // document, provider, IndexedDB store, editor, preview, or snapshot can
         // mount for this response.
-        const encryptionStateIsTrusted = meta.isEncrypted
-          ? markNoteEncrypted(slug)
-          : getEncryptionPinState(slug) === "clear";
+        const encryptionStateIsTrusted = recoveringConverted
+          || (meta.isEncrypted
+            ? markNoteEncrypted(slug)
+            : getEncryptionPinState(slug) === "clear");
         if (!encryptionStateIsTrusted) {
           if (!isCurrentRequest()) return;
           setEncryption(null);
@@ -977,6 +1018,30 @@ export default function NotePage({
     );
   }
 
+  if (convertError === "converted" && !capabilityAccess) {
+    const body = (
+      <div className="mx-auto max-w-md space-y-3 px-6 text-center" role="status">
+        <p className="text-sm text-foreground">{t("security.convert_reopen_banner")}</p>
+        <Button
+          type="button"
+          size="lg"
+          className="min-h-11 min-w-11 px-4"
+          onClick={() => navigate("/")}
+        >
+          {t("security.convert_reopen_cta")}
+        </Button>
+      </div>
+    );
+    if (embedSlug) {
+      return <div className="h-full min-h-0 bg-background">{body}</div>;
+    }
+    return (
+      <AppShell className="flex h-svh flex-col">
+        <main className="flex flex-1 min-h-0 items-center justify-center">{body}</main>
+      </AppShell>
+    );
+  }
+
   // SplitView wraps each panel — render the workspace without the global topbar.
   // SplitView wraps each panel — render compact topbar + editor (+ preview if toggled).
   // Compact topbar hides app-wide toggles (zen, theme, settings) but keeps
@@ -992,7 +1057,7 @@ export default function NotePage({
       legacyEncryptionSecret ? `#${encodeURIComponent(legacyEncryptionSecret)}` : ""
     }`
     : undefined;
-  const convertChrome = (convertBusy || convertError) ? (
+  const convertChrome = (convertBusy || (convertError && convertError !== "converted")) ? (
     <div
       className="flex min-h-11 flex-wrap items-center gap-2 border-b bg-muted px-3 py-2 text-sm text-foreground"
       role={convertError ? "alert" : "status"}

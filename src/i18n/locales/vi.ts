@@ -295,6 +295,8 @@ const vi: Dictionary = {
     "security.convert_success": "Đã chuyển sang note an toàn",
     "security.convert_fail": "Không lưu được note này an toàn. Kiểm tra kết nối rồi thử lại.",
     "security.convert_retry": "Thử lại",
+    "security.convert_reopen_banner": "Note này đã chuyển sang bản an toàn. Mở lại từ link owner (`#owner=`).",
+    "security.convert_reopen_cta": "Trang chủ",
     "security.legacy_confirm_title": "Bật định dạng Legacy?",
     "security.legacy_confirm_body": "Định dạng Legacy mở note này ở chế độ chỉ xem. Bạn có thể tắt bất kỳ lúc nào trong Bảo mật note. Việc này không đổi các note khác hay trình soạn mặc định.",
     "security.legacy_confirm_body_short": "Mở note này ở định dạng Legacy chỉ xem?",

@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
+import { CapabilityApiError } from "@/lib/capability/client";
 import {
   consumeConvertSeed,
   convertPlainNoteOnWrite,
+  ConvertedSlugUnrecoverableError,
   resetConvertOnWriteForTests,
 } from "../convert-on-write";
+import type { LegacyImportRecovery } from "../cutover";
 
 function memoryRecoveryStore() {
   let value: unknown = null;
@@ -15,8 +18,8 @@ function memoryRecoveryStore() {
   };
 }
 
-function memoryOwnerStore() {
-  let value: string | null = null;
+function memoryOwnerStore(initial: string | null = null) {
+  let value: string | null = initial;
   return {
     load: vi.fn(() => value),
     save: vi.fn((_slug: string, owner: string) => { value = owner; }),
@@ -24,8 +27,27 @@ function memoryOwnerStore() {
   };
 }
 
+function storedRecovery(owner = "c".repeat(43)): LegacyImportRecovery {
+  return {
+    sourceSlug: "daily",
+    sourceFingerprint: "a".repeat(64),
+    owner,
+    checkpointId: "b".repeat(64),
+    payload: "AQID",
+    isEncrypted: false,
+    salt: null,
+    check: null,
+    iterations: null,
+  };
+}
+
+function slugUnavailable() {
+  return new CapabilityApiError("slug unavailable", 409, null, "slug_unavailable");
+}
+
 afterEach(() => {
   resetConvertOnWriteForTests();
+  sessionStorage.clear();
 });
 
 describe("W1 convert-on-write", () => {
@@ -167,5 +189,149 @@ describe("W1 convert-on-write", () => {
     const path = await convertPlainNoteOnWrite(input);
     expect(api.convertLegacyNote).toHaveBeenCalledTimes(2);
     expect(path.startsWith("/daily#owner=")).toBe(true);
+  });
+
+  it("reopens a converted slug through stored convert-legacy recovery, never create", async () => {
+    const doc = new Y.Doc();
+    const owner = "c".repeat(43);
+    const recovery = storedRecovery(owner);
+    const recoveryStore = memoryRecoveryStore();
+    recoveryStore.save("daily", recovery);
+    const api = {
+      convertLegacyNote: vi.fn(async (_body: unknown, candidate: string) => ({
+        capabilities: { owner: candidate },
+      })),
+      createNote: vi.fn(),
+    };
+
+    const path = await convertPlainNoteOnWrite({
+      slug: "daily",
+      doc,
+      source: null,
+      api,
+      recoveryStore,
+    });
+
+    expect(api.createNote).not.toHaveBeenCalled();
+    expect(api.convertLegacyNote).toHaveBeenCalledOnce();
+    expect(api.convertLegacyNote).toHaveBeenCalledWith(
+      expect.objectContaining({
+        slug: "daily",
+        checkpointId: recovery.checkpointId,
+        payload: recovery.payload,
+      }),
+      owner,
+    );
+    expect(path).toBe(`/daily#owner=${owner}`);
+    expect(consumeConvertSeed("daily")).toBeInstanceOf(Uint8Array);
+  });
+
+  it("persists the convert owner so a later reopen can recover", async () => {
+    const doc = new Y.Doc();
+    doc.getText("content").insert(0, "keep me");
+    const pendingOwnerStore = memoryOwnerStore();
+    const convertRecoveryStore = memoryRecoveryStore();
+    const api = {
+      convertLegacyNote: vi.fn(async (_body: unknown, owner: string) => ({
+        capabilities: { owner },
+      })),
+      createNote: vi.fn(),
+    };
+
+    const path = await convertPlainNoteOnWrite({
+      slug: "daily",
+      doc,
+      source: {
+        slug: "daily",
+        content: "keep me",
+        ydocState: "",
+        isEncrypted: false,
+        salt: null,
+        check: null,
+        iterations: null,
+      },
+      api,
+      recoveryStore: memoryRecoveryStore(),
+      pendingOwnerStore,
+      convertRecoveryStore,
+    });
+
+    const owner = api.convertLegacyNote.mock.calls[0][1] as string;
+    expect(path).toBe(`/daily#owner=${owner}`);
+    expect(pendingOwnerStore.save).toHaveBeenCalledWith("daily", owner);
+    expect(convertRecoveryStore.save).toHaveBeenCalledWith(
+      "daily",
+      expect.objectContaining({ owner, sourceSlug: "daily" }),
+    );
+  });
+
+  it("reopens with a session owner through convert-legacy before create", async () => {
+    const doc = new Y.Doc();
+    const owner = "c".repeat(43);
+    const api = {
+      convertLegacyNote: vi.fn(async (_body: unknown, candidate: string) => ({
+        capabilities: { owner: candidate },
+      })),
+      createNote: vi.fn(),
+    };
+
+    const path = await convertPlainNoteOnWrite({
+      slug: "daily",
+      doc,
+      source: null,
+      api,
+      pendingOwnerStore: memoryOwnerStore(owner),
+    });
+
+    expect(api.createNote).not.toHaveBeenCalled();
+    expect(api.convertLegacyNote).toHaveBeenCalledOnce();
+    expect(api.convertLegacyNote.mock.calls[0][1]).toBe(owner);
+    expect(path).toBe(`/daily#owner=${owner}`);
+  });
+
+  it("falls back to create when session-owner convert-legacy cannot recover", async () => {
+    const doc = new Y.Doc();
+    const owner = "c".repeat(43);
+    const api = {
+      convertLegacyNote: vi.fn(async () => {
+        throw slugUnavailable();
+      }),
+      createNote: vi.fn(async (_slug: string, candidate: string) => ({
+        capabilities: { owner: candidate },
+      })),
+    };
+
+    const path = await convertPlainNoteOnWrite({
+      slug: "daily",
+      doc,
+      source: null,
+      api,
+      pendingOwnerStore: memoryOwnerStore(owner),
+    });
+
+    expect(api.convertLegacyNote).toHaveBeenCalledOnce();
+    expect(api.createNote).toHaveBeenCalledOnce();
+    expect(api.createNote.mock.calls[0][1]).toBe(owner);
+    expect(path).toBe(`/daily#owner=${owner}`);
+  });
+
+  it("does not retry create after slug_unavailable when recover is impossible", async () => {
+    const doc = new Y.Doc();
+    const api = {
+      convertLegacyNote: vi.fn(),
+      createNote: vi.fn(async () => {
+        throw slugUnavailable();
+      }),
+    };
+
+    await expect(convertPlainNoteOnWrite({
+      slug: "daily",
+      doc,
+      source: null,
+      api,
+      pendingOwnerStore: memoryOwnerStore(),
+    })).rejects.toBeInstanceOf(ConvertedSlugUnrecoverableError);
+    expect(api.createNote).toHaveBeenCalledOnce();
+    expect(api.convertLegacyNote).not.toHaveBeenCalled();
   });
 });
