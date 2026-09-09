@@ -292,6 +292,24 @@ export function convertPlainNoteOnWrite(input: {
         }
       }
 
+      const ownerBefore = loadPendingOwnerCandidate(input.slug, input.pendingOwnerStore);
+      if (ownerBefore && !input.encryption) {
+        try {
+          return await convertFromOwnerCandidate({
+            slug: input.slug,
+            doc: input.doc,
+            owner: ownerBefore,
+            api: input.api,
+            pendingOwnerStore: input.pendingOwnerStore,
+          });
+        } catch (error) {
+          if (
+            mapMintFailure(error).kind !== "slug_unavailable"
+            && !isLegacyNotFound(error)
+          ) throw error;
+        }
+      }
+
       try {
         const minted = await mintCapabilityNote(
           input.slug,
@@ -302,27 +320,7 @@ export function convertPlainNoteOnWrite(input: {
         return minted.path;
       } catch (error) {
         if (mapMintFailure(error).kind !== "slug_unavailable") throw error;
-        const owner = loadPendingOwnerCandidate(input.slug, input.pendingOwnerStore);
-        if (!owner) throw new ConvertedSlugUnrecoverableError();
-        try {
-          return await convertFromOwnerCandidate({
-            slug: input.slug,
-            doc: input.doc,
-            owner,
-            api: input.api,
-            encryption: input.encryption,
-            pendingOwnerStore: input.pendingOwnerStore,
-          });
-        } catch (recoverError) {
-          if (
-            recoverError instanceof ConvertedSlugUnrecoverableError
-            || mapMintFailure(recoverError).kind === "slug_unavailable"
-            || isLegacyNotFound(recoverError)
-          ) {
-            throw new ConvertedSlugUnrecoverableError();
-          }
-          throw recoverError;
-        }
+        throw new ConvertedSlugUnrecoverableError();
       }
     } finally {
       inflight.delete(input.slug);

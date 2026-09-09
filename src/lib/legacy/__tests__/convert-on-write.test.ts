@@ -265,16 +265,14 @@ describe("W1 convert-on-write", () => {
     );
   });
 
-  it("on create 409, recovers through convert-legacy with the session owner", async () => {
+  it("reopens with a session owner through convert-legacy before create", async () => {
     const doc = new Y.Doc();
     const owner = "c".repeat(43);
     const api = {
       convertLegacyNote: vi.fn(async (_body: unknown, candidate: string) => ({
         capabilities: { owner: candidate },
       })),
-      createNote: vi.fn(async () => {
-        throw slugUnavailable();
-      }),
+      createNote: vi.fn(),
     };
 
     const path = await convertPlainNoteOnWrite({
@@ -285,18 +283,42 @@ describe("W1 convert-on-write", () => {
       pendingOwnerStore: memoryOwnerStore(owner),
     });
 
-    expect(api.createNote).toHaveBeenCalledOnce();
+    expect(api.createNote).not.toHaveBeenCalled();
     expect(api.convertLegacyNote).toHaveBeenCalledOnce();
     expect(api.convertLegacyNote.mock.calls[0][1]).toBe(owner);
+    expect(path).toBe(`/daily#owner=${owner}`);
+  });
+
+  it("falls back to create when session-owner convert-legacy cannot recover", async () => {
+    const doc = new Y.Doc();
+    const owner = "c".repeat(43);
+    const api = {
+      convertLegacyNote: vi.fn(async () => {
+        throw slugUnavailable();
+      }),
+      createNote: vi.fn(async (_slug: string, candidate: string) => ({
+        capabilities: { owner: candidate },
+      })),
+    };
+
+    const path = await convertPlainNoteOnWrite({
+      slug: "daily",
+      doc,
+      source: null,
+      api,
+      pendingOwnerStore: memoryOwnerStore(owner),
+    });
+
+    expect(api.convertLegacyNote).toHaveBeenCalledOnce();
+    expect(api.createNote).toHaveBeenCalledOnce();
+    expect(api.createNote.mock.calls[0][1]).toBe(owner);
     expect(path).toBe(`/daily#owner=${owner}`);
   });
 
   it("does not retry create after slug_unavailable when recover is impossible", async () => {
     const doc = new Y.Doc();
     const api = {
-      convertLegacyNote: vi.fn(async () => {
-        throw slugUnavailable();
-      }),
+      convertLegacyNote: vi.fn(),
       createNote: vi.fn(async () => {
         throw slugUnavailable();
       }),
@@ -310,5 +332,6 @@ describe("W1 convert-on-write", () => {
       pendingOwnerStore: memoryOwnerStore(),
     })).rejects.toBeInstanceOf(ConvertedSlugUnrecoverableError);
     expect(api.createNote).toHaveBeenCalledOnce();
+    expect(api.convertLegacyNote).not.toHaveBeenCalled();
   });
 });

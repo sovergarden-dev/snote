@@ -324,6 +324,8 @@ export default function NotePage({
 
   const runConvert = useCallback(async () => {
     if (!doc || convertBusyRef.current || capabilityAccess || convertErrorRef.current === "converted") return;
+    const startedSlug = slug;
+    const startedMeta = metaVersion;
     convertBusyRef.current = true;
     setConvertBusy(true);
     setConvertError(null);
@@ -331,18 +333,26 @@ export default function NotePage({
       const runtime = capabilityRuntime ?? await loadCapabilityRuntime();
       const plain = plainRuntime ?? await loadPlainRuntime();
       const path = await plain.convertPlainNoteOnWrite({
-        slug,
+        slug: startedSlug,
         doc,
         source: legacySourceRef.current,
         api: runtime.createCapabilityApi(),
         encryption,
         encryptionSecret: readEncryptionSecret(window.location.hash),
       });
+      if (
+        currentEncTargetRef.current.slug !== startedSlug
+        || currentEncTargetRef.current.metaVersion !== startedMeta
+      ) return;
       navigate(path, { replace: true });
       toast({
         title: tRef.current("security.convert_success"),
       });
     } catch (error) {
+      if (
+        currentEncTargetRef.current.slug !== startedSlug
+        || currentEncTargetRef.current.metaVersion !== startedMeta
+      ) return;
       const kind = (plainRuntime ?? await loadPlainRuntime()).mapDuplicateFailure(error);
       if (kind === "converted" || kind === "slug_unavailable") {
         convertErrorRef.current = "converted";
@@ -363,7 +373,7 @@ export default function NotePage({
       convertBusyRef.current = false;
       setConvertBusy(false);
     }
-  }, [capabilityAccess, doc, encryption, navigate, provider, slug]);
+  }, [capabilityAccess, doc, encryption, metaVersion, navigate, provider, slug]);
   persistPlainRef.current = () => { void runConvert(); };
 
   useEffect(() => {
@@ -518,6 +528,7 @@ export default function NotePage({
           ydoc_state?: string | null;
         } | null = null;
         let rowExists = false;
+        let recoveringConverted = false;
         if (capabilityAccess) {
           const runtime = capabilityRuntime ?? await loadCapabilityRuntime();
           const session = await runtime.createCapabilityApi().openSession(capabilityAccess.token);
@@ -550,6 +561,7 @@ export default function NotePage({
           const note = await runtime.createLegacyNoteApi().open(slug);
           if (!isCurrentRequest()) return;
           legacySourceRef.current = note;
+          recoveringConverted = !note && runtime.hasStoredConvertRecovery(slug);
           if (!note) {
             data = {
               is_encrypted: false,
@@ -604,9 +616,10 @@ export default function NotePage({
         // localStorage is synchronous, so the pin is committed before any
         // document, provider, IndexedDB store, editor, preview, or snapshot can
         // mount for this response.
-        const encryptionStateIsTrusted = meta.isEncrypted
-          ? markNoteEncrypted(slug)
-          : getEncryptionPinState(slug) === "clear";
+        const encryptionStateIsTrusted = recoveringConverted
+          || (meta.isEncrypted
+            ? markNoteEncrypted(slug)
+            : getEncryptionPinState(slug) === "clear");
         if (!encryptionStateIsTrusted) {
           if (!isCurrentRequest()) return;
           setEncryption(null);

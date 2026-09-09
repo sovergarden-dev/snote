@@ -45,6 +45,7 @@ const harness = vi.hoisted(() => ({
   convertPlainNoteOnWrite: vi.fn<(...args: unknown[]) => Promise<string>>(async () => {
     throw new Error("convert-on-write is mocked in this harness");
   }),
+  hasStoredConvertRecovery: vi.fn(() => false),
   translate: (key: string) => key,
   metaPromise: Promise.resolve({ data: null as Record<string, unknown> | null }),
 }));
@@ -261,7 +262,7 @@ vi.mock("@/lib/legacy/cutover", () => ({
 vi.mock("@/lib/legacy/convert-on-write", () => ({
   convertPlainNoteOnWrite: (...args: unknown[]) => harness.convertPlainNoteOnWrite(...args),
   consumeConvertSeed: () => null,
-  hasStoredConvertRecovery: () => false,
+  hasStoredConvertRecovery: (...args: unknown[]) => harness.hasStoredConvertRecovery(...args),
 }));
 vi.mock("@/hooks/use-word-goal", () => ({ useWordGoal: () => ({ goal: null }), consumeGoalReached: () => false }));
 vi.mock("@/hooks/use-toast", () => ({ toast: (...args: unknown[]) => harness.toast(...args) }));
@@ -511,6 +512,8 @@ describe("NotePage encryption gate", () => {
     harness.convertPlainNoteOnWrite.mockImplementation(async () => {
       throw new Error("convert-on-write is mocked in this harness");
     });
+    harness.hasStoredConvertRecovery.mockReset();
+    harness.hasStoredConvertRecovery.mockReturnValue(false);
     harness.translate = (key: string) => key;
     localStorage.clear();
     window.history.replaceState(null, "", window.location.pathname);
@@ -965,6 +968,66 @@ describe("NotePage encryption gate", () => {
       screen.getByRole("button", { name: "security.convert_reopen_cta" }).click();
     });
     await waitFor(() => expect(screen.getByText("home")).toBeInTheDocument());
+  });
+
+  it("auto-recovers a converted bare slug through convert-legacy without waiting for persist", async () => {
+    harness.metaForSlug.mockResolvedValue({ data: null, error: null });
+    harness.hasStoredConvertRecovery.mockReturnValue(true);
+    const owner = "c".repeat(43);
+    harness.convertPlainNoteOnWrite.mockResolvedValue(`/secret#owner=${owner}`);
+    harness.capabilityOpenSession.mockResolvedValue(pollingSession());
+
+    function ConvertLocationProbe() {
+      const loc = useLocation();
+      return <div data-testid="loc">{`${loc.pathname}${loc.hash}`}</div>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <Routes>
+          <Route path="/:slug" element={<><ConvertLocationProbe /><NotePage /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(harness.convertPlainNoteOnWrite).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(harness.toast).toHaveBeenCalledWith({ title: "security.convert_success" });
+    });
+    expect(screen.getByTestId("loc")).toHaveTextContent(`/secret#owner=${owner}`);
+    expect(harness.toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "security.convert_fail" }),
+    );
+  });
+
+  it("recovers a pinned converted slug instead of the encryption metadata-conflict gate", async () => {
+    expect(markNoteEncrypted("secret")).toBe(true);
+    harness.metaForSlug.mockResolvedValue({ data: null, error: null });
+    harness.hasStoredConvertRecovery.mockReturnValue(true);
+    const owner = "c".repeat(43);
+    harness.convertPlainNoteOnWrite.mockResolvedValue(`/secret#owner=${owner}`);
+    harness.capabilityOpenSession.mockResolvedValue(pollingSession());
+
+    function ConvertLocationProbe() {
+      const loc = useLocation();
+      return <div data-testid="loc">{`${loc.pathname}${loc.hash}`}</div>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <Routes>
+          <Route path="/:slug" element={<><ConvertLocationProbe /><NotePage /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(harness.toast).toHaveBeenCalledWith({ title: "security.convert_success" });
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByTestId("loc")).toHaveTextContent(`/secret#owner=${owner}`);
   });
 
   it("immediately closes a live plaintext note when another local flow pins it", async () => {
