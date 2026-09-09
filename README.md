@@ -32,9 +32,17 @@ Legacy RO only (PR #128; Edge `note-session` `import-legacy`). Home mints capabi
 are applied on production; `writes_enabled=true` and
 `private_realtime_enabled=false` (findings §3d). SQL 240 is already applied;
 soak ≥48h started from the first canary (not soak-complete) — see
-[security findings](docs/security-findings.md). Pixel/Sentinel live verify for
-this SHA may still be in flight; this attest does not record a Pixel or
-Sentinel verdict.
+[security findings](docs/security-findings.md). Pixel Live UX W1 PASS on origin
+`2ae9a230` / Pages `fb35474a` (hard-reload after A′ SW/cache false RO; plain
+`/hage` editable modern no RO banner; panel Legacy OFF + Encrypt
+disabled+honest + Duplicate hidden; convert busy «Saving securely…» →
+soft-replace `#owner=` + Synced; evidence `pixel-qa/w1-2ae9a230/`). Pixel
+MEDIUM residual (not BLOCKER): `?legacyRo=1` on `/hage` after convert →
+«This legacy note does not exist» + Duplicate absent (expected U1 after row
+flip); leftover unconverted smoke still needed; empty legacyRo helper still
+A′ «table note» copy (POLISH/MEDIUM). Sentinel still completing
+Encrypt/Duplicate/network before final verdict (pending; no Sentinel verdict
+recorded).
 
 **W1 live (named Pages go of #130/#131):** canary-on plain `/<slug>` and
 SplitView panes are editable `NotePage` (convert-on-write). A′ (#126)

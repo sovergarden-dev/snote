@@ -57,9 +57,17 @@ Flag-off builds keep `NotePage` `legacyOnly` and do not import `CutoverNotePage`
 
 Pixel visual A′ PASS remains historical evidence on prior live `b4eba5d2`
 (plain `/hage` Legacy RO + banner + CTA Home; Encrypt omit; mint `#owner=`
-editable; evidence `pixel-qa/a-prime-b4eba5d2/`). Pixel/Sentinel live verify
-for W1 `2ae9a230` may still be in flight; this attest does not record a
-Pixel or Sentinel verdict for that SHA.
+editable; evidence `pixel-qa/a-prime-b4eba5d2/`). Pixel Live UX W1 PASS on
+origin `2ae9a230` / Pages `fb35474a` (hard-reload after A′ SW/cache false RO;
+plain `/hage` editable modern no RO banner; panel Legacy OFF + Encrypt
+disabled+honest + Duplicate hidden; convert busy «Saving securely…» →
+soft-replace `#owner=` + Synced; evidence `pixel-qa/w1-2ae9a230/`). Pixel
+MEDIUM residual (not BLOCKER): `?legacyRo=1` on `/hage` after convert →
+«This legacy note does not exist» + Duplicate absent (expected U1 after row
+flip); leftover unconverted smoke still needed; empty legacyRo helper still
+A′ «table note» copy (POLISH/MEDIUM). Sentinel still completing
+Encrypt/Duplicate/network before final verdict (pending; no Sentinel verdict
+recorded).
 
 ## Walls
 

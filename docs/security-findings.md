@@ -1235,9 +1235,17 @@ the independently verified short id, not an invented UUID.
 Atlas/Pulse pin matches this independent fetch: live
 `note.syrin.online`, SHA `2ae9a230`, Pages `fb35474a`, buildId
 `1788924147004-wx705xxn`, canary on. W1 convert-on-write live (#130).
-A′ plain RO is no longer the default. Pixel/Sentinel live verify for this
-SHA may still be in flight; this attest does not record a Pixel or Sentinel
-verdict. Historical A′ Pixel PASS remains `pixel-qa/a-prime-b4eba5d2/`.
+A′ plain RO is no longer the default. Pixel Live UX W1 PASS on live
+`2ae9a230` / Pages `fb35474a` (hard-reload after A′ SW/cache false RO; plain
+`/hage` editable modern no RO banner; panel Legacy OFF + Encrypt
+disabled+honest + Duplicate hidden; convert busy «Saving securely…» →
+soft-replace `#owner=` + Synced; evidence `pixel-qa/w1-2ae9a230/`). Pixel
+MEDIUM residual (not BLOCKER): `?legacyRo=1` on `/hage` after convert →
+«This legacy note does not exist» + Duplicate absent (expected U1 after row
+flip); leftover unconverted smoke still needed; empty legacyRo helper still
+A′ «table note» copy (POLISH/MEDIUM). Sentinel still completing
+Encrypt/Duplicate/network before final verdict (pending; no Sentinel verdict
+recorded). Historical A′ Pixel PASS remains `pixel-qa/a-prime-b4eba5d2/`.
 PWA smoke after this ship: SUCCESS (GitHub Actions `workflow_dispatch` run
 `34306921753`; `EXPECTED_DEPLOYED_SHA` `2ae9a230…`;
 `EXPECTED_CAPABILITY_ROUTES_ENABLED` true; Playwright 2 passed (2/2)). GitHub
@@ -1285,8 +1293,16 @@ the primary update UX; Sonner is suppressed while Ko-fi FAB is mounted;
 Update apply consumes one hard-reload per target. Encrypt is disabled+honest
 on plain pre-convert; `#owner=` Encrypt stays active; the encryption gate is
 not opened on the plain table path.
-Pixel/Sentinel live verify for `2ae9a230` / Pages `fb35474a` may still be in
-flight; this attest does not record a Pixel or Sentinel verdict.
+Pixel Live UX W1 PASS on live `2ae9a230` / Pages `fb35474a` (hard-reload after
+A′ SW/cache false RO; plain `/hage` editable modern no RO banner; panel
+Legacy OFF + Encrypt disabled+honest + Duplicate hidden; convert busy
+«Saving securely…» → soft-replace `#owner=` + Synced; evidence
+`pixel-qa/w1-2ae9a230/`). Pixel MEDIUM residual (not BLOCKER): `?legacyRo=1`
+on `/hage` after convert → «This legacy note does not exist» + Duplicate
+absent (expected U1 after row flip); leftover unconverted smoke still
+needed; empty legacyRo helper still A′ «table note» copy (POLISH/MEDIUM).
+Sentinel still completing Encrypt/Duplicate/network before final verdict
+(pending; no Sentinel verdict recorded).
 This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
