@@ -40,9 +40,13 @@ soft-replace `#owner=` + Synced; evidence `pixel-qa/w1-2ae9a230/`). Pixel
 MEDIUM residual (not BLOCKER): `?legacyRo=1` on `/hage` after convert →
 «This legacy note does not exist» + Duplicate absent (expected U1 after row
 flip); leftover unconverted smoke still needed; empty legacyRo helper still
-A′ «table note» copy (POLISH/MEDIUM). Sentinel still completing
-Encrypt/Duplicate/network before final verdict (pending; no Sentinel verdict
-recorded).
+A′ «table note» copy (POLISH/MEDIUM). Sentinel pin: READY WITH KNOWN RISKS
+live W1/U1 @ `2ae9a230` / Pages `fb35474a` (BLOCKER none; first-persist OK;
+evidence `sentinel-qa-w1-live/`). HIGH residual: plain reopen of a converted
+slug does NOT go `#owner=` → note-session `create` → 409 `slug_unavailable`
+(does not call convert-legacy) → Sync error (bookmark residual; needs
+follow-up recovery / «open secure link»). MEDIUM: SW A′ false RO until
+hard-reload. Not soak-complete.
 
 **W1 live (named Pages go of #130/#131):** canary-on plain `/<slug>` and
 SplitView panes are editable `NotePage` (convert-on-write). A′ (#126)

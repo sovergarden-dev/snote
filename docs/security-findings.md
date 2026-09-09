@@ -1243,9 +1243,16 @@ soft-replace `#owner=` + Synced; evidence `pixel-qa/w1-2ae9a230/`). Pixel
 MEDIUM residual (not BLOCKER): `?legacyRo=1` on `/hage` after convert →
 «This legacy note does not exist» + Duplicate absent (expected U1 after row
 flip); leftover unconverted smoke still needed; empty legacyRo helper still
-A′ «table note» copy (POLISH/MEDIUM). Sentinel still completing
-Encrypt/Duplicate/network before final verdict (pending; no Sentinel verdict
-recorded). Historical A′ Pixel PASS remains `pixel-qa/a-prime-b4eba5d2/`.
+A′ «table note» copy (POLISH/MEDIUM). Sentinel pin: READY WITH KNOWN RISKS
+on live `2ae9a230` / Pages `fb35474a` (BLOCKER none; first-persist OK;
+evidence `sentinel-qa-w1-live/`). PASSED: pin+canary; anon notes 42501;
+empty → `#owner=` (after SW clear); `/hage` editable no RO; Pixel first
+convert → LNO exists:false; `#owner=` Encrypt OK / Duplicate hidden; no
+`from("notes")` write. HIGH residual: plain reopen of a converted slug does
+NOT go `#owner=` → note-session `create` → 409 `slug_unavailable` (does not
+call convert-legacy) → Sync error (bookmark residual; needs follow-up
+recovery / «open secure link»). MEDIUM: `?legacyRo=1` post-convert «does not
+exist»/no Duplicate = expected; SW A′ false RO until hard-reload. Historical A′ Pixel PASS remains `pixel-qa/a-prime-b4eba5d2/`.
 PWA smoke after this ship: SUCCESS (GitHub Actions `workflow_dispatch` run
 `34306921753`; `EXPECTED_DEPLOYED_SHA` `2ae9a230…`;
 `EXPECTED_CAPABILITY_ROUTES_ENABLED` true; Playwright 2 passed (2/2)). GitHub
@@ -1301,8 +1308,15 @@ Legacy OFF + Encrypt disabled+honest + Duplicate hidden; convert busy
 on `/hage` after convert → «This legacy note does not exist» + Duplicate
 absent (expected U1 after row flip); leftover unconverted smoke still
 needed; empty legacyRo helper still A′ «table note» copy (POLISH/MEDIUM).
-Sentinel still completing Encrypt/Duplicate/network before final verdict
-(pending; no Sentinel verdict recorded).
+Sentinel pin: READY WITH KNOWN RISKS on live `2ae9a230` / Pages `fb35474a`
+(BLOCKER none; first-persist OK; evidence `sentinel-qa-w1-live/`). PASSED:
+pin+canary; anon notes 42501; empty → `#owner=` (after SW clear); `/hage`
+editable no RO; Pixel first convert → LNO exists:false; `#owner=` Encrypt OK
+/ Duplicate hidden; no `from("notes")` write. HIGH residual: plain reopen of
+a converted slug does NOT go `#owner=` → note-session `create` → 409
+`slug_unavailable` (does not call convert-legacy) → Sync error (bookmark
+residual; needs follow-up recovery / «open secure link»). MEDIUM: SW A′
+false RO until hard-reload.
 This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
