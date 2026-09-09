@@ -45,7 +45,7 @@ const harness = vi.hoisted(() => ({
   convertPlainNoteOnWrite: vi.fn<(...args: unknown[]) => Promise<string>>(async () => {
     throw new Error("convert-on-write is mocked in this harness");
   }),
-  hasStoredConvertRecovery: vi.fn(() => false),
+  hasStoredConvertRecovery: vi.fn<(...args: unknown[]) => boolean>(() => false),
   translate: (key: string) => key,
   metaPromise: Promise.resolve({ data: null as Record<string, unknown> | null }),
 }));
