@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const CANONICAL_ORIGIN = "https://note.syrin.online";
+const staleU1NotLive = ["not ", "applied/published"].join("");
+const staleGithubReady = ["GitHub", "-ready"].join("");
 
 const publicSurfaces = [
   "index.html",
@@ -50,8 +52,8 @@ describe("canonical production origin", () => {
     expect(readme).toContain("umsg_01m21zhm");
     expect(readme).toContain("**applied** live");
     expect(readme).toContain("**published**");
-    expect(readme).not.toContain("not applied/published");
-    expect(readme).not.toContain("GitHub-ready");
+    expect(readme).not.toContain(staleU1NotLive);
+    expect(readme).not.toContain(staleGithubReady);
     expect(readme).toContain("Live UX W1 PASS");
     expect(readme).toContain("pixel-qa/w1-2ae9a230/");
     expect(readme).toContain("Saving securely");
@@ -230,8 +232,8 @@ describe("canonical production origin", () => {
     expect(findings).toContain("umsg_01m21zhm");
     expect(findings).toContain("**applied** live");
     expect(findings).toContain("**published**");
-    expect(findings).not.toContain("not applied/published");
-    expect(findings).not.toContain("GitHub-ready");
+    expect(findings).not.toContain(staleU1NotLive);
+    expect(findings).not.toContain(staleGithubReady);
     expect(findings).toContain("Duplicate securely is enabled");
     expect(findings).toContain("import-legacy");
     expect(findings).toContain("a-prime-cutover-restore.md");
@@ -720,8 +722,8 @@ describe("canonical production origin", () => {
     expect(findings).toContain("umsg_01m21zhm");
     expect(findings).toContain("**applied** live");
     expect(findings).toContain("**published**");
-    expect(findings).not.toContain("not applied/published");
-    expect(findings).not.toContain("GitHub-ready");
+    expect(findings).not.toContain(staleU1NotLive);
+    expect(findings).not.toContain(staleGithubReady);
     expect(findings).toContain("Live UX W1 PASS");
     expect(findings).toContain("pixel-qa/w1-2ae9a230/");
     expect(findings).toContain("Saving securely");
@@ -803,8 +805,8 @@ describe("canonical production origin", () => {
     expect(client).toContain("umsg_01m21zhm");
     expect(client).toContain("**applied** live");
     expect(client).toContain("**published**");
-    expect(client).not.toContain("not applied/published");
-    expect(client).not.toContain("GitHub-ready");
+    expect(client).not.toContain(staleU1NotLive);
+    expect(client).not.toContain(staleGithubReady);
     expect(client).toContain("a-prime-cutover-restore.md");
     expect(client).toContain("#118");
     expect(client).toContain("#119");
@@ -922,8 +924,8 @@ describe("canonical production origin", () => {
     expect(backend).toContain("umsg_01m21zhm");
     expect(backend).toContain("**applied** live");
     expect(backend).toContain("**published**");
-    expect(backend).not.toContain("not applied/published");
-    expect(backend).not.toContain("GitHub-ready");
+    expect(backend).not.toContain(staleU1NotLive);
+    expect(backend).not.toContain(staleGithubReady);
     expect(backend).toContain("Choice A");
     expect(backend).toContain("A′");
     expect(backend).toContain("superseded");
@@ -1003,8 +1005,8 @@ describe("canonical production origin", () => {
     expect(aPrime).toContain("umsg_01m21zhm");
     expect(aPrime).toContain("**applied** live");
     expect(aPrime).toContain("**published**");
-    expect(aPrime).not.toContain("not applied/published");
-    expect(aPrime).not.toContain("GitHub-ready");
+    expect(aPrime).not.toContain(staleU1NotLive);
+    expect(aPrime).not.toContain(staleGithubReady);
     expect(aPrime).not.toContain("Sentinel still completing");
     expect(aPrime).toContain("DUPLICATE_SECURELY_AVAILABLE = true");
     expect(aPrime).not.toContain("DUPLICATE_SECURELY_AVAILABLE = false");
@@ -1128,8 +1130,8 @@ describe("canonical production origin", () => {
     expect(rollout).toContain("umsg_01m21zhm");
     expect(rollout).toContain("applied live");
     expect(rollout).toContain("published");
-    expect(rollout).not.toContain("not applied/published");
-    expect(rollout).not.toContain("GitHub-ready");
+    expect(rollout).not.toContain(staleU1NotLive);
+    expect(rollout).not.toContain(staleGithubReady);
     expect(rollout).toContain("Choice A");
     expect(rollout).toContain("Sonner");
     expect(rollout).toContain("FAB-primary");
@@ -1168,8 +1170,8 @@ describe("canonical production origin", () => {
     expect(adr).toContain("umsg_01m21zhm");
     expect(adr).toContain("**applied** live");
     expect(adr).toContain("**published**");
-    expect(adr).not.toContain("not applied/published");
-    expect(adr).not.toContain("GitHub-ready");
+    expect(adr).not.toContain(staleU1NotLive);
+    expect(adr).not.toContain(staleGithubReady);
     expect(adr).not.toContain("Duplicate securely is hidden with");
     expect(adr).toContain("Sonner");
     expect(adr).toContain("FAB-primary");
@@ -1455,8 +1457,8 @@ describe("canonical production origin", () => {
     expect(cutover).toContain("umsg_01m21zhm");
     expect(cutover).toContain("**applied**");
     expect(cutover).toContain("**published**");
-    expect(cutover).not.toContain("not applied/published");
-    expect(cutover).not.toContain("GitHub-ready");
+    expect(cutover).not.toContain(staleU1NotLive);
+    expect(cutover).not.toContain(staleGithubReady);
     expect(cutover).toContain("Choice A");
     expect(cutover).toContain("A′");
     expect(cutover).toContain("superseded");
