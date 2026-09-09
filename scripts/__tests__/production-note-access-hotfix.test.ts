@@ -36,7 +36,7 @@ describe("production note access hotfix", () => {
     expect(app).toContain("<NotePage legacyOnly={!capabilityRoutesEnabled} />");
     expect(app).not.toContain("<NotePage legacyOnly />");
     expectValueImportBehindRoutesGuard(app, "./pages/CutoverNotePage");
-    // A′: canary-on default is CutoverNotePage→LNO RO, not Choice A editable NotePage.
+    // Canary-on default still mounts CutoverNotePage (W1 editable unless ?legacyRo=1).
     expect(app).toMatch(
       /capabilityRoutesEnabled\s*&&\s*CutoverNotePage\s*\?\s*\(\s*<CutoverNotePage\s*\/>/,
     );
@@ -73,7 +73,7 @@ describe("production note access hotfix", () => {
     const panel = source("src/components/note/NoteSecurityPanel.tsx");
     expect(panel).toContain("buildLegacyOptInLocation");
     expect(panel).toContain("DUPLICATE_SECURELY_AVAILABLE");
-    expect(panel).toContain("legacyLockedOn");
+    expect(panel).not.toContain("legacyLockedOn");
     expect(panel).toContain("security.legacy_helper_on_plain");
     expect(panel).toContain("security.legacy_banner_cta");
     expect(source("src/lib/legacy/legacy-opt-in.ts")).toContain(
@@ -86,6 +86,9 @@ describe("production note access hotfix", () => {
       "allowEncryptionTransitions={!legacyContainment}",
     );
     expect(source("src/pages/CutoverNotePage.tsx")).toContain("isLegacyRoSearch");
+    expect(source("src/pages/CutoverNotePage.tsx")).not.toMatch(
+      /isLegacyRoSearch\(location\.search\)\s*\|\|\s*!capabilityAccess/,
+    );
     expect(source("src/pages/SharePage.tsx")).not.toContain("NoteSecurityPanel");
 
     const client = source("src/lib/capability/client.ts");
@@ -257,7 +260,9 @@ describe("production note access hotfix", () => {
 
     expect(cutover).toContain('"legacy-note-open"');
     expect(cutover).toContain("legacy-note-open");
-    expect(notePage).not.toContain("@/lib/legacy/cutover");
+    expectValueImportBehindRoutesGuard(notePage, "@/lib/legacy/cutover");
+    expectValueImportBehindRoutesGuard(notePage, "@/lib/legacy/convert-on-write");
+    expectValueImportBehindRoutesGuard(notePage, "@/lib/yjs/local-convert-provider");
     expectValueImportBehindRoutesGuard(notePage, "./CutoverNotePage");
     expectValueImportBehindRoutesGuard(cutoverNotePage, "./LegacyNotePage");
     expectValueImportBehindRoutesGuard(cutoverNotePage, "./NotePage");
@@ -368,6 +373,10 @@ describe("production note access hotfix", () => {
     expect(legacyNotePage).toContain("createCapabilityApi");
     expect(legacyNotePage).toContain("duplicateLegacyNote");
     expect(client).toContain('action: "import-legacy"');
+    expect(client).toContain('action: "convert-legacy"');
+    expect(cutover).not.toContain("convertLegacyNote");
+    expect(legacyNotePage).not.toContain("convertLegacyNote");
+    expect(source("src/lib/legacy/convert-on-write.ts")).toContain("convertLegacyNote");
     expect(client).toContain("Authorization");
     expect(envExample).not.toMatch(/VITE_.*SERVICE/i);
     expect(envExample).not.toMatch(/VITE_.*SECRET/i);

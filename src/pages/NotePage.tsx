@@ -38,6 +38,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/i18n";
 import { deriveKey, encryptBytes, decryptBytes, verifyCheck, iterationsFor } from "@/lib/crypto";
 import { acquireDoc, releaseDoc } from "@/lib/yjs/doc-cache";
+import type { LegacyNote } from "@/lib/legacy/cutover";
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
 import { isExtensionContext } from "@/lib/ext-context";
@@ -98,8 +99,18 @@ type CapabilityRuntime = {
   CapabilityYjsProvider: CapabilityYjsProviderCtor;
 };
 
+type PlainRuntime = {
+  createLegacyNoteApi: (typeof import("@/lib/legacy/cutover"))["createLegacyNoteApi"];
+  mapDuplicateFailure: (typeof import("@/lib/legacy/cutover"))["mapDuplicateFailure"];
+  convertPlainNoteOnWrite: (typeof import("@/lib/legacy/convert-on-write"))["convertPlainNoteOnWrite"];
+  consumeConvertSeed: (typeof import("@/lib/legacy/convert-on-write"))["consumeConvertSeed"];
+  LocalConvertProvider: typeof import("@/lib/yjs/local-convert-provider").LocalConvertProvider;
+};
+
 let capabilityRuntime: CapabilityRuntime | undefined;
 let capabilityRuntimePromise: Promise<CapabilityRuntime> | undefined;
+let plainRuntime: PlainRuntime | undefined;
+let plainRuntimePromise: Promise<PlainRuntime> | undefined;
 
 const loadCapabilityRuntime = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
   ? () => {
@@ -118,6 +129,29 @@ const loadCapabilityRuntime = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED ===
     }
   : async (): Promise<CapabilityRuntime> => {
       throw new Error("capability API unavailable");
+    };
+
+const loadPlainRuntime = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
+  ? () => {
+      plainRuntimePromise ??= Promise.all([
+        import("@/lib/legacy/cutover"),
+        import("@/lib/legacy/convert-on-write"),
+        import("@/lib/yjs/local-convert-provider"),
+      ]).then(([cutover, convert, local]) => {
+        const runtime: PlainRuntime = {
+          createLegacyNoteApi: cutover.createLegacyNoteApi,
+          mapDuplicateFailure: cutover.mapDuplicateFailure,
+          convertPlainNoteOnWrite: convert.convertPlainNoteOnWrite,
+          consumeConvertSeed: convert.consumeConvertSeed,
+          LocalConvertProvider: local.LocalConvertProvider,
+        };
+        plainRuntime = runtime;
+        return runtime;
+      });
+      return plainRuntimePromise;
+    }
+  : async (): Promise<PlainRuntime> => {
+      throw new Error("plain convert runtime unavailable");
     };
 
 const LazyCutoverNotePage = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
@@ -258,6 +292,12 @@ export default function NotePage({
     && capabilityAdmission.access.slug === capabilityAccess.slug
     ? capabilityAdmission
     : null;
+  const legacySourceRef = useRef<LegacyNote | null>(null);
+  const [plainProviderCtor, setPlainProviderCtor] = useState<PlainRuntime["LocalConvertProvider"] | null>(null);
+  const [convertBusy, setConvertBusy] = useState(false);
+  const [convertError, setConvertError] = useState<"network" | "permission" | "retry" | null>(null);
+  const convertBusyRef = useRef(false);
+  const persistPlainRef = useRef<() => void>(() => {});
 
   // Bumped by the hashchange listener (lock/unlock) and by Retry on the
   // enc-meta error gate so the meta-fetch effect re-runs.
@@ -278,6 +318,44 @@ export default function NotePage({
   const doc = resourcesAreCurrent ? resources.doc : null;
   const provider = resourcesAreCurrent ? resources.provider : null;
   const [writeFenced, setWriteFenced] = useState(false);
+
+  const runConvert = useCallback(async () => {
+    if (!doc || convertBusyRef.current || capabilityAccess) return;
+    convertBusyRef.current = true;
+    setConvertBusy(true);
+    setConvertError(null);
+    try {
+      const runtime = capabilityRuntime ?? await loadCapabilityRuntime();
+      const plain = plainRuntime ?? await loadPlainRuntime();
+      const path = await plain.convertPlainNoteOnWrite({
+        slug,
+        doc,
+        source: legacySourceRef.current,
+        api: runtime.createCapabilityApi(),
+        encryption,
+        encryptionSecret: readEncryptionSecret(window.location.hash),
+      });
+      navigate(path, { replace: true });
+      toast({
+        title: tRef.current("security.convert_success"),
+      });
+    } catch (error) {
+      const kind = (plainRuntime ?? await loadPlainRuntime()).mapDuplicateFailure(error);
+      const feedback = kind === "permission" || kind === "network" ? kind : "retry";
+      setConvertError(feedback);
+      if (provider && "emitConvertError" in provider) {
+        (provider as { emitConvertError: (message: string) => void }).emitConvertError(feedback);
+      }
+      toast({
+        title: tRef.current("security.convert_fail"),
+        variant: "destructive",
+      });
+    } finally {
+      convertBusyRef.current = false;
+      setConvertBusy(false);
+    }
+  }, [capabilityAccess, doc, encryption, navigate, provider, slug]);
+  persistPlainRef.current = () => { void runConvert(); };
 
   useEffect(() => {
     setWriteFenced(false);
@@ -311,11 +389,19 @@ export default function NotePage({
       || encPhase !== "ready"
       || !encTargetIsCurrent
       || (capabilityAccess && !admittedCapability)
+      || (
+        !capabilityAccess
+        && !legacyOnly
+        && !plainProviderCtor
+        && import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
+      )
     ) return;
     const docCacheKey = admittedCapability
       ? `capability:${admittedCapability.session.noteId}:${admittedCapability.session.scope}:${admittedCapability.session.generation}`
       : slug;
     const ownedDoc = acquireDoc(docCacheKey);
+    const seed = plainRuntime?.consumeConvertSeed(slug);
+    if (seed) Y.applyUpdate(ownedDoc, seed);
     const CapabilityYjsProvider = admittedCapability?.YjsProvider;
     const ownedProvider: YjsProviderLike = admittedCapability && CapabilityYjsProvider
       ? new CapabilityYjsProvider(
@@ -324,7 +410,9 @@ export default function NotePage({
           ownedDoc,
           { pollingOnly: true },
         )
-      : new SupabaseYjsProvider(slug, ownedDoc);
+      : plainProviderCtor && !legacyOnly
+        ? new plainProviderCtor(slug, ownedDoc, () => persistPlainRef.current())
+        : new SupabaseYjsProvider(slug, ownedDoc);
     setResources({
       slug,
       metaVersion,
@@ -346,6 +434,8 @@ export default function NotePage({
     capabilityAccess,
     capabilityToken,
     admittedCapability,
+    legacyOnly,
+    plainProviderCtor,
   ]);
 
   useLayoutEffect(() => {
@@ -424,8 +514,36 @@ export default function NotePage({
             ydoc_state: null,
           };
           rowExists = true;
+        } else if (!legacyOnly && import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true") {
+          setCapabilityAdmission(null);
+          const runtime = plainRuntime ?? await loadPlainRuntime();
+          if (!isCurrentRequest()) return;
+          setPlainProviderCtor(() => runtime.LocalConvertProvider);
+          const note = await runtime.createLegacyNoteApi().open(slug);
+          if (!isCurrentRequest()) return;
+          legacySourceRef.current = note;
+          if (!note) {
+            data = {
+              is_encrypted: false,
+              enc_salt: null,
+              enc_check: null,
+              enc_iterations: null,
+              ydoc_state: null,
+            };
+            rowExists = false;
+          } else {
+            data = {
+              is_encrypted: note.isEncrypted,
+              enc_salt: note.salt,
+              enc_check: note.check,
+              enc_iterations: note.iterations,
+              ydoc_state: note.ydocState,
+            };
+            rowExists = true;
+          }
         } else {
           setCapabilityAdmission(null);
+          legacySourceRef.current = null;
           const response = await supabase
             .from("notes")
             .select("is_encrypted, enc_salt, enc_check, enc_iterations, ydoc_state")
@@ -517,6 +635,7 @@ export default function NotePage({
     metaVersion,
     capabilityAccess,
     capabilityToken,
+    legacyOnly,
     routerTarget,
   ]);
 
@@ -644,7 +763,7 @@ export default function NotePage({
 
     // y-indexeddb stores Yjs structs as plaintext. Capability outbox replaces
     // it for secure notes, and encrypted legacy notes must not mount it.
-    const idb = !capabilityAccess && !encMeta.isEncrypted
+    const idb = !capabilityAccess && !encMeta.isEncrypted && !plainProviderCtor
       ? new IndexeddbPersistence(`note:${slug}`, doc)
       : null;
     // Knowledge index: live Y.Text after this gate only. Never scan y-indexeddb
@@ -778,7 +897,7 @@ export default function NotePage({
       unsubSync();
       idb?.destroy();
     };
-  }, [slug, validSlug, doc, provider, embedSlug, encPhase, encTargetIsCurrent, encryption, encMeta.isEncrypted, encMeta.ydocState, encMeta.rowExists, capabilityAccess, capabilityToken]);
+  }, [slug, validSlug, doc, provider, embedSlug, encPhase, encTargetIsCurrent, encryption, encMeta.isEncrypted, encMeta.ydocState, encMeta.rowExists, capabilityAccess, capabilityToken, plainProviderCtor]);
 
   if (!validSlug) return <Navigate to="/" replace />;
 
@@ -873,6 +992,22 @@ export default function NotePage({
       legacyEncryptionSecret ? `#${encodeURIComponent(legacyEncryptionSecret)}` : ""
     }`
     : undefined;
+  const convertChrome = (convertBusy || convertError) ? (
+    <div
+      className="flex min-h-11 flex-wrap items-center gap-2 border-b bg-muted px-3 py-2 text-sm text-foreground"
+      role={convertError ? "alert" : "status"}
+      aria-busy={convertBusy || undefined}
+    >
+      <p className="flex-1">
+        {convertBusy ? t("security.convert_busy") : t("security.convert_fail")}
+      </p>
+      {convertError && (
+        <Button type="button" size="lg" className="min-h-11 min-w-11 px-4" onClick={() => void runConvert()}>
+          {t("security.convert_retry")}
+        </Button>
+      )}
+    </div>
+  ) : null;
 
   if (embedSlug) {
     return (
@@ -905,6 +1040,7 @@ export default function NotePage({
           compact
           narrowOverride={narrow}
         />
+        {convertChrome}
         <div
           className={
             narrow
@@ -988,6 +1124,7 @@ export default function NotePage({
         onToggleOutline={() => setOutlineOpen((open) => !open)}
         outlineTriggerRef={outlineTriggerRef}
       />
+      {convertChrome}
 
       <div className="flex min-h-0 flex-1">
         <OutlineSidebar

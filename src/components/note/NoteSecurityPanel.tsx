@@ -95,11 +95,6 @@ export function NoteSecurityPanel({
   const showEncrypt = !!doc && !ownerOnly && !legacyOn && (canaryOn || allowEncryptionTransitions);
   const busy = loading;
   const isSplit = location.pathname.includes("+");
-  const hasCapabilityFragment = Boolean(capabilityAccess) || (() => {
-    const params = new URLSearchParams(location.hash.startsWith("#") ? location.hash.slice(1) : location.hash);
-    return params.has("owner") || params.has("edit");
-  })();
-  const legacyLockedOn = legacyOn && !hasCapabilityFragment;
 
   const applyLegacy = (enabled: boolean) => {
     navigate(
@@ -111,7 +106,7 @@ export function NoteSecurityPanel({
   const requestLegacy = (next: boolean) => {
     if (busy || ownerOnly || !showLegacy) return;
     if (!next) {
-      if (legacyLockedOn || isSplit) return;
+      if (isSplit) return;
       applyLegacy(false);
       return;
     }
@@ -210,7 +205,7 @@ export function NoteSecurityPanel({
               <p className="text-[11px] text-muted-foreground">
                 {isSplit && !legacyOn
                   ? t("security.legacy_helper_split")
-                  : legacyLockedOn || isSplit
+                  : isSplit
                     ? t("security.legacy_helper_on_plain")
                     : legacyOn
                       ? t("security.legacy_helper_on")
@@ -219,7 +214,7 @@ export function NoteSecurityPanel({
             </div>
             <SecuritySwitch
               checked={legacyOn}
-              disabled={busy || isSplit || legacyLockedOn}
+              disabled={busy || isSplit}
               labelledBy="security-legacy-label"
               onCheckedChange={requestLegacy}
             />

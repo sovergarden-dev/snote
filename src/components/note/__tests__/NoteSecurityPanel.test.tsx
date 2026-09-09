@@ -206,15 +206,15 @@ describe("NoteSecurityPanel", () => {
     expect(within(dialog).queryByText("security.legacy_confirm_body")).not.toBeInTheDocument();
   });
 
-  it("keeps plain ?legacyRo=1 RO on and does not reopen the table editor", async () => {
+  it("clears ?legacyRo=1 back to W1 editable when Legacy is turned off", async () => {
     renderPanel({ path: "/daily?legacyRo=1", legacyOn: true });
     await openPanel();
-    expect(screen.getByText("security.legacy_helper_on_plain")).toBeInTheDocument();
+    expect(screen.getByText("security.legacy_helper_on")).toBeInTheDocument();
     const sw = screen.getByRole("switch", { name: "security.legacy_label" });
-    expect(sw).toBeDisabled();
+    expect(sw).not.toBeDisabled();
     await userEvent.click(sw);
-    expect(screen.queryByRole("dialog", { name: "security.legacy_confirm_title" })).not.toBeInTheDocument();
-    expect(screen.getByTestId("loc")).toHaveTextContent("/daily?legacyRo=1");
+    expect(screen.getByTestId("loc")).toHaveTextContent("/daily");
+    expect(screen.getByTestId("loc")).not.toHaveTextContent("legacyRo");
   });
 
   it("disables switches and shows Loading… while busy", async () => {
@@ -241,15 +241,15 @@ describe("NoteSecurityPanel", () => {
     await openPanel();
     expect(screen.queryByText("security.encrypt_label")).not.toBeInTheDocument();
     expect(screen.queryByText("encrypt-control")).not.toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "security.legacy_label" })).toBeDisabled();
-    expect(screen.getByText("security.legacy_helper_on_plain")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "security.legacy_label" })).not.toBeDisabled();
+    expect(screen.getByText("security.legacy_helper_on")).toBeInTheDocument();
   });
 
-  it("does not turn Legacy off on plain RO (no Choice A table path)", async () => {
-    renderPanel({ path: "/daily", legacyOn: true, allowEncryptionTransitions: false });
+  it("turns Legacy off on plain RO back to W1 editable", async () => {
+    renderPanel({ path: "/daily?legacyRo=1", legacyOn: true, allowEncryptionTransitions: false });
     await openPanel();
     const sw = screen.getByRole("switch", { name: "security.legacy_label" });
-    expect(sw).toBeDisabled();
+    expect(sw).not.toBeDisabled();
     await userEvent.click(sw);
     expect(screen.getByTestId("loc")).toHaveTextContent("/daily");
     expect(screen.getByTestId("loc")).not.toHaveTextContent("legacyRo");
@@ -324,6 +324,16 @@ describe("NoteSecurityPanel", () => {
     const row = screen.getByTestId("security-legacy-row");
     expect(row.className).toMatch(/min-h-11/);
     expect(screen.getByRole("switch", { name: "security.legacy_label" }).className).toMatch(/h-11/);
+  });
+
+  it("hides Duplicate securely on default plain editable", async () => {
+    renderPanel({
+      path: "/daily",
+      onDuplicateSecurely: () => {},
+    });
+    await openPanel();
+    expect(screen.queryByText("security.duplicate_label")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "security.duplicate_label" })).not.toBeInTheDocument();
   });
 
   it("hides Duplicate securely on the editable capability path", async () => {

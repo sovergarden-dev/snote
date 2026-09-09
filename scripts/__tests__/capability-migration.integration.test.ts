@@ -36,6 +36,7 @@ const capabilityMigrationPaths = [
   "supabase/migrations/20260723000000_capability_checkpoint_compaction.sql",
   "supabase/migrations/20260724000000_atomic_capability_cutover.sql",
   "supabase/migrations/20260727000000_capability_sync_conflict_codes.sql",
+  "supabase/migrations/20260908000000_capability_note_convert_legacy.sql",
 ] as const;
 
 async function applyCapabilityMigrations(
@@ -948,6 +949,116 @@ it("executes capability isolation, sync, management, and Realtime RLS in Postgre
     `);
     expect(importedRows.rows[0]).toEqual({ notes: 1, capabilities: 3, checkpoints: 1 });
 
+    await db.exec(readFileSync(
+      resolve(process.cwd(), capabilityMigrationPaths[4]),
+      "utf8",
+    ));
+
+    const legacyRowId = (await db.query<{ note_id: string }>(
+      "SELECT note_id::text FROM public.notes WHERE slug = 'legacy-row'",
+    )).rows[0].note_id;
+    const notesBeforeConvert = (await db.query<{ count: number }>(
+      "SELECT count(*)::integer AS count FROM public.notes",
+    )).rows[0].count;
+    const convertBytes = Buffer.alloc(60, 29);
+    const convertOwner = hash([201]);
+    const convertEdit = hash([202]);
+    const convertView = hash([203]);
+    const convertConflictOwner = hash([204]);
+    const convertArgs = [
+      "legacy-row",
+      convertOwner,
+      convertEdit,
+      convertView,
+      createHash("sha256").update(convertBytes).digest("hex"),
+      convertBytes.toString("base64url"),
+      false,
+      null,
+      null,
+      null,
+    ] as const;
+    const convertRpcTypes = ["", "", "", "", "", "", "", "", "", "::integer"];
+
+    await db.exec("SET ROLE service_role");
+    const converted = await rpc(db, "capability_note_convert_legacy", [
+      ...convertArgs,
+    ], convertRpcTypes);
+    expect(converted).toMatchObject({
+      status: "ok",
+      recovered: false,
+      noteId: legacyRowId,
+      session: {
+        slug: "legacy-row",
+        scope: "owner",
+        checkpointPayload: convertBytes.toString("base64url"),
+      },
+    });
+    const recoveredConvert = await rpc(db, "capability_note_convert_legacy", [
+      ...convertArgs,
+    ], convertRpcTypes);
+    expect(recoveredConvert).toMatchObject({
+      status: "ok",
+      recovered: true,
+      noteId: legacyRowId,
+    });
+    expect((await rpc(db, "capability_note_convert_legacy", [
+      "legacy-row",
+      convertConflictOwner,
+      convertEdit,
+      convertView,
+      createHash("sha256").update(convertBytes).digest("hex"),
+      convertBytes.toString("base64url"),
+      false,
+      null,
+      null,
+      null,
+    ], convertRpcTypes)).status).toBe("slug_unavailable");
+    expect((await rpc(db, "capability_note_convert_legacy", [
+      "no-such-legacy-slug",
+      convertOwner,
+      convertEdit,
+      convertView,
+      createHash("sha256").update(convertBytes).digest("hex"),
+      convertBytes.toString("base64url"),
+      false,
+      null,
+      null,
+      null,
+    ], convertRpcTypes)).status).toBe("not_found");
+    await db.exec("RESET ROLE");
+
+    const convertedNote = (await db.query<{
+      note_id: string;
+      capability_managed: boolean;
+      sync_status: string;
+      content: string;
+      ydoc_state: string;
+    }>(
+      `SELECT note_id::text, capability_managed, sync_status::text, content, ydoc_state
+       FROM public.notes WHERE slug = 'legacy-row'`,
+    )).rows[0];
+    expect(convertedNote.note_id).toBe(legacyRowId);
+    expect(convertedNote.capability_managed).toBe(true);
+    expect(convertedNote.sync_status).toBe("active");
+    expect(convertedNote.content).toBe("");
+    expect(convertedNote.ydoc_state).toBe("");
+    expect((await db.query<{ count: number }>(
+      "SELECT count(*)::integer AS count FROM public.notes",
+    )).rows[0].count).toBe(notesBeforeConvert);
+    expect((await db.query<{ capabilities: number; checkpoints: number }>(`
+      SELECT
+        (SELECT count(*)::integer FROM public.note_capabilities
+          WHERE note_id = $1::uuid) AS capabilities,
+        (SELECT count(*)::integer FROM public.note_checkpoints
+          WHERE note_id = $1::uuid) AS checkpoints
+    `, [legacyRowId])).rows[0]).toEqual({ capabilities: 3, checkpoints: 1 });
+
+    await db.exec("SET ROLE anon");
+    await expect(rpc(db, "capability_note_convert_legacy", [
+      ...convertArgs,
+    ], convertRpcTypes)).rejects.toMatchObject({ code: "42501" });
+    await db.exec("RESET ROLE");
+
     await setRealtimeIdentity(db, ownerAuthId, imported.session!.noteId);
     await db.exec("SET ROLE service_role");
     await rpc<RuntimeState>(db, "capability_runtime_set", [false, false]);
@@ -1043,6 +1154,19 @@ it("executes capability isolation, sync, management, and Realtime RLS in Postgre
       tokenHash("6"),
       hash([99]),
       importBytes.toString("base64url"),
+      false,
+      null,
+      null,
+      null,
+    ], ["", "", "", "", "", "", "", "", "", "::integer"])).status)
+      .toBe("writes_disabled");
+    expect((await rpc(db, "capability_note_convert_legacy", [
+      "disabled-convert",
+      convertOwner,
+      convertEdit,
+      convertView,
+      createHash("sha256").update(convertBytes).digest("hex"),
+      convertBytes.toString("base64url"),
       false,
       null,
       null,

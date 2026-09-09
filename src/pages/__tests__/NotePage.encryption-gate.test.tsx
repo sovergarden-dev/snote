@@ -1,6 +1,6 @@
-import { act, fireEvent, render, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Suspense, type ReactNode } from "react";
-import { BrowserRouter, MemoryRouter, Route, Routes, useNavigate } from "react-router";
+import { BrowserRouter, MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import NotePage from "../NotePage";
@@ -35,10 +35,16 @@ const harness = vi.hoisted(() => ({
   topbarProps: vi.fn(),
   capabilityOpenSession: vi.fn(),
   metaForSlug: vi.fn(),
+  notesFrom: vi.fn(),
   deriveKey: vi.fn(),
   verifyCheck: vi.fn(),
   decryptBytes: vi.fn(),
   shareInvoke: vi.fn(),
+  toast: vi.fn(),
+  persistPlain: null as null | (() => void),
+  convertPlainNoteOnWrite: vi.fn<(...args: unknown[]) => Promise<string>>(async () => {
+    throw new Error("convert-on-write is mocked in this harness");
+  }),
   translate: (key: string) => key,
   metaPromise: Promise.resolve({ data: null as Record<string, unknown> | null }),
 }));
@@ -103,11 +109,14 @@ vi.mock("@/integrations/supabase/client", () => ({
     functions: {
       invoke: (...args: unknown[]) => harness.shareInvoke(...args),
     },
-    from: () => ({
-      select: () => ({
-        eq: (_column: string, slug: string) => ({ maybeSingle: () => harness.metaForSlug(slug) }),
-      }),
-    }),
+    from: (table: string) => {
+      harness.notesFrom(table);
+      return {
+        select: () => ({
+          eq: (_column: string, slug: string) => ({ maybeSingle: () => harness.metaForSlug(slug) }),
+        }),
+      };
+    },
   },
 }));
 vi.mock("@/lib/capability/client", () => ({
@@ -186,8 +195,67 @@ vi.mock("@/lib/yjs/capability-provider", () => ({
     }
   },
 }));
+vi.mock("@/lib/yjs/local-convert-provider", () => ({
+  LocalConvertProvider: class {
+    awareness = {};
+    private destroyed = false;
+
+    constructor(
+      private readonly slug: string,
+      _doc: unknown,
+      onFirstPersist: () => void,
+    ) {
+      harness.providerConstruct(slug);
+      harness.persistPlain = onFirstPersist;
+    }
+
+    setEncryption() {}
+    setExpectedEncrypted() {}
+    onAwareness() { return vi.fn(); }
+    onSyncEvent() { return vi.fn(); }
+    connect() {
+      if (this.destroyed) return Promise.resolve();
+      harness.providerConnect(this.slug);
+      return Promise.resolve();
+    }
+    flushBeacon() {}
+    destroy() {
+      this.destroyed = true;
+      harness.providerDestroy(this.slug);
+      return Promise.resolve();
+    }
+  },
+}));
+vi.mock("@/lib/legacy/cutover", () => ({
+  createLegacyNoteApi: () => ({
+    open: async (slug: string) => {
+      const result = await harness.metaForSlug(slug);
+      if (result && typeof result === "object" && "error" in result && (result as { error?: unknown }).error) {
+        throw (result as { error: unknown }).error;
+      }
+      const data = (result as { data?: Record<string, unknown> | null } | null)?.data;
+      if (!data) {
+        return null;
+      }
+      return {
+        slug,
+        content: typeof data.content === "string" ? data.content : "",
+        ydocState: typeof data.ydoc_state === "string" ? data.ydoc_state : "",
+        isEncrypted: Boolean(data.is_encrypted),
+        salt: typeof data.enc_salt === "string" ? data.enc_salt : null,
+        check: typeof data.enc_check === "string" ? data.enc_check : null,
+        iterations: typeof data.enc_iterations === "number" ? data.enc_iterations : null,
+      };
+    },
+  }),
+  mapDuplicateFailure: () => "retry",
+}));
+vi.mock("@/lib/legacy/convert-on-write", () => ({
+  convertPlainNoteOnWrite: (...args: unknown[]) => harness.convertPlainNoteOnWrite(...args),
+  consumeConvertSeed: () => null,
+}));
 vi.mock("@/hooks/use-word-goal", () => ({ useWordGoal: () => ({ goal: null }), consumeGoalReached: () => false }));
-vi.mock("@/hooks/use-toast", () => ({ toast: vi.fn() }));
+vi.mock("@/hooks/use-toast", () => ({ toast: (...args: unknown[]) => harness.toast(...args) }));
 vi.mock("@/hooks/use-zen-mode", () => ({ useZenMode: () => ({ zen: false, toggle: vi.fn() }) }));
 vi.mock("@/hooks/use-typewriter-mode", () => ({ useTypewriterMode: () => ({ typewriter: false, toggle: vi.fn() }) }));
 vi.mock("@/hooks/use-preview-visible", () => ({ usePreviewVisible: () => ({ visible: true, setVisible: vi.fn() }) }));
@@ -423,10 +491,17 @@ describe("NotePage encryption gate", () => {
     harness.capabilityOpenSession.mockResolvedValue(null);
     harness.metaForSlug.mockReset();
     harness.metaForSlug.mockImplementation(() => harness.metaPromise);
+    harness.notesFrom.mockReset();
     harness.deriveKey.mockReset();
     harness.verifyCheck.mockReset();
     harness.decryptBytes.mockReset();
     harness.shareInvoke.mockReset();
+    harness.toast.mockReset();
+    harness.persistPlain = null;
+    harness.convertPlainNoteOnWrite.mockReset();
+    harness.convertPlainNoteOnWrite.mockImplementation(async () => {
+      throw new Error("convert-on-write is mocked in this harness");
+    });
     harness.translate = (key: string) => key;
     localStorage.clear();
     window.history.replaceState(null, "", window.location.pathname);
@@ -447,6 +522,7 @@ describe("NotePage encryption gate", () => {
     );
 
     await waitFor(() => expect(harness.metaForSlug).toHaveBeenCalledWith("secret"));
+    expect(harness.notesFrom).toHaveBeenCalledWith("notes");
     expect(harness.capabilityOpenSession).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(harness.topbarProps).toHaveBeenLastCalledWith(
@@ -456,6 +532,7 @@ describe("NotePage encryption gate", () => {
         }),
       ),
     );
+    await waitFor(() => expect(harness.idbConstruct).toHaveBeenCalledWith("note:secret"));
   });
 
   it("disables encryption transitions in the embedded legacy-only workspace", async () => {
@@ -765,7 +842,8 @@ describe("NotePage encryption gate", () => {
     await waitFor(() => expect(view.getByTestId("editor")).toBeInTheDocument());
     expect(harness.docAcquire).toHaveBeenCalledWith("secret");
     expect(harness.providerConstruct).toHaveBeenCalledWith("secret");
-    expect(harness.idbConstruct).toHaveBeenCalledWith("note:secret");
+    expect(harness.idbConstruct).not.toHaveBeenCalled();
+    expect(harness.notesFrom).not.toHaveBeenCalled();
     await waitFor(() => expect(harness.upsertPlaintextNote).toHaveBeenCalled());
     expect(
       harness.upsertPlaintextNote.mock.calls.every(
@@ -780,6 +858,56 @@ describe("NotePage encryption gate", () => {
           currentShareUrl: `${window.location.origin}/secret`,
         }),
       ),
+    );
+  });
+
+  it.each([
+    ["existing LNO source", {
+      data: {
+        is_encrypted: false,
+        content: "keep me",
+        ydoc_state: "",
+        enc_salt: null,
+        enc_check: null,
+        enc_iterations: null,
+      },
+      error: null,
+    }],
+    ["empty new note", { data: null, error: null }],
+  ])("toasts convert_success after %s soft-replaces #owner=", async (_label, meta) => {
+    harness.metaForSlug.mockResolvedValue(meta);
+    const owner = "c".repeat(43);
+    harness.convertPlainNoteOnWrite.mockResolvedValue(`/secret#owner=${owner}`);
+    harness.capabilityOpenSession.mockResolvedValue(pollingSession());
+
+    function ConvertLocationProbe() {
+      const loc = useLocation();
+      return <div data-testid="loc">{`${loc.pathname}${loc.hash}`}</div>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <Routes>
+          <Route path="/:slug" element={<><ConvertLocationProbe /><NotePage /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(harness.persistPlain).toEqual(expect.any(Function)));
+    expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
+    expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
+
+    await act(async () => {
+      harness.persistPlain?.();
+    });
+
+    await waitFor(() => {
+      expect(harness.toast).toHaveBeenCalledWith({ title: "security.convert_success" });
+    });
+    expect(harness.convertPlainNoteOnWrite).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("loc")).toHaveTextContent(`/secret#owner=${owner}`);
+    expect(harness.toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "security.convert_fail" }),
     );
   });
 

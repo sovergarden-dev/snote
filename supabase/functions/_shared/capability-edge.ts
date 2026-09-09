@@ -82,6 +82,21 @@ type CapabilityDatabase = {
         };
         Returns: CapabilityRpcResponse;
       };
+      capability_note_convert_legacy: {
+        Args: {
+          p_slug: string;
+          p_owner_token_hash: string;
+          p_edit_token_hash: string;
+          p_view_token_hash: string;
+          p_checkpoint_id: string;
+          p_payload_text: string;
+          p_is_encrypted: boolean;
+          p_salt: string | null;
+          p_check: string | null;
+          p_iterations: number | null;
+        };
+        Returns: CapabilityRpcResponse;
+      };
       capability_admission_consume: {
         Args: {
           p_operation: "create" | "sync" | "membership";
@@ -379,6 +394,7 @@ export function capabilityFailure(status: string): Response {
     || status === "checkpoint_version_conflict"
   ) return capabilityJson(body("version conflict"), 409);
   if (status === "slug_unavailable") return capabilityJson(body("slug unavailable"), 409);
+  if (status === "not_found") return capabilityJson(body("not found"), 404);
   if (status === "quota_exceeded") {
     // Storage/update quota transitions the note to read-only quarantine. It is
     // not an admission window, so raw clients must not treat it as retryable.
