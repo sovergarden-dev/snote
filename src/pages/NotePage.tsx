@@ -49,6 +49,14 @@ import {
   markNoteEncrypted,
   clearNoteEncryptionPin,
 } from "@/lib/encryption-pin";
+import {
+  LEGACY_SECURE_PIN_CHANGE_EVENT,
+  clearLegacySecurePin,
+  clearPlainNoteIndexedDb,
+  hasLegacySecurePin,
+  legacySecurePinKey,
+  markLegacySecurePin,
+} from "@/lib/legacy/legacy-secure-pin";
 
 const SLUG_RE = /^[a-zA-Z0-9_-]{1,64}$/;
 const SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000;
@@ -346,6 +354,8 @@ export default function NotePage({
         currentEncTargetRef.current.slug !== startedSlug
         || currentEncTargetRef.current.metaVersion !== startedMeta
       ) return;
+      markLegacySecurePin(startedSlug);
+      clearPlainNoteIndexedDb(startedSlug);
       navigate(path, { replace: true });
       toast({
         title: tRef.current("security.legacy_secure_success_on"),
@@ -401,6 +411,7 @@ export default function NotePage({
         currentEncTargetRef.current.slug !== startedSlug
         || currentEncTargetRef.current.metaVersion !== startedMeta
       ) return;
+      clearLegacySecurePin(startedSlug);
       clearNoteEncryptionPin(startedSlug);
       navigate(`/${startedSlug}`, { replace: true });
       toast({
@@ -465,7 +476,7 @@ export default function NotePage({
       || encPhase !== "ready"
       || !encTargetIsCurrent
       || (capabilityAccess && !admittedCapability)
-      || convertError === "converted"
+      || (convertError === "converted" && !capabilityAccess)
       || (
         !capabilityAccess
         && !legacyOnly
@@ -496,6 +507,7 @@ export default function NotePage({
               return runtime.createCapabilityApi().upsertPlainNote(body, keepalive);
             },
             () => {
+              markLegacySecurePin(slug);
               convertErrorRef.current = "converted";
               setConvertError("converted");
             },
@@ -590,6 +602,8 @@ export default function NotePage({
           ) {
             throw new Error("capability session unavailable");
           }
+          convertErrorRef.current = null;
+          setConvertError(null);
           setCapabilityAdmission({
             access: capabilityAccess,
             session,
@@ -606,6 +620,14 @@ export default function NotePage({
         } else if (!legacyOnly && import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true") {
           setCapabilityAdmission(null);
           setPlainProviderCtor(null);
+          if (hasLegacySecurePin(slug)) {
+            convertErrorRef.current = "converted";
+            setConvertError("converted");
+            setEncryption(null);
+            setEncPhase("ready");
+            setResolvedEncTarget(requestTarget);
+            return;
+          }
           const runtime = plainRuntime ?? await loadPlainRuntime();
           if (!isCurrentRequest()) return;
           const note = await runtime.createLegacyNoteApi().open(slug);
@@ -714,6 +736,7 @@ export default function NotePage({
             try {
               const plain = plainRuntime ?? await loadPlainRuntime();
               if (plain.mapDuplicateFailure(error) === "converted") {
+                markLegacySecurePin(slug);
                 convertErrorRef.current = "converted";
                 setConvertError("converted");
                 setPlainProviderCtor(null);
@@ -744,6 +767,47 @@ export default function NotePage({
     legacyOnly,
     routerTarget,
   ]);
+
+  // A sibling tab (native storage event) or this tab's Legacy ON (custom event)
+  // can pin the slug while a bare free-edit workspace is live. Close it to the
+  // need-owner banner instead of keeping IndexedDB «Synced» with no durable write.
+  useEffect(() => {
+    if (!validSlug || capabilityAccess) return;
+
+    const applyLegacySecurePin = () => {
+      if (hasLegacySecurePin(slug)) {
+        convertErrorRef.current = "converted";
+        setConvertError("converted");
+        setPlainProviderCtor(null);
+        return;
+      }
+      if (convertErrorRef.current !== "converted") return;
+      convertErrorRef.current = null;
+      setConvertError(null);
+      setMetaVersion((n) => n + 1);
+    };
+    const onLegacySecureStorage = (event: StorageEvent) => {
+      if (event.key !== null && event.key !== legacySecurePinKey(slug)) return;
+      applyLegacySecurePin();
+    };
+    const onLegacySecureLocal = (event: Event) => {
+      const changedSlug = (event as CustomEvent<{ slug?: string }>).detail?.slug;
+      if (changedSlug !== slug) return;
+      applyLegacySecurePin();
+    };
+
+    window.addEventListener("storage", onLegacySecureStorage);
+    window.addEventListener(LEGACY_SECURE_PIN_CHANGE_EVENT, onLegacySecureLocal);
+    return () => {
+      window.removeEventListener("storage", onLegacySecureStorage);
+      window.removeEventListener(LEGACY_SECURE_PIN_CHANGE_EVENT, onLegacySecureLocal);
+    };
+  }, [slug, validSlug, capabilityAccess]);
+
+  useEffect(() => {
+    if (!validSlug || convertError !== "converted" || capabilityAccess) return;
+    clearPlainNoteIndexedDb(slug);
+  }, [slug, validSlug, convertError, capabilityAccess]);
 
   // A sibling tab (native storage event) or a same-tab lock/decrypt flow
   // (custom event) can change the durable pin while this provider is live.

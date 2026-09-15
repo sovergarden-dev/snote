@@ -10,6 +10,7 @@ import {
   getEncryptionPinState,
   markNoteEncrypted,
 } from "@/lib/encryption-pin";
+import { markLegacySecurePin } from "@/lib/legacy/legacy-secure-pin";
 import type {
   PollingNoteSession,
   PrivateRealtimeNoteSession,
@@ -135,20 +136,16 @@ vi.mock("@/lib/capability/client", () => ({
     disableSecureNote: (...args: unknown[]) => harness.disableSecureNote(...args),
   }),
 }));
-vi.mock("@/lib/yjs/doc-cache", () => ({
-  acquireDoc: (slug: string) => {
-    harness.docAcquire(slug);
-    return {
-      getText: () => ({
-        toString: () => "",
-        insert: vi.fn(),
-        observe: vi.fn(),
-        unobserve: vi.fn(),
-      }),
-    };
-  },
-  releaseDoc: (slug: string) => harness.docRelease(slug),
-}));
+vi.mock("@/lib/yjs/doc-cache", async () => {
+  const Y = await vi.importActual<typeof import("yjs")>("yjs");
+  return {
+    acquireDoc: (slug: string) => {
+      harness.docAcquire(slug);
+      return new Y.Doc();
+    },
+    releaseDoc: (slug: string) => harness.docRelease(slug),
+  };
+});
 vi.mock("@/lib/yjs/provider", () => ({
   SupabaseYjsProvider: class {
     awareness = {};
@@ -345,7 +342,10 @@ vi.mock("@/lib/crypto", () => ({
   verifyCheck: harness.verifyCheck,
   iterationsFor: () => 1,
 }));
-vi.mock("@/lib/yjs/base64", () => ({ base64ToBytes: () => new Uint8Array([1]) }));
+vi.mock("@/lib/yjs/base64", () => ({
+  base64ToBytes: () => new Uint8Array([1]),
+  bytesToBase64: () => "YQ",
+}));
 vi.mock("@/hooks/use-scene-theme", () => ({ useSceneTheme: () => ({ scene: "none" }) }));
 vi.mock("@/lib/recent-notes", () => ({ touchRecent: vi.fn() }));
 vi.mock("@/lib/snapshots", () => ({
@@ -580,6 +580,8 @@ describe("NotePage encryption gate", () => {
     harness.disableSecureNote.mockResolvedValue({ noteId: "n", recovered: false });
     harness.translate = (key: string) => key;
     localStorage.clear();
+    sessionStorage.clear();
+    vi.unstubAllGlobals();
     window.history.replaceState(null, "", window.location.pathname);
   });
 
@@ -957,6 +959,8 @@ describe("NotePage encryption gate", () => {
     const owner = "c".repeat(43);
     harness.convertPlainNoteOnWrite.mockResolvedValue(`/secret#owner=${owner}`);
     harness.capabilityOpenSession.mockResolvedValue(pollingSession());
+    const deleteDatabase = vi.fn();
+    vi.stubGlobal("indexedDB", { deleteDatabase });
 
     function ConvertLocationProbe() {
       const loc = useLocation();
@@ -1013,9 +1017,12 @@ describe("NotePage encryption gate", () => {
       }),
     );
     expect(screen.getByTestId("loc")).toHaveTextContent(`/secret#owner=${owner}`);
+    expect(localStorage.getItem("snote:legacy-secure:secret")).toBe("1");
+    expect(deleteDatabase).toHaveBeenCalledWith("note:secret");
     expect(harness.toast).not.toHaveBeenCalledWith(
       expect.objectContaining({ title: "security.legacy_secure_fail_on" }),
     );
+    vi.unstubAllGlobals();
   });
 
   it.each([
@@ -1056,6 +1063,7 @@ describe("NotePage encryption gate", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("security.legacy_secure_fail_on");
     expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
     expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
+    expect(localStorage.getItem("snote:legacy-secure:secret")).toBeNull();
     expect(harness.toast).not.toHaveBeenCalledWith(
       expect.objectContaining({ title: "security.legacy_secure_success_on" }),
     );
@@ -1103,6 +1111,193 @@ describe("NotePage encryption gate", () => {
       screen.getByRole("button", { name: "security.legacy_secure_reopen_cta" }).click();
     });
     await waitFor(() => expect(screen.getByText("home")).toBeInTheDocument());
+    expect(localStorage.getItem("snote:legacy-secure:secret")).toBe("1");
+  });
+
+  it("shows the reopen banner on bare /slug when Legacy ON pin is set even if LNO misses", async () => {
+    localStorage.setItem("snote:legacy-secure:secret", "1");
+    harness.metaForSlug.mockResolvedValue({ data: null, error: null });
+
+    function ConvertLocationProbe() {
+      const loc = useLocation();
+      return <div data-testid="loc">{`${loc.pathname}${loc.hash}`}</div>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <Routes>
+          <Route path="/" element={<div>home</div>} />
+          <Route path="/:slug" element={<><ConvertLocationProbe /><NotePage /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("security.legacy_secure_reopen_banner");
+    });
+    expect(screen.getByRole("button", { name: "security.legacy_secure_reopen_cta" })).toBeInTheDocument();
+    expect(screen.queryByTestId("editor")).not.toBeInTheDocument();
+    expect(harness.metaForSlug).not.toHaveBeenCalled();
+    expect(harness.providerConstruct).not.toHaveBeenCalled();
+    expect(harness.idbConstruct).not.toHaveBeenCalled();
+    expect(harness.convertPlainNoteOnWrite).not.toHaveBeenCalled();
+    expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
+    expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
+  });
+
+  it("closes a live bare free-edit workspace when Legacy ON pins in this tab", async () => {
+    harness.metaForSlug.mockResolvedValue({ data: null, error: null });
+    const deleteDatabase = vi.fn();
+    vi.stubGlobal("indexedDB", { deleteDatabase });
+
+    render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <Routes>
+          <Route path="/" element={<div>home</div>} />
+          <Route path="/:slug" element={<NotePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("editor")).toBeInTheDocument());
+    act(() => {
+      expect(markLegacySecurePin("secret")).toBe(true);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("security.legacy_secure_reopen_banner");
+    });
+    expect(screen.getByRole("button", { name: "security.legacy_secure_reopen_cta" })).toBeInTheDocument();
+    expect(screen.queryByTestId("editor")).not.toBeInTheDocument();
+    expect(harness.providerDestroy).toHaveBeenCalled();
+    await waitFor(() => expect(deleteDatabase).toHaveBeenCalledWith("note:secret"));
+    vi.unstubAllGlobals();
+  });
+
+  it("closes a live bare free-edit workspace when a sibling tab pins Legacy ON", async () => {
+    harness.metaForSlug.mockResolvedValue({ data: null, error: null });
+    const deleteDatabase = vi.fn();
+    vi.stubGlobal("indexedDB", { deleteDatabase });
+
+    render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <Routes>
+          <Route path="/" element={<div>home</div>} />
+          <Route path="/:slug" element={<NotePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("editor")).toBeInTheDocument());
+    act(() => {
+      localStorage.setItem("snote:legacy-secure:secret", "1");
+      window.dispatchEvent(new StorageEvent("storage", {
+        key: "snote:legacy-secure:secret",
+        newValue: "1",
+      }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("security.legacy_secure_reopen_banner");
+    });
+    expect(screen.queryByTestId("editor")).not.toBeInTheDocument();
+    expect(harness.providerDestroy).toHaveBeenCalled();
+    await waitFor(() => expect(deleteDatabase).toHaveBeenCalledWith("note:secret"));
+    vi.unstubAllGlobals();
+  });
+
+  it("returns a pinned bare RO banner to free-edit when a sibling tab turns Legacy OFF", async () => {
+    localStorage.setItem("snote:legacy-secure:secret", "1");
+    harness.metaForSlug.mockResolvedValue({ data: null, error: null });
+
+    render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <Routes>
+          <Route path="/:slug" element={<NotePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("security.legacy_secure_reopen_banner");
+    });
+
+    act(() => {
+      localStorage.removeItem("snote:legacy-secure:secret");
+      window.dispatchEvent(new StorageEvent("storage", {
+        key: "snote:legacy-secure:secret",
+        newValue: null,
+      }));
+    });
+
+    await waitFor(() => expect(screen.getByTestId("editor")).toBeInTheDocument());
+    expect(screen.queryByText("security.legacy_secure_reopen_banner")).not.toBeInTheDocument();
+    expect(harness.providerConstruct).toHaveBeenCalledWith("secret");
+  });
+
+  it("keeps #owner= editable when the Legacy ON pin is set", async () => {
+    localStorage.setItem("snote:legacy-secure:secret", "1");
+    harness.capabilityOpenSession.mockResolvedValue(pollingSession());
+
+    renderCapability("owner");
+
+    await waitFor(() => expect(harness.capabilityProviderConstruct).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByTestId("editor")).toBeInTheDocument());
+    expect(screen.queryByText("security.legacy_secure_reopen_banner")).not.toBeInTheDocument();
+    expect(harness.metaForSlug).not.toHaveBeenCalled();
+    expect(harness.providerConstruct).not.toHaveBeenCalled();
+  });
+
+  it("opens #owner= from a pinned bare RO banner without keeping the workspace closed", async () => {
+    localStorage.setItem("snote:legacy-secure:secret", "1");
+    harness.metaForSlug.mockResolvedValue({ data: null, error: null });
+    harness.capabilityOpenSession.mockResolvedValue(pollingSession());
+    const view = renderCapabilityNavigation("/secret");
+
+    await waitFor(() => {
+      expect(view.getByRole("status")).toHaveTextContent("security.legacy_secure_reopen_banner");
+    });
+    fireEvent.click(view.getByRole("button", { name: "navigate-owner" }));
+
+    await waitFor(() => expect(harness.capabilityProviderConstruct).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(view.getByTestId("editor")).toBeInTheDocument());
+    expect(view.queryByText("security.legacy_secure_reopen_banner")).not.toBeInTheDocument();
+  });
+
+  it("clears the Legacy ON pin on OFF and returns bare /slug to free-edit", async () => {
+    localStorage.setItem("snote:legacy-secure:secret", "1");
+    harness.capabilityOpenSession.mockResolvedValue(pollingSession());
+    harness.metaForSlug.mockResolvedValue({ data: null, error: null });
+
+    function ConvertLocationProbe() {
+      const loc = useLocation();
+      return <div data-testid="loc">{`${loc.pathname}${loc.hash}`}</div>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={[`/secret#owner=${CAPABILITY_TOKEN}`]}>
+        <Routes>
+          <Route path="/:slug" element={<><ConvertLocationProbe /><NotePage /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("editor")).toBeInTheDocument());
+    const disable = harness.topbarProps.mock.calls.at(-1)?.[0] as { onLegacyDisable?: () => void };
+    await act(async () => {
+      disable.onLegacyDisable?.();
+    });
+
+    await waitFor(() => {
+      expect(harness.toast).toHaveBeenCalledWith({ title: "security.legacy_secure_success_off" });
+    });
+    expect(harness.disableSecureNote).toHaveBeenCalledOnce();
+    expect(localStorage.getItem("snote:legacy-secure:secret")).toBeNull();
+    expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
+    expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
+    await waitFor(() => expect(harness.providerConstruct).toHaveBeenCalledWith("secret"));
+    expect(screen.getByTestId("editor")).toBeInTheDocument();
+    expect(screen.queryByText("security.legacy_secure_reopen_banner")).not.toBeInTheDocument();
   });
 
   it("shows the reopen banner immediately for a managed LNO slug", async () => {
@@ -1132,6 +1327,7 @@ describe("NotePage encryption gate", () => {
     expect(harness.toast).not.toHaveBeenCalledWith(
       expect.objectContaining({ title: "security.legacy_secure_success_on" }),
     );
+    expect(localStorage.getItem("snote:legacy-secure:secret")).toBe("1");
   });
 
   it("shows the reopen banner for a pinned managed slug instead of the encryption metadata-conflict gate", async () => {
