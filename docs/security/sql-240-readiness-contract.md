@@ -1,12 +1,12 @@
 # SQL 240 readiness contract (architecture + ops fold-in)
 
 - Status: **Docs package only** — does **not** authorize apply (SQL 240 already applied; do not re-apply)
-- Date: 2026-09-09
+- Date: 2026-09-15
 - Repo: `sovergarden-dev/snote`
-- Live pin (product): origin `2ae9a230` / Pages `fb35474a` / canary true / smoke `34306921753`
-- Main tip: `2ae9a230` (#130 W1 convert-on-write + #131 lint/lockfile) — this docs attest does not change origin
+- Live pin (product): origin `0cdcdc0f` / Pages `1b9ed3d1` / canary true / smoke `34986611791`
+- Main tip: `0cdcdc0f` (#135 W2 free-edit + #137 Legacy ON handoff + #138 A3 bare RO + #139 lint/types) — this docs attest does not change origin
 - Owners: Aegis (gates) · Pulse (ops) · Forge (docs PR) · Atlas (coord) · Syringa (named apply)
-- Walls: SQL 240 already applied; U1 SQL `capability_note_convert_legacy` applied live; Edge `convert-legacy` published (Pulse `umsg_01m21zhm…`); Worker HOLD (no redeploy), `writes_enabled` HOLD, Realtime HOLD; this docs PR does not re-apply SQL U1 or re-publish Edge / couple Pages
+- Walls: SQL 240 already applied; W2 SQL `capability_note_plain_upsert` / `capability_note_disable_secure` applied live; U1 SQL `capability_note_convert_legacy` applied live; Edge `plain-upsert` / `disable-secure` / `convert-legacy` published (Pulse `umsg_01m21zhm…` for `convert-legacy`); Worker HOLD (no redeploy), `writes_enabled` HOLD, Realtime HOLD; this docs PR does not re-apply SQL U1 or re-publish Edge / couple Pages
 
 This is not SQL 240, not Realtime, not soak-complete.
 
@@ -16,33 +16,33 @@ Ops detail: [sql-240-ops-preflight.md](./sql-240-ops-preflight.md) (Pulse). This
 
 ## 0. Hard architecture gate (before any apply)
 
-**W1 is live** on origin `2ae9a230`: plain `/slug` = `CutoverNotePage` → editable `NotePage` (convert-on-write).
-A′ Cutover/LNO RO default is **superseded**; A′ remains the `?legacyRo=1` / Legacy Advanced path.
+**W2 is live** on origin `0cdcdc0f`: plain `/slug` = `CutoverNotePage` → editable `NotePage` (free-edit).
+W1 convert-on-write as product default is **superseded**. A′ Cutover/LNO RO default is **superseded**; A′ remains the `?legacyRo=1` / Legacy Advanced path.
 Choice A editable-plain is **not** the live default. SQL 240 already applied.
 Duplicate securely is enabled on Legacy RO only (PR #128; Edge `note-session` `import-legacy`).
-U1 SQL `capability_note_convert_legacy` is **applied** live. Edge `note-session` `convert-legacy` is **published** (Pulse `umsg_01m21zhm…`).
+SQL `capability_note_plain_upsert` / `capability_note_disable_secure` are **applied** live. U1 SQL `capability_note_convert_legacy` is **applied** live. Edge `note-session` `plain-upsert`, `disable-secure`, and `convert-legacy` are **published** (Pulse `umsg_01m21zhm…` for `convert-legacy`).
 Worker / `writes_enabled` / Realtime still HOLD. This docs pin does not re-apply SQL 240 or U1 and does not re-publish Edge.
 
 SQL 240 `REVOKE`s browser grants on `public.notes`. Choice A depended on those
 grants. Applying 240 while Choice A was live would have instantly broken plain
 edit (provider upsert / enc-meta select). That live-default blocker was cleared
-by A′ and remains cleared under W1 (plain persist is Edge convert/create, not
+by A′ and remains cleared under W2 (plain persist is Edge `plain-upsert`, not
 table upsert); remaining gates below still HOLD apply.
 
 ### Required product posture at apply time (pick one)
 
 | Option | Meaning | Required before apply |
 |---|---|---|
-| **A′ (preferred, now live)** | Re-flip plain `/slug` → `CutoverNotePage` → Legacy RO (LNO) as default; capability `#owner=`/`#edit=` unchanged | SPA ship + smoke: plain RO via LNO; Home mint `#owner=` PASS; Duplicate securely **PASS** or honest-unavailable with no trapped users; Encrypt omit on plain RO; `#owner=` Encrypt active |
+| **A′ (preferred at apply; superseded as live default)** | Re-flip plain `/slug` → `CutoverNotePage` → Legacy RO (LNO) as default; capability `#owner=`/`#edit=` unchanged | SPA ship + smoke: plain RO via LNO; Home mint `#owner=` PASS; Duplicate securely **PASS** or honest-unavailable with no trapped users; Encrypt omit on plain RO; `#owner=` Encrypt active |
 | **B (accept break)** | Syringa explicitly accepts plain table edit dies at apply | Written named acceptance; kill-switch plan ready |
 
-Choice A routing contract (`SNOTE-EDITABLE-PLAIN-SLUG-ROUTING-CONTRACT.md`, Aegis artifact name — not a path in this repo) is **superseded** by A′ then by live W1 (findings §3e / #126 / #130). A′ was a **prerequisite** for 240, not SQL 240 apply (or same calendar day only if Atlas sequences SPA → soak smoke → 240).
+Choice A routing contract (`SNOTE-EDITABLE-PLAIN-SLUG-ROUTING-CONTRACT.md`, Aegis artifact name — not a path in this repo) is **superseded** by A′ then W1 then live W2 (findings §3e / #126 / #130 / #135). A′ was a **prerequisite** for 240, not SQL 240 apply (or same calendar day only if Atlas sequences SPA → soak smoke → 240).
 
-W1 convert-on-write is live on origin `2ae9a230` ([a-prime-cutover-restore.md](./a-prime-cutover-restore.md) records A′ as superseded default / remaining Legacy RO path). Choice A (#118) editable-plain default is **superseded**. Duplicate securely (#128) is enabled on Legacy RO only. This does not authorize re-apply.
+W2 free-edit is live on origin `0cdcdc0f` ([a-prime-cutover-restore.md](./a-prime-cutover-restore.md) records A′ as superseded default / remaining Legacy RO path; W1 convert-on-write is superseded as product default). Choice A (#118) editable-plain default is **superseded**. Duplicate securely (#128) is enabled on Legacy RO only. This does not authorize re-apply.
 
 ---
 
-## 1. Migration identity (verified @ `2ae9a230`)
+## 1. Migration identity (verified @ `0cdcdc0f`)
 
 | Field | Value |
 |---|---|
@@ -88,7 +88,7 @@ Ops SQL (Pulse §5) plus product:
 1. No anon/authenticated usable grants on `notes` (and related per migration)
 2. `capability_note_import_legacy` present
 3. Home mint / `#owner=` still works (Edge)
-4. Plain `/slug` **does not** silently table-write (W1 convert-on-write via Edge, or LNO RO per remaining A′ `?legacyRo=1`)
+4. Plain `/slug` **does not** silently table-write (W2 free-edit via Edge `plain-upsert`, or LNO RO per remaining A′ `?legacyRo=1`)
 5. LNO + `?legacyRo=1` RO still work
 6. Encrypt UI posture unchanged by migration
 7. `version.json` unchanged unless separate Pages go was named
@@ -125,11 +125,11 @@ Out of scope for that PR: applying 240, origin ship, Worker, Realtime.
 |---|---|
 | 1 | Aegis contract + Pulse ops folded (this doc + OPS-PREFLIGHT) |
 | 2 | Forge docs-only PR green; Sentinel light-review |
-| 3 | Syringa has clear separate named-go for **apply 240** (A′ prerequisite was live; W1 is now the live default) |
+| 3 | Syringa has clear separate named-go for **apply 240** (A′ prerequisite was live; W2 is now the live default) |
 | 4 | **NOT** authorized: applying SQL 240 |
 
 ## Verdict (architecture)
 
 **READY WITH KNOWN RISKS** to open the **docs package**.
 
-**W1 is live** (plain `/slug` = editable convert-on-write; A′ remains `?legacyRo=1`; Duplicate securely enabled on Legacy RO). SQL 240 already applied. U1 SQL `capability_note_convert_legacy` **applied** live; Edge `convert-legacy` **published** (Pulse `umsg_01m21zhm…`). Worker / `writes_enabled` / Realtime still **HOLD**. Not soak-complete.
+**W2 is live** (plain `/slug` = free-edit; W1 convert-on-write superseded as default; A′ remains `?legacyRo=1`; Duplicate securely enabled on Legacy RO). SQL 240 already applied. W2 SQL `capability_note_plain_upsert` / `capability_note_disable_secure` **applied** live; U1 SQL `capability_note_convert_legacy` **applied** live; Edge `plain-upsert` / `disable-secure` / `convert-legacy` **published** (Pulse `umsg_01m21zhm…` for `convert-legacy`). Worker / `writes_enabled` / Realtime still **HOLD**. Not soak-complete.
