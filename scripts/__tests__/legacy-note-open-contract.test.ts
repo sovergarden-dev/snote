@@ -244,6 +244,30 @@ describe("legacy-note-open HTTP contract", () => {
     });
   });
 
+  it("returns managed=true for capability-owned slugs without exposing the note", async () => {
+    const lookup: LegacyNoteLookup = {
+      exists: async () => false,
+      open: async () => "managed",
+    };
+    const result = await read(await handleLegacyNoteOpen(
+      request("POST", { action: "open", slug: "daily" }),
+      lookup,
+    ));
+    expect(result.status).toBe(200);
+    expect(result.json).toEqual({ exists: false, managed: true });
+    expect(result.cacheControl).toBe("no-store");
+
+    const { createLegacyNoteApi, CapabilityManagedError } = await import(
+      "../../src/lib/legacy/cutover.ts"
+    );
+    const api = createLegacyNoteApi({
+      baseUrl: "https://db.example",
+      fetcher: (input, init) => handleLegacyNoteOpen(new Request(input, init), lookup),
+    });
+    await expect(api.open("daily")).rejects.toBeInstanceOf(CapabilityManagedError);
+    await expect(api.exists("daily")).resolves.toBe(false);
+  });
+
   it("requires encrypted salt, check, and iterations", async () => {
     const result = await read(await handleLegacyNoteOpen(
       request("POST", { action: "open", slug: "locked" }),

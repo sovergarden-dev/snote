@@ -33,7 +33,7 @@ describe("W1 convert-on-write contract", () => {
     expect(convert).not.toContain("capability_note_convert_legacy");
   });
 
-  it("keeps canary plain persist off notes-table writes", () => {
+  it("keeps canary plain persist off notes-table writes and parks convert-on-first-persist", () => {
     const notePage = source("src/pages/NotePage.tsx");
     const local = source("src/lib/yjs/local-convert-provider.ts");
     const convert = source("src/lib/legacy/convert-on-write.ts");
@@ -41,28 +41,20 @@ describe("W1 convert-on-write contract", () => {
     expect(local).not.toContain('from("notes")');
     expect(local).not.toContain("integrations/supabase");
     expect(local).toContain("Never reads or writes `public.notes`");
+    expect(local).toContain("Parked W1");
     expect(convert).not.toContain('from("notes")');
-
-    const canaryArm = notePage.indexOf(
-      'else if (!legacyOnly && import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true")',
-    );
-    const notesArm = notePage.indexOf('.from("notes")');
-    const localProviderAt = notePage.indexOf("new plainProviderCtor");
-    const supabaseProviderAt = notePage.lastIndexOf("new SupabaseYjsProvider");
-    expect(canaryArm).toBeGreaterThan(0);
-    expect(notesArm).toBeGreaterThan(canaryArm);
-    expect(localProviderAt).toBeGreaterThan(0);
-    expect(supabaseProviderAt).toBeGreaterThan(localProviderAt);
+    expect(notePage).not.toContain("LocalConvertProvider");
+    expect(notePage).not.toContain("hasStoredConvertRecovery");
+    expect(notePage).toContain("PlainUpsertProvider");
     expect(notePage).toContain("createLegacyNoteApi().open");
     expect(notePage).toContain("convertPlainNoteOnWrite");
-    expect(notePage).toContain("hasStoredConvertRecovery");
-    expect(notePage).toContain("security.convert_reopen_banner");
-    expect(notePage).toContain("security.convert_reopen_cta");
+    expect(notePage).toContain("security.legacy_secure_reopen_banner");
+    expect(notePage).toContain("security.legacy_secure_reopen_cta");
     expect(notePage).not.toContain("onDuplicateSecurely");
 
     const navigateAt = notePage.indexOf("navigate(path, { replace: true })");
-    const successAt = notePage.indexOf('tRef.current("security.convert_success")');
-    const failAt = notePage.indexOf('tRef.current("security.convert_fail")');
+    const successAt = notePage.indexOf('tRef.current("security.legacy_secure_success_on")');
+    const failAt = notePage.indexOf('tRef.current("security.legacy_secure_fail_on")');
     expect(navigateAt).toBeGreaterThan(0);
     expect(successAt).toBeGreaterThan(navigateAt);
     expect(failAt).toBeGreaterThan(successAt);

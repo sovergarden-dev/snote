@@ -262,7 +262,8 @@ describe("production note access hotfix", () => {
     expect(cutover).toContain("legacy-note-open");
     expectValueImportBehindRoutesGuard(notePage, "@/lib/legacy/cutover");
     expectValueImportBehindRoutesGuard(notePage, "@/lib/legacy/convert-on-write");
-    expectValueImportBehindRoutesGuard(notePage, "@/lib/yjs/local-convert-provider");
+    expectValueImportBehindRoutesGuard(notePage, "@/lib/yjs/plain-upsert-provider");
+    expect(notePage).not.toContain("@/lib/yjs/local-convert-provider");
     expectValueImportBehindRoutesGuard(notePage, "./CutoverNotePage");
     expectValueImportBehindRoutesGuard(cutoverNotePage, "./LegacyNotePage");
     expectValueImportBehindRoutesGuard(cutoverNotePage, "./NotePage");

@@ -25,6 +25,8 @@ const capabilityMigrationPaths = [
   "supabase/migrations/20260724000000_atomic_capability_cutover.sql",
   "supabase/migrations/20260727000000_capability_sync_conflict_codes.sql",
   "supabase/migrations/20260908000000_capability_note_convert_legacy.sql",
+  "supabase/migrations/20260915000000_capability_note_plain_upsert.sql",
+  "supabase/migrations/20260915000001_capability_note_disable_secure.sql",
 ];
 const allCapabilityMigrations = capabilityMigrationPaths.map(source).join("\n");
 const allCapabilitySources = [
@@ -105,7 +107,7 @@ describe("capability primitives", () => {
     expect(manage).toContain('from "../_shared/slug.ts"');
     expect(session).not.toContain("const SLUG_RE");
     expect(manage).not.toContain("const SLUG_RE");
-    expect(session.match(/isUsableSlug\(slug\)/g) ?? []).toHaveLength(3);
+    expect(session.match(/isUsableSlug\(slug\)/g) ?? []).toHaveLength(5);
     expect(manage.match(/isUsableSlug\(slug\)/g) ?? []).toHaveLength(1);
 
     const slugPath = resolve(root, "supabase/functions/_shared/slug.ts");
@@ -227,6 +229,8 @@ describe("capability database boundary", () => {
     "capability_checkpoint_append",
     "capability_note_import_legacy",
     "capability_note_convert_legacy",
+    "capability_note_plain_upsert",
+    "capability_note_disable_secure",
   ])("%s is fenced by the database runtime row", (functionName) => {
     const body = sqlFunction(allCapabilityMigrations, functionName);
     const gate = body.indexOf("IF NOT public.capability_writes_acquire()");

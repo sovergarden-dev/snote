@@ -27,10 +27,27 @@ const SECURITY_KEYS = [
   "security.convert_retry",
   "security.convert_reopen_banner",
   "security.convert_reopen_cta",
+  "security.legacy_secure_busy_on",
+  "security.legacy_secure_busy_off",
+  "security.legacy_secure_success_on",
+  "security.legacy_secure_success_off",
+  "security.legacy_secure_fail_on",
+  "security.legacy_secure_fail_off",
+  "security.legacy_secure_reopen_banner",
+  "security.legacy_secure_reopen_cta",
   "security.legacy_confirm_title",
   "security.legacy_confirm_body",
   "security.legacy_confirm_body_short",
   "security.legacy_confirm_turn_on",
+  "security.legacy_secure_label",
+  "security.legacy_secure_helper_off",
+  "security.legacy_secure_helper_on",
+  "security.legacy_secure_confirm_title",
+  "security.legacy_secure_confirm_body",
+  "security.legacy_secure_confirm_body_short",
+  "security.legacy_confirm_off_title",
+  "security.legacy_confirm_off_body",
+  "security.legacy_confirm_turn_off",
   "security.legacy_banner",
   "security.legacy_banner_cta",
   "security.owner_only",
@@ -80,15 +97,43 @@ describe("Note security panel i18n", () => {
     );
     expect(dict.en["security.duplicate_retry"]).toBe("Retry");
     expect(dict.vi["security.duplicate_retry"]).toBe("Thử lại");
-    expect(dict.en["security.convert_busy"]).toBe("Saving securely…");
-    expect(dict.vi["security.convert_busy"]).toBe("Đang lưu an toàn…");
-    expect(dict.en["security.convert_success"]).toBe("Switched to a secure editable note");
-    expect(dict.vi["security.convert_success"]).toBe("Đã chuyển sang note an toàn");
+    expect(dict.en["security.legacy_secure_busy_on"]).toBe("Turning Legacy on…");
+    expect(dict.vi["security.legacy_secure_busy_on"]).toBe("Đang bật Legacy…");
+    expect(dict.en["security.legacy_secure_busy_off"]).toBe("Turning Legacy off…");
+    expect(dict.vi["security.legacy_secure_busy_off"]).toBe("Đang tắt Legacy…");
+    expect(dict.en["security.legacy_secure_success_on"]).toBe(
+      "Legacy on. Keep the owner link to turn it off later.",
+    );
+    expect(dict.vi["security.legacy_secure_success_on"]).toBe(
+      "Đã bật Legacy. Giữ link owner để tắt sau.",
+    );
+    expect(dict.en["security.legacy_secure_success_off"]).toBe(
+      "Legacy off. Anyone with the link can edit.",
+    );
+    expect(dict.vi["security.legacy_secure_success_off"]).toBe(
+      "Đã tắt Legacy. Ai có link cũng sửa được.",
+    );
+    expect(dict.en["security.legacy_secure_reopen_banner"]).toBe(
+      "This note has Legacy on. Reopen it with the owner link (`#owner=`).",
+    );
+    expect(dict.vi["security.legacy_secure_reopen_banner"]).toBe(
+      "Note đang bật Legacy. Mở lại bằng link owner (`#owner=`).",
+    );
+    expect(dict.en["security.legacy_secure_reopen_cta"]).toBe("Home");
+    expect(dict.vi["security.legacy_secure_reopen_cta"]).toBe("Trang chủ");
+    expect(dict.en["security.convert_busy"]).toBe("Turning Legacy on…");
+    expect(dict.vi["security.convert_busy"]).toBe("Đang bật Legacy…");
+    expect(dict.en["security.convert_success"]).toBe(
+      "Legacy on. Keep the owner link to turn it off later.",
+    );
+    expect(dict.vi["security.convert_success"]).toBe(
+      "Đã bật Legacy. Giữ link owner để tắt sau.",
+    );
     expect(dict.en["security.convert_reopen_banner"]).toBe(
-      "This note was upgraded to a secure copy. Reopen it with your owner link (`#owner=`).",
+      "This note has Legacy on. Reopen it with the owner link (`#owner=`).",
     );
     expect(dict.vi["security.convert_reopen_banner"]).toBe(
-      "Note này đã chuyển sang bản an toàn. Mở lại từ link owner (`#owner=`).",
+      "Note đang bật Legacy. Mở lại bằng link owner (`#owner=`).",
     );
     expect(dict.en["security.convert_reopen_cta"]).toBe("Home");
     expect(dict.vi["security.convert_reopen_cta"]).toBe("Trang chủ");
@@ -104,6 +149,30 @@ describe("Note security panel i18n", () => {
     expect(dict.vi["security.legacy_confirm_title"]).toBe("Bật định dạng Legacy?");
     expect(dict.en["security.legacy_confirm_turn_on"]).toBe("Turn on Legacy");
     expect(dict.vi["security.legacy_confirm_turn_on"]).toBe("Bật Legacy");
+    expect(dict.en["security.legacy_secure_label"]).toBe("Legacy (Secure)");
+    expect(dict.vi["security.legacy_secure_label"]).toBe("Legacy (Bảo mật)");
+    expect(dict.en["security.legacy_secure_helper_off"]).toMatch(/anyone who knows this slug can edit/i);
+    expect(dict.vi["security.legacy_secure_helper_off"]).toMatch(/slug/);
+    expect(dict.en["security.legacy_secure_helper_on"]).toMatch(/#owner=/);
+    expect(dict.vi["security.legacy_secure_helper_on"]).toMatch(/#owner=/);
+    expect(dict.en["security.legacy_secure_confirm_title"]).toBe("Turn on Legacy (Secure)?");
+    expect(dict.vi["security.legacy_secure_confirm_title"]).toBe("Bật Legacy (Bảo mật)?");
+    expect(dict.en["security.legacy_secure_confirm_body"]).toBe(
+      "This turns Legacy on and replaces the URL with `#owner=`. Anyone with only the slug will not be able to edit.",
+    );
+    expect(dict.vi["security.legacy_secure_confirm_body"]).toBe(
+      "Note sẽ bật Legacy và URL đổi thành `#owner=`. Ai chỉ có slug sẽ không sửa được.",
+    );
+    expect(dict.en["security.legacy_confirm_off_title"]).toBe("Turn off Legacy (Secure)?");
+    expect(dict.vi["security.legacy_confirm_off_title"]).toBe("Tắt Legacy (Bảo mật)?");
+    expect(dict.en["security.legacy_confirm_off_body"]).toBe(
+      "This turns Legacy off. Anyone with the link can edit.",
+    );
+    expect(dict.vi["security.legacy_confirm_off_body"]).toBe(
+      "Tắt Legacy. Ai có link cũng sửa được.",
+    );
+    expect(dict.en["security.legacy_confirm_turn_off"]).toBe("Turn off Legacy");
+    expect(dict.vi["security.legacy_confirm_turn_off"]).toBe("Tắt Legacy");
     expect(dict.en["security.legacy_banner"]).toBe(
       "View only. Create an editable copy from Home.",
     );
@@ -125,6 +194,11 @@ describe("Note security panel i18n", () => {
     }
     for (const key of SECURITY_KEYS) {
       expect(dict.vi[key], key).not.toBe(dict.en[key]);
+    }
+    const bannedW1 = /Saving securely|Switched to a secure editable note|upgraded to a secure copy/i;
+    for (const key of SECURITY_KEYS) {
+      expect(dict.en[key], `en:${key}`).not.toMatch(bannedW1);
+      expect(dict.vi[key], `vi:${key}`).not.toMatch(/Đang lưu an toàn|Đã chuyển sang note an toàn/);
     }
   });
 });

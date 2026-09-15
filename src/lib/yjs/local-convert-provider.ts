@@ -11,7 +11,8 @@ import type {
 type Listener<T> = (value: T) => void;
 
 /**
- * Local-only provider for W1 plain `/slug` before convert-on-write.
+ * Parked W1 convert-on-first-persist provider. W2 free-edit uses
+ * `PlainUpsertProvider` as the canary default. Do not wire this as default.
  * Never reads or writes `public.notes`.
  */
 export class LocalConvertProvider implements YjsProviderLike {

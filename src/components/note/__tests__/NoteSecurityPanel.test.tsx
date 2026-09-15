@@ -49,6 +49,9 @@ function renderPanel({
   onDuplicateSecurely,
   duplicateBusy = false,
   duplicateFeedback = null,
+  onLegacyEnable,
+  onLegacyDisable,
+  hideEncrypt = false,
 }: {
   path?: string;
   legacyOn?: boolean;
@@ -61,6 +64,9 @@ function renderPanel({
   onDuplicateSecurely?: () => void;
   duplicateBusy?: boolean;
   duplicateFeedback?: "network" | "permission" | "retry" | "success" | null;
+  onLegacyEnable?: () => void;
+  onLegacyDisable?: () => void;
+  hideEncrypt?: boolean;
 } = {}) {
   return render(
     <MemoryRouter initialEntries={[path]}>
@@ -83,6 +89,9 @@ function renderPanel({
                   onDuplicateSecurely={onDuplicateSecurely}
                   duplicateBusy={duplicateBusy}
                   duplicateFeedback={duplicateFeedback}
+                  onLegacyEnable={onLegacyEnable}
+                  onLegacyDisable={onLegacyDisable}
+                  hideEncrypt={hideEncrypt}
                 />
               </>
             }
@@ -237,6 +246,7 @@ describe("NoteSecurityPanel", () => {
       path: "/daily",
       legacyOn: true,
       allowEncryptionTransitions: false,
+      hideEncrypt: true,
     });
     await openPanel();
     expect(screen.queryByText("security.encrypt_label")).not.toBeInTheDocument();
@@ -421,5 +431,61 @@ describe("NoteSecurityPanel", () => {
     await openPanel();
     expect(screen.getByRole("alert")).toHaveTextContent("security.duplicate_fail_permission");
     expect(screen.getByRole("button", { name: "security.duplicate_retry" })).not.toBeDisabled();
+  });
+
+  it("uses W2 Legacy (Secure) copy, keeps Encrypt honest until ON, and confirms ON without ?legacyRo=1", async () => {
+    const onLegacyEnable = vi.fn();
+    renderPanel({
+      onLegacyEnable,
+      allowEncryptionTransitions: false,
+    });
+    await openPanel();
+
+    expect(screen.getByText("security.legacy_secure_label")).toBeInTheDocument();
+    expect(screen.getByText("security.legacy_secure_helper_off")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "security.legacy_secure_label" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    expect(screen.getByRole("switch", { name: "security.encrypt_label" })).toBeDisabled();
+    expect(screen.getByText("security.encrypt_helper_unavailable")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("switch", { name: "security.legacy_secure_label" }));
+    const dialog = await screen.findByRole("dialog", { name: "security.legacy_secure_confirm_title" });
+    expect(within(dialog).getByText("security.legacy_secure_confirm_body")).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "security.legacy_confirm_turn_on" }));
+    expect(onLegacyEnable).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("loc")).not.toHaveTextContent("legacyRo");
+  });
+
+  it("confirms Legacy OFF only when an owner disable callback is present", async () => {
+    const onLegacyDisable = vi.fn();
+    renderPanel({
+      legacyOn: true,
+      onLegacyEnable: vi.fn(),
+      onLegacyDisable,
+      allowEncryptionTransitions: true,
+    });
+    await openPanel();
+
+    expect(screen.getByText("security.legacy_secure_helper_on")).toBeInTheDocument();
+    const sw = screen.getByRole("switch", { name: "security.legacy_secure_label" });
+    expect(sw).not.toBeDisabled();
+    await userEvent.click(sw);
+    const dialog = await screen.findByRole("dialog", { name: "security.legacy_confirm_off_title" });
+    expect(within(dialog).getByText("security.legacy_confirm_off_body")).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "security.legacy_confirm_turn_off" }));
+    expect(onLegacyDisable).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("loc")).not.toHaveTextContent("legacyRo");
+  });
+
+  it("disables Legacy OFF without an owner callback", async () => {
+    renderPanel({
+      legacyOn: true,
+      onLegacyEnable: vi.fn(),
+      allowEncryptionTransitions: true,
+    });
+    await openPanel();
+    expect(screen.getByRole("switch", { name: "security.legacy_secure_label" })).toBeDisabled();
   });
 });

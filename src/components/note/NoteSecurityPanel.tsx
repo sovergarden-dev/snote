@@ -48,6 +48,12 @@ export interface NoteSecurityPanelProps {
   onDuplicateSecurely?: () => void;
   duplicateBusy?: boolean;
   duplicateFeedback?: "network" | "permission" | "retry" | "success" | null;
+  /** W2 Secure opt-in: convert via U1. When set, the switch does not use `?legacyRo=1`. */
+  onLegacyEnable?: () => void;
+  /** W2 Legacy OFF: owner-only reverse RPC. When set, OFF confirms then calls this. */
+  onLegacyDisable?: () => void;
+  /** Hide Encrypt (Legacy RO viewer). */
+  hideEncrypt?: boolean;
 }
 
 export function LegacyRoBanner() {
@@ -81,20 +87,24 @@ export function NoteSecurityPanel({
   onDuplicateSecurely,
   duplicateBusy = false,
   duplicateFeedback = null,
+  onLegacyEnable,
+  onLegacyDisable,
+  hideEncrypt = false,
 }: NoteSecurityPanelProps) {
   const { t } = useI18n();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  const [confirmKind, setConfirmKind] = useState<"full" | "short" | null>(null);
+  const [confirmKind, setConfirmKind] = useState<"full" | "short" | "off" | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const open = openProp ?? uncontrolledOpen;
   const setOpen = onOpenChange ?? setUncontrolledOpen;
   const showLegacy = canaryOn && !ownerOnly;
-  const showEncrypt = !!doc && !ownerOnly && !legacyOn && (canaryOn || allowEncryptionTransitions);
+  const showEncrypt = !!doc && !ownerOnly && !hideEncrypt && (canaryOn || allowEncryptionTransitions);
   const busy = loading;
   const isSplit = location.pathname.includes("+");
+  const secureMode = Boolean(onLegacyEnable || onLegacyDisable);
 
   const applyLegacy = (enabled: boolean) => {
     navigate(
@@ -107,10 +117,17 @@ export function NoteSecurityPanel({
     if (busy || ownerOnly || !showLegacy) return;
     if (!next) {
       if (isSplit) return;
+      if (secureMode) {
+        if (!onLegacyDisable) return;
+        setOpen(false);
+        setConfirmKind("off");
+        return;
+      }
       applyLegacy(false);
       return;
     }
     if (legacyOn || isSplit) return;
+    if (secureMode && !onLegacyEnable) return;
     setOpen(false);
     setConfirmKind(hasConfirmedLegacyOptIn(slug) ? "short" : "full");
   };
@@ -118,7 +135,16 @@ export function NoteSecurityPanel({
   const confirmLegacy = () => {
     markLegacyOptInConfirmed(slug);
     setConfirmKind(null);
+    if (onLegacyEnable) {
+      onLegacyEnable();
+      return;
+    }
     applyLegacy(true);
+  };
+
+  const confirmLegacyOff = () => {
+    setConfirmKind(null);
+    onLegacyDisable?.();
   };
 
   const showDuplicate = DUPLICATE_SECURELY_AVAILABLE && showLegacy && legacyOn
@@ -200,7 +226,7 @@ export function NoteSecurityPanel({
           >
             <div className="min-w-0">
               <p id="security-legacy-label" className="text-sm font-medium text-muted-foreground">
-                {t("security.legacy_label")}
+                {t(secureMode ? "security.legacy_secure_label" : "security.legacy_label")}
               </p>
               <p className="text-[11px] text-muted-foreground">
                 {isSplit && !legacyOn
@@ -208,13 +234,13 @@ export function NoteSecurityPanel({
                   : isSplit
                     ? t("security.legacy_helper_on_plain")
                     : legacyOn
-                      ? t("security.legacy_helper_on")
-                      : t("security.legacy_helper_off")}
+                      ? t(secureMode ? "security.legacy_secure_helper_on" : "security.legacy_helper_on")
+                      : t(secureMode ? "security.legacy_secure_helper_off" : "security.legacy_helper_off")}
               </p>
             </div>
             <SecuritySwitch
               checked={legacyOn}
-              disabled={busy || isSplit}
+              disabled={busy || isSplit || (secureMode && legacyOn && !onLegacyDisable)}
               labelledBy="security-legacy-label"
               onCheckedChange={requestLegacy}
             />
@@ -289,11 +315,17 @@ export function NoteSecurityPanel({
         }}
       >
         <DialogHeader>
-          <DialogTitle>{t("security.legacy_confirm_title")}</DialogTitle>
+          <DialogTitle>
+            {confirmKind === "off"
+              ? t("security.legacy_confirm_off_title")
+              : t(secureMode ? "security.legacy_secure_confirm_title" : "security.legacy_confirm_title")}
+          </DialogTitle>
           <DialogDescription>
-            {confirmKind === "short"
-              ? t("security.legacy_confirm_body_short")
-              : t("security.legacy_confirm_body")}
+            {confirmKind === "off"
+              ? t("security.legacy_confirm_off_body")
+              : confirmKind === "short"
+                ? t(secureMode ? "security.legacy_secure_confirm_body_short" : "security.legacy_confirm_body_short")
+                : t(secureMode ? "security.legacy_secure_confirm_body" : "security.legacy_confirm_body")}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -306,8 +338,12 @@ export function NoteSecurityPanel({
           >
             {t("lock.cancel")}
           </Button>
-          <Button type="button" className="min-h-11" onClick={confirmLegacy}>
-            {t("security.legacy_confirm_turn_on")}
+          <Button
+            type="button"
+            className="min-h-11"
+            onClick={confirmKind === "off" ? confirmLegacyOff : confirmLegacy}
+          >
+            {t(confirmKind === "off" ? "security.legacy_confirm_turn_off" : "security.legacy_confirm_turn_on")}
           </Button>
         </DialogFooter>
       </DialogContent>

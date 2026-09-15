@@ -97,6 +97,35 @@ type CapabilityDatabase = {
         };
         Returns: CapabilityRpcResponse;
       };
+      capability_note_plain_upsert: {
+        Args: {
+          p_slug: string;
+          p_ydoc_state: string;
+          p_content: string;
+          p_char_count: number;
+          p_tags: string[];
+          p_is_encrypted: boolean;
+          p_salt: string | null;
+          p_check: string | null;
+          p_iterations: number | null;
+        };
+        Returns: CapabilityRpcResponse;
+      };
+      capability_note_disable_secure: {
+        Args: {
+          p_owner_token_hash: string;
+          p_slug: string;
+          p_ydoc_state: string;
+          p_content: string;
+          p_char_count: number;
+          p_tags: string[];
+          p_is_encrypted: boolean;
+          p_salt: string | null;
+          p_check: string | null;
+          p_iterations: number | null;
+        };
+        Returns: CapabilityRpcResponse;
+      };
       capability_admission_consume: {
         Args: {
           p_operation: "create" | "sync" | "membership";
@@ -394,6 +423,9 @@ export function capabilityFailure(status: string): Response {
     || status === "checkpoint_version_conflict"
   ) return capabilityJson(body("version conflict"), 409);
   if (status === "slug_unavailable") return capabilityJson(body("slug unavailable"), 409);
+  if (status === "capability_managed") {
+    return capabilityJson(body("capability managed"), 409);
+  }
   if (status === "not_found") return capabilityJson(body("not found"), 404);
   if (status === "quota_exceeded") {
     // Storage/update quota transitions the note to read-only quarantine. It is

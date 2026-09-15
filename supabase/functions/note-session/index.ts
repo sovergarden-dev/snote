@@ -34,6 +34,154 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const bearer = readCapabilityBearer(req);
 
+    if (body?.action === "plain-upsert") {
+      const slug = typeof body?.slug === "string" ? body.slug.trim() : "";
+      const ydocState = typeof body?.ydocState === "string" ? body.ydocState : "";
+      const content = typeof body?.content === "string" ? body.content : "";
+      const charCount = Number(body?.charCount);
+      const tags = body?.tags;
+      const isEncrypted = body?.isEncrypted;
+      const salt = body?.salt ?? null;
+      const check = body?.check ?? null;
+      const iterations = body?.iterations ?? null;
+      const tagsValid = Array.isArray(tags)
+        && tags.length <= 20
+        && tags.every((tag) => typeof tag === "string" && /^[a-z0-9_-]{1,32}$/.test(tag));
+      const encryptionMetadataValid = isEncrypted === true
+        ? typeof salt === "string" && salt.length >= 16 && salt.length <= 512
+          && typeof check === "string" && check.length >= 16 && check.length <= 2048
+          && Number.isSafeInteger(iterations) && iterations >= 100_000 && iterations <= 2_000_000
+          && content === ""
+          && charCount === 0
+          && Array.isArray(tags) && tags.length === 0
+        : isEncrypted === false && salt === null && check === null && iterations === null;
+      if (
+        !isUsableSlug(slug)
+        || ydocState.length > MAX_ENCODED_PAYLOAD_CHARS
+        || content.length > 1_048_576
+        || !Number.isSafeInteger(charCount)
+        || charCount < 0
+        || charCount > 1_048_576
+        || !tagsValid
+        || !encryptionMetadataValid
+      ) return capabilityFailure("invalid");
+      const auth = await verifyRealtimeAuth(req, environment);
+      if (auth.mode === "unavailable") return capabilityFailure("unavailable");
+      const subjectHash = await hashCapabilityAdmissionSubject(req, environment.hmacSecret);
+      if (!subjectHash) return capabilityFailure("unavailable");
+      const { data: admitted, error: admissionError } = await environment.client.rpc(
+        "capability_admission_consume",
+        {
+          p_operation: "sync",
+          p_subject_hash: subjectHash,
+          p_request_cost: 1,
+          p_byte_cost: ydocState.length,
+        },
+      );
+      if (admissionError) return capabilityFailure("unavailable");
+      if (rpcStatus(admitted) !== "ok") {
+        return capabilityAdmissionFailure(rpcStatus(admitted));
+      }
+      const { data: upserted, error: upsertError } = await environment.client.rpc(
+        "capability_note_plain_upsert",
+        {
+          p_slug: slug,
+          p_ydoc_state: ydocState,
+          p_content: content,
+          p_char_count: charCount,
+          p_tags: tags,
+          p_is_encrypted: isEncrypted,
+          p_salt: salt,
+          p_check: check,
+          p_iterations: iterations,
+        },
+      );
+      if (upsertError || rpcStatus(upserted) !== "ok") {
+        return capabilityFailure(upsertError ? "unavailable" : rpcStatus(upserted));
+      }
+      return capabilityJson({
+        status: "ok",
+        noteId: upserted?.noteId,
+        created: upserted?.created === true,
+      }, upserted?.created === true ? 201 : 200);
+    }
+
+    if (body?.action === "disable-secure") {
+      if (!bearer) return capabilityJson({ error: "unauthorized" }, 401);
+      const slug = typeof body?.slug === "string" ? body.slug.trim() : "";
+      const ydocState = typeof body?.ydocState === "string" ? body.ydocState : "";
+      const content = typeof body?.content === "string" ? body.content : "";
+      const charCount = Number(body?.charCount);
+      const tags = body?.tags;
+      const isEncrypted = body?.isEncrypted;
+      const salt = body?.salt ?? null;
+      const check = body?.check ?? null;
+      const iterations = body?.iterations ?? null;
+      const tagsValid = Array.isArray(tags)
+        && tags.length <= 20
+        && tags.every((tag) => typeof tag === "string" && /^[a-z0-9_-]{1,32}$/.test(tag));
+      const encryptionMetadataValid = isEncrypted === true
+        ? typeof salt === "string" && salt.length >= 16 && salt.length <= 512
+          && typeof check === "string" && check.length >= 16 && check.length <= 2048
+          && Number.isSafeInteger(iterations) && iterations >= 100_000 && iterations <= 2_000_000
+          && content === ""
+          && charCount === 0
+          && Array.isArray(tags) && tags.length === 0
+        : isEncrypted === false && salt === null && check === null && iterations === null;
+      if (
+        !isUsableSlug(slug)
+        || ydocState.length > MAX_ENCODED_PAYLOAD_CHARS
+        || content.length > 1_048_576
+        || !Number.isSafeInteger(charCount)
+        || charCount < 0
+        || charCount > 1_048_576
+        || !tagsValid
+        || !encryptionMetadataValid
+      ) return capabilityFailure("invalid");
+      const auth = await verifyRealtimeAuth(req, environment);
+      if (auth.mode === "unavailable") return capabilityFailure("unavailable");
+      const ownerHash = await capabilityTokenHash(bearer, environment.hmacSecret);
+      if (!ownerHash) return capabilityFailure("unavailable");
+      const subjectHash = await hashCapabilityAdmissionSubject(req, environment.hmacSecret);
+      if (!subjectHash) return capabilityFailure("unavailable");
+      const { data: admitted, error: admissionError } = await environment.client.rpc(
+        "capability_admission_consume",
+        {
+          p_operation: "create",
+          p_subject_hash: subjectHash,
+          p_request_cost: 1,
+          p_byte_cost: ydocState.length,
+        },
+      );
+      if (admissionError) return capabilityFailure("unavailable");
+      if (rpcStatus(admitted) !== "ok") {
+        return capabilityAdmissionFailure(rpcStatus(admitted));
+      }
+      const { data: disabled, error: disableError } = await environment.client.rpc(
+        "capability_note_disable_secure",
+        {
+          p_owner_token_hash: ownerHash,
+          p_slug: slug,
+          p_ydoc_state: ydocState,
+          p_content: content,
+          p_char_count: charCount,
+          p_tags: tags,
+          p_is_encrypted: isEncrypted,
+          p_salt: salt,
+          p_check: check,
+          p_iterations: iterations,
+        },
+      );
+      if (disableError || rpcStatus(disabled) !== "ok") {
+        return capabilityFailure(disableError ? "unavailable" : rpcStatus(disabled));
+      }
+      return capabilityJson({
+        status: "ok",
+        noteId: disabled?.noteId,
+        recovered: disabled?.recovered === true,
+      }, 200);
+    }
+
     if (body?.action === "create") {
       if (!bearer) return capabilityJson({ error: "unauthorized" }, 401);
       const slug = typeof body?.slug === "string" ? body.slug.trim() : "";

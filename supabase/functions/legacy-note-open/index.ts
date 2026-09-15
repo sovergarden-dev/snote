@@ -8,6 +8,13 @@ import {
 // HMAC CF-Connecting-IP admission is omitted: this path is SELECT-only and
 // has no admission window. Consume RPCs would write. No Turnstile.
 
+function asLegacyNoteRow(data: unknown): LegacyNoteRow | null {
+  if (!data || typeof data !== "object") return null;
+  // Dynamic `.select(columns: string)` is typed as GenericStringError.
+  if ("error" in data && (data as { error?: unknown }).error === true) return null;
+  return data as LegacyNoteRow;
+}
+
 function serviceLookup(): LegacyNoteLookup | null {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -39,7 +46,16 @@ function serviceLookup(): LegacyNoteLookup | null {
         slug,
       );
       if (error) return "unavailable";
-      return (data as LegacyNoteRow | null) ?? null;
+      const row = asLegacyNoteRow(data);
+      if (row) return row;
+      const { data: taken, error: takenError } = await client
+        .from("notes")
+        .select("capability_managed")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (takenError) return "unavailable";
+      if (taken?.capability_managed) return "managed";
+      return null;
     },
   };
 }

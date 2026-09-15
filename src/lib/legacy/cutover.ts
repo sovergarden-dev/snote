@@ -4,6 +4,16 @@ import { capabilityPayloadId, encodeCapabilityPayload, newOwnerCandidate } from 
 import { isUsableSlug } from "@/lib/slug";
 import type { Encryption } from "@/lib/yjs/provider";
 
+export class CapabilityManagedError extends Error {
+  readonly code = "capability_managed";
+  readonly status = 409;
+
+  constructor() {
+    super("capability managed");
+    this.name = "CapabilityManagedError";
+  }
+}
+
 export type LegacyNote = {
   slug: string;
   content: string;
@@ -68,6 +78,7 @@ export function createLegacyNoteApi(options: LegacyApiOptions = {}) {
 
     async open(slug: string, signal?: AbortSignal): Promise<LegacyNote | null> {
       const data = await post("open", slug, signal);
+      if (data.managed === true) throw new CapabilityManagedError();
       if (data.exists === false) return null;
       const note = data.note;
       if (!note || typeof note !== "object") throw new Error("invalid legacy response");
@@ -307,7 +318,7 @@ export function mapDuplicateFailure(error: unknown): DuplicateFailureKind {
   const code = typeof candidate.code === "string" && /^[a-z][a-z_]{0,63}$/.test(candidate.code)
     ? candidate.code
     : null;
-  if (code === "converted_slug_unrecoverable") return "converted";
+  if (code === "converted_slug_unrecoverable" || code === "capability_managed") return "converted";
   if (code === "slug_unavailable") return "slug_unavailable";
   if (code === "unauthorized" || status === 401 || status === 403) return "permission";
   if (status === null) return "network";
