@@ -1244,6 +1244,7 @@ it("upserts unmanaged slugs and reverses secure notes without notes table GRANTs
       created: false,
       noteId: created.noteId,
     });
+    await db.exec("RESET ROLE");
     expect((await db.query<{ content: string; managed: boolean }>(`
       SELECT content, capability_managed AS managed FROM public.notes WHERE slug = 'free-edit'
     `)).rows[0]).toEqual({ content: "hello!", managed: false });
@@ -1252,6 +1253,7 @@ it("upserts unmanaged slugs and reverses secure notes without notes table GRANTs
     const convertOwner = hash([211]);
     const convertEdit = hash([212]);
     const convertView = hash([213]);
+    await db.exec("SET ROLE service_role");
     const converted = await rpc(db, "capability_note_convert_legacy", [
       "free-edit",
       convertOwner,
@@ -1303,9 +1305,11 @@ it("upserts unmanaged slugs and reverses secure notes without notes table GRANTs
       null,
     ], disableTypes);
     expect(disabled).toMatchObject({ status: "ok", recovered: false });
+    await db.exec("RESET ROLE");
     expect((await db.query<{ content: string; managed: boolean }>(`
       SELECT content, capability_managed AS managed FROM public.notes WHERE slug = 'free-edit'
     `)).rows[0]).toEqual({ content: "plain again", managed: false });
+    await db.exec("SET ROLE service_role");
     const recovered = await rpc(db, "capability_note_disable_secure", [
       convertOwner,
       "free-edit",

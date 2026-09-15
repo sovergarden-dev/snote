@@ -51,6 +51,7 @@ function renderPanel({
   duplicateFeedback = null,
   onLegacyEnable,
   onLegacyDisable,
+  hideEncrypt = false,
 }: {
   path?: string;
   legacyOn?: boolean;
@@ -65,6 +66,7 @@ function renderPanel({
   duplicateFeedback?: "network" | "permission" | "retry" | "success" | null;
   onLegacyEnable?: () => void;
   onLegacyDisable?: () => void;
+  hideEncrypt?: boolean;
 } = {}) {
   return render(
     <MemoryRouter initialEntries={[path]}>
@@ -89,6 +91,7 @@ function renderPanel({
                   duplicateFeedback={duplicateFeedback}
                   onLegacyEnable={onLegacyEnable}
                   onLegacyDisable={onLegacyDisable}
+                  hideEncrypt={hideEncrypt}
                 />
               </>
             }
@@ -243,6 +246,7 @@ describe("NoteSecurityPanel", () => {
       path: "/daily",
       legacyOn: true,
       allowEncryptionTransitions: false,
+      hideEncrypt: true,
     });
     await openPanel();
     expect(screen.queryByText("security.encrypt_label")).not.toBeInTheDocument();
