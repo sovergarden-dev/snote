@@ -301,6 +301,7 @@ export default function NotePage({
   const [convertError, setConvertError] = useState<"network" | "permission" | "retry" | "converted" | null>(null);
   const convertBusyRef = useRef(false);
   const convertErrorRef = useRef<"network" | "permission" | "retry" | "converted" | null>(null);
+  const [legacyBusyKind, setLegacyBusyKind] = useState<"on" | "off">("on");
 
   // Bumped by the hashchange listener (lock/unlock) and by Retry on the
   // enc-meta error gate so the meta-fetch effect re-runs.
@@ -327,6 +328,7 @@ export default function NotePage({
     const startedSlug = slug;
     const startedMeta = metaVersion;
     convertBusyRef.current = true;
+    setLegacyBusyKind("on");
     setConvertBusy(true);
     setConvertError(null);
     try {
@@ -346,7 +348,7 @@ export default function NotePage({
       ) return;
       navigate(path, { replace: true });
       toast({
-        title: tRef.current("security.convert_success"),
+        title: tRef.current("security.legacy_secure_success_on"),
       });
     } catch (error) {
       if (
@@ -366,7 +368,7 @@ export default function NotePage({
         (provider as { emitConvertError: (message: string) => void }).emitConvertError(feedback);
       }
       toast({
-        title: tRef.current("security.convert_fail"),
+        title: tRef.current("security.legacy_secure_fail_on"),
         variant: "destructive",
       });
     } finally {
@@ -381,6 +383,7 @@ export default function NotePage({
     const startedSlug = slug;
     const startedMeta = metaVersion;
     convertBusyRef.current = true;
+    setLegacyBusyKind("off");
     setConvertBusy(true);
     setConvertError(null);
     try {
@@ -405,6 +408,9 @@ export default function NotePage({
       ) return;
       clearNoteEncryptionPin(startedSlug);
       navigate(`/${startedSlug}`, { replace: true });
+      toast({
+        title: tRef.current("security.legacy_secure_success_off"),
+      });
     } catch (error) {
       if (
         currentEncTargetRef.current.slug !== startedSlug
@@ -415,7 +421,7 @@ export default function NotePage({
       convertErrorRef.current = feedback;
       setConvertError(feedback);
       toast({
-        title: tRef.current("security.convert_fail"),
+        title: tRef.current("security.legacy_secure_fail_off"),
         variant: "destructive",
       });
     } finally {
@@ -1085,14 +1091,14 @@ export default function NotePage({
   if (convertError === "converted" && !capabilityAccess) {
     const body = (
       <div className="mx-auto max-w-md space-y-3 px-6 text-center" role="status">
-        <p className="text-sm text-foreground">{t("security.convert_reopen_banner")}</p>
+        <p className="text-sm text-foreground">{t("security.legacy_secure_reopen_banner")}</p>
         <Button
           type="button"
           size="lg"
           className="min-h-11 min-w-11 px-4"
           onClick={() => navigate("/")}
         >
-          {t("security.convert_reopen_cta")}
+          {t("security.legacy_secure_reopen_cta")}
         </Button>
       </div>
     );
@@ -1128,10 +1134,12 @@ export default function NotePage({
       aria-busy={convertBusy || undefined}
     >
       <p className="flex-1">
-        {convertBusy ? t("security.convert_busy") : t("security.convert_fail")}
+        {convertBusy
+          ? t(legacyBusyKind === "off" ? "security.legacy_secure_busy_off" : "security.legacy_secure_busy_on")
+          : t(legacyBusyKind === "off" ? "security.legacy_secure_fail_off" : "security.legacy_secure_fail_on")}
       </p>
       {convertError && (
-        <Button type="button" size="lg" className="min-h-11 min-w-11 px-4" onClick={() => void runConvert()}>
+        <Button type="button" size="lg" className="min-h-11 min-w-11 px-4" onClick={() => void (legacyBusyKind === "off" ? runDisable() : runConvert())}>
           {t("security.convert_retry")}
         </Button>
       )}

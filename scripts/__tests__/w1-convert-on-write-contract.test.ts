@@ -48,13 +48,13 @@ describe("W1 convert-on-write contract", () => {
     expect(notePage).toContain("PlainUpsertProvider");
     expect(notePage).toContain("createLegacyNoteApi().open");
     expect(notePage).toContain("convertPlainNoteOnWrite");
-    expect(notePage).toContain("security.convert_reopen_banner");
-    expect(notePage).toContain("security.convert_reopen_cta");
+    expect(notePage).toContain("security.legacy_secure_reopen_banner");
+    expect(notePage).toContain("security.legacy_secure_reopen_cta");
     expect(notePage).not.toContain("onDuplicateSecurely");
 
     const navigateAt = notePage.indexOf("navigate(path, { replace: true })");
-    const successAt = notePage.indexOf('tRef.current("security.convert_success")');
-    const failAt = notePage.indexOf('tRef.current("security.convert_fail")');
+    const successAt = notePage.indexOf('tRef.current("security.legacy_secure_success_on")');
+    const failAt = notePage.indexOf('tRef.current("security.legacy_secure_fail_on")');
     expect(navigateAt).toBeGreaterThan(0);
     expect(successAt).toBeGreaterThan(navigateAt);
     expect(failAt).toBeGreaterThan(successAt);

@@ -55,8 +55,8 @@ describe("W2 free-edit default + Legacy opt-in contract", () => {
     expect(client).toContain('action: "disable-secure"');
     expect(client).not.toContain('.from("notes")');
     expect(notePage).toContain("convertPlainNoteOnWrite");
-    expect(notePage).toContain("security.convert_reopen_banner");
-    expect(notePage).toContain("security.convert_reopen_cta");
+    expect(notePage).toContain("security.legacy_secure_reopen_banner");
+    expect(notePage).toContain("security.legacy_secure_reopen_cta");
     const runConvertAt = notePage.indexOf("const runConvert = useCallback");
     const persistAt = notePage.indexOf("upsertPlainNote");
     expect(runConvertAt).toBeGreaterThan(0);

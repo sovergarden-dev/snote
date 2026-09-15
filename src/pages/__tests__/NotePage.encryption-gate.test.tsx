@@ -991,7 +991,7 @@ describe("NotePage encryption gate", () => {
 
     expect(harness.upsertPlainNote).toHaveBeenCalled();
     expect(harness.convertPlainNoteOnWrite).not.toHaveBeenCalled();
-    expect(harness.toast).not.toHaveBeenCalledWith({ title: "security.convert_success" });
+    expect(harness.toast).not.toHaveBeenCalledWith({ title: "security.legacy_secure_success_on" });
     expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
     expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
 
@@ -1001,12 +1001,12 @@ describe("NotePage encryption gate", () => {
     });
 
     await waitFor(() => {
-      expect(harness.toast).toHaveBeenCalledWith({ title: "security.convert_success" });
+      expect(harness.toast).toHaveBeenCalledWith({ title: "security.legacy_secure_success_on" });
     });
     expect(harness.convertPlainNoteOnWrite).toHaveBeenCalledOnce();
     expect(screen.getByTestId("loc")).toHaveTextContent(`/secret#owner=${owner}`);
     expect(harness.toast).not.toHaveBeenCalledWith(
-      expect.objectContaining({ title: "security.convert_fail" }),
+      expect.objectContaining({ title: "security.legacy_secure_fail_on" }),
     );
   });
 
@@ -1034,22 +1034,22 @@ describe("NotePage encryption gate", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent("security.convert_reopen_banner");
+      expect(screen.getByRole("status")).toHaveTextContent("security.legacy_secure_reopen_banner");
     });
-    expect(screen.getByRole("button", { name: "security.convert_reopen_cta" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "security.legacy_secure_reopen_cta" })).toBeInTheDocument();
     expect(screen.queryByTestId("editor")).not.toBeInTheDocument();
     expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
     expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
     expect(harness.convertPlainNoteOnWrite).not.toHaveBeenCalled();
     expect(harness.toast).not.toHaveBeenCalledWith(
-      expect.objectContaining({ title: "security.convert_fail" }),
+      expect.objectContaining({ title: "security.legacy_secure_fail_on" }),
     );
     expect(harness.toast).not.toHaveBeenCalledWith(
-      expect.objectContaining({ title: "security.convert_success" }),
+      expect.objectContaining({ title: "security.legacy_secure_success_on" }),
     );
 
     await act(async () => {
-      screen.getByRole("button", { name: "security.convert_reopen_cta" }).click();
+      screen.getByRole("button", { name: "security.legacy_secure_reopen_cta" }).click();
     });
     await waitFor(() => expect(screen.getByText("home")).toBeInTheDocument());
   });
@@ -1072,14 +1072,14 @@ describe("NotePage encryption gate", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent("security.convert_reopen_banner");
+      expect(screen.getByRole("status")).toHaveTextContent("security.legacy_secure_reopen_banner");
     });
     expect(harness.convertPlainNoteOnWrite).not.toHaveBeenCalled();
     expect(harness.providerConstruct).not.toHaveBeenCalled();
     expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
     expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
     expect(harness.toast).not.toHaveBeenCalledWith(
-      expect.objectContaining({ title: "security.convert_success" }),
+      expect.objectContaining({ title: "security.legacy_secure_success_on" }),
     );
   });
 
@@ -1096,7 +1096,7 @@ describe("NotePage encryption gate", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent("security.convert_reopen_banner");
+      expect(screen.getByRole("status")).toHaveTextContent("security.legacy_secure_reopen_banner");
     });
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(harness.convertPlainNoteOnWrite).not.toHaveBeenCalled();
