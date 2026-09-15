@@ -481,7 +481,7 @@ export type Database = {
       capability_admission_consume: {
         Args: {
           p_byte_cost?: number
-          p_operation: "create" | "sync" | "membership"
+          p_operation: string
           p_request_cost?: number
           p_subject_hash: string
         }
@@ -520,6 +520,21 @@ export type Database = {
         }
         Returns: Json
       }
+      capability_note_disable_secure: {
+        Args: {
+          p_char_count: number
+          p_check: string
+          p_content: string
+          p_is_encrypted: boolean
+          p_iterations: number
+          p_owner_token_hash: string
+          p_salt: string
+          p_slug: string
+          p_tags: string[]
+          p_ydoc_state: string
+        }
+        Returns: Json
+      }
       capability_note_import_legacy: {
         Args: {
           p_check: string
@@ -537,6 +552,20 @@ export type Database = {
       }
       capability_note_manage: {
         Args: { p_action: string; p_params?: Json; p_token_hash: string }
+        Returns: Json
+      }
+      capability_note_plain_upsert: {
+        Args: {
+          p_char_count: number
+          p_check: string
+          p_content: string
+          p_is_encrypted: boolean
+          p_iterations: number
+          p_salt: string
+          p_slug: string
+          p_tags: string[]
+          p_ydoc_state: string
+        }
         Returns: Json
       }
       capability_payload_audit: {
