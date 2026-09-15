@@ -63,6 +63,10 @@ describe("W2 free-edit default + Legacy opt-in contract", () => {
     expect(notePage).toContain("clearPlainNoteIndexedDb");
     expect(source("src/lib/legacy/legacy-secure-pin.ts")).toContain("snote:legacy-secure:");
     expect(source("src/lib/legacy/legacy-secure-pin.ts")).toContain("note:");
+    expect(source("src/lib/legacy/legacy-secure-pin.ts")).toContain("localStorage");
+    expect(source("src/lib/legacy/legacy-secure-pin.ts")).toContain("LEGACY_SECURE_PIN_CHANGE_EVENT");
+    expect(notePage).toContain("LEGACY_SECURE_PIN_CHANGE_EVENT");
+    expect(notePage).toContain("legacySecurePinKey");
     const runConvertAt = notePage.indexOf("const runConvert = useCallback");
     const persistAt = notePage.indexOf("upsertPlainNote");
     expect(runConvertAt).toBeGreaterThan(0);

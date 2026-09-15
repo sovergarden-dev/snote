@@ -10,6 +10,7 @@ import {
   getEncryptionPinState,
   markNoteEncrypted,
 } from "@/lib/encryption-pin";
+import { markLegacySecurePin } from "@/lib/legacy/legacy-secure-pin";
 import type {
   PollingNoteSession,
   PrivateRealtimeNoteSession,
@@ -1016,7 +1017,7 @@ describe("NotePage encryption gate", () => {
       }),
     );
     expect(screen.getByTestId("loc")).toHaveTextContent(`/secret#owner=${owner}`);
-    expect(sessionStorage.getItem("snote:legacy-secure:secret")).toBe("1");
+    expect(localStorage.getItem("snote:legacy-secure:secret")).toBe("1");
     expect(deleteDatabase).toHaveBeenCalledWith("note:secret");
     expect(harness.toast).not.toHaveBeenCalledWith(
       expect.objectContaining({ title: "security.legacy_secure_fail_on" }),
@@ -1062,7 +1063,7 @@ describe("NotePage encryption gate", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("security.legacy_secure_fail_on");
     expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
     expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
-    expect(sessionStorage.getItem("snote:legacy-secure:secret")).toBeNull();
+    expect(localStorage.getItem("snote:legacy-secure:secret")).toBeNull();
     expect(harness.toast).not.toHaveBeenCalledWith(
       expect.objectContaining({ title: "security.legacy_secure_success_on" }),
     );
@@ -1110,10 +1111,11 @@ describe("NotePage encryption gate", () => {
       screen.getByRole("button", { name: "security.legacy_secure_reopen_cta" }).click();
     });
     await waitFor(() => expect(screen.getByText("home")).toBeInTheDocument());
+    expect(localStorage.getItem("snote:legacy-secure:secret")).toBe("1");
   });
 
   it("shows the reopen banner on bare /slug when Legacy ON pin is set even if LNO misses", async () => {
-    sessionStorage.setItem("snote:legacy-secure:secret", "1");
+    localStorage.setItem("snote:legacy-secure:secret", "1");
     harness.metaForSlug.mockResolvedValue({ data: null, error: null });
 
     function ConvertLocationProbe() {
@@ -1143,8 +1145,98 @@ describe("NotePage encryption gate", () => {
     expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
   });
 
+  it("closes a live bare free-edit workspace when Legacy ON pins in this tab", async () => {
+    harness.metaForSlug.mockResolvedValue({ data: null, error: null });
+    const deleteDatabase = vi.fn();
+    vi.stubGlobal("indexedDB", { deleteDatabase });
+
+    render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <Routes>
+          <Route path="/" element={<div>home</div>} />
+          <Route path="/:slug" element={<NotePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("editor")).toBeInTheDocument());
+    act(() => {
+      expect(markLegacySecurePin("secret")).toBe(true);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("security.legacy_secure_reopen_banner");
+    });
+    expect(screen.getByRole("button", { name: "security.legacy_secure_reopen_cta" })).toBeInTheDocument();
+    expect(screen.queryByTestId("editor")).not.toBeInTheDocument();
+    expect(harness.providerDestroy).toHaveBeenCalled();
+    await waitFor(() => expect(deleteDatabase).toHaveBeenCalledWith("note:secret"));
+    vi.unstubAllGlobals();
+  });
+
+  it("closes a live bare free-edit workspace when a sibling tab pins Legacy ON", async () => {
+    harness.metaForSlug.mockResolvedValue({ data: null, error: null });
+    const deleteDatabase = vi.fn();
+    vi.stubGlobal("indexedDB", { deleteDatabase });
+
+    render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <Routes>
+          <Route path="/" element={<div>home</div>} />
+          <Route path="/:slug" element={<NotePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("editor")).toBeInTheDocument());
+    act(() => {
+      localStorage.setItem("snote:legacy-secure:secret", "1");
+      window.dispatchEvent(new StorageEvent("storage", {
+        key: "snote:legacy-secure:secret",
+        newValue: "1",
+      }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("security.legacy_secure_reopen_banner");
+    });
+    expect(screen.queryByTestId("editor")).not.toBeInTheDocument();
+    expect(harness.providerDestroy).toHaveBeenCalled();
+    await waitFor(() => expect(deleteDatabase).toHaveBeenCalledWith("note:secret"));
+    vi.unstubAllGlobals();
+  });
+
+  it("returns a pinned bare RO banner to free-edit when a sibling tab turns Legacy OFF", async () => {
+    localStorage.setItem("snote:legacy-secure:secret", "1");
+    harness.metaForSlug.mockResolvedValue({ data: null, error: null });
+
+    render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <Routes>
+          <Route path="/:slug" element={<NotePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("security.legacy_secure_reopen_banner");
+    });
+
+    act(() => {
+      localStorage.removeItem("snote:legacy-secure:secret");
+      window.dispatchEvent(new StorageEvent("storage", {
+        key: "snote:legacy-secure:secret",
+        newValue: null,
+      }));
+    });
+
+    await waitFor(() => expect(screen.getByTestId("editor")).toBeInTheDocument());
+    expect(screen.queryByText("security.legacy_secure_reopen_banner")).not.toBeInTheDocument();
+    expect(harness.providerConstruct).toHaveBeenCalledWith("secret");
+  });
+
   it("keeps #owner= editable when the Legacy ON pin is set", async () => {
-    sessionStorage.setItem("snote:legacy-secure:secret", "1");
+    localStorage.setItem("snote:legacy-secure:secret", "1");
     harness.capabilityOpenSession.mockResolvedValue(pollingSession());
 
     renderCapability("owner");
@@ -1157,7 +1249,7 @@ describe("NotePage encryption gate", () => {
   });
 
   it("opens #owner= from a pinned bare RO banner without keeping the workspace closed", async () => {
-    sessionStorage.setItem("snote:legacy-secure:secret", "1");
+    localStorage.setItem("snote:legacy-secure:secret", "1");
     harness.metaForSlug.mockResolvedValue({ data: null, error: null });
     harness.capabilityOpenSession.mockResolvedValue(pollingSession());
     const view = renderCapabilityNavigation("/secret");
@@ -1173,7 +1265,7 @@ describe("NotePage encryption gate", () => {
   });
 
   it("clears the Legacy ON pin on OFF and returns bare /slug to free-edit", async () => {
-    sessionStorage.setItem("snote:legacy-secure:secret", "1");
+    localStorage.setItem("snote:legacy-secure:secret", "1");
     harness.capabilityOpenSession.mockResolvedValue(pollingSession());
     harness.metaForSlug.mockResolvedValue({ data: null, error: null });
 
@@ -1200,7 +1292,7 @@ describe("NotePage encryption gate", () => {
       expect(harness.toast).toHaveBeenCalledWith({ title: "security.legacy_secure_success_off" });
     });
     expect(harness.disableSecureNote).toHaveBeenCalledOnce();
-    expect(sessionStorage.getItem("snote:legacy-secure:secret")).toBeNull();
+    expect(localStorage.getItem("snote:legacy-secure:secret")).toBeNull();
     expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
     expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
     await waitFor(() => expect(harness.providerConstruct).toHaveBeenCalledWith("secret"));
@@ -1235,6 +1327,7 @@ describe("NotePage encryption gate", () => {
     expect(harness.toast).not.toHaveBeenCalledWith(
       expect.objectContaining({ title: "security.legacy_secure_success_on" }),
     );
+    expect(localStorage.getItem("snote:legacy-secure:secret")).toBe("1");
   });
 
   it("shows the reopen banner for a pinned managed slug instead of the encryption metadata-conflict gate", async () => {
