@@ -115,6 +115,13 @@ describe("CI toolchain contract", () => {
     expect(packageJson.overrides?.postcss).toBe("8.5.23");
   });
 
+  it("keeps knip's smol-toml on the GHSA-7w5x-hrqm-74c2 floor", () => {
+    expect(packageJson.overrides?.["smol-toml"]).toBe("^1.7.1");
+    expect(bunLock).toContain('"smol-toml": "^1.7.1"');
+    expect(bunLock).not.toContain('"smol-toml": ["smol-toml@1.6.1"');
+    expect(bunLock).not.toContain('"smol-toml": ["smol-toml@1.7.0"');
+  });
+
   it("runs explicit app, node, tools, and edge TypeScript gates", () => {
     expect(ci).not.toMatch(/bunx tsc --noEmit\s*$/m);
     for (const project of ["app", "node", "tools"]) {
