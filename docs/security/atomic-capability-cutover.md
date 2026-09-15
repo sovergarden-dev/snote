@@ -146,9 +146,9 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    Legacy RO for plain `/slug`.
    Same-canary origin SHA bump
    2026-09-09 ~10:22 ICT:
-   live `deployedSha` `2ae9a23084dbdddec5aeffb9dd9aff191602b4b8`, still
+   `deployedSha` `2ae9a23084dbdddec5aeffb9dd9aff191602b4b8`, still
    `capabilityRoutesEnabled` true. W1 convert-on-write (#130 U1 SPA on #131)
-   is live: canary-on plain `/slug` and SplitView panes mount
+   was live (not current): canary-on plain `/slug` and SplitView panes mount
    `CutoverNotePage` → editable `NotePage` (no A′ RO banner). First persist
    converts existing legacy via `note-session` `convert-legacy` then
    soft-replaces to `#owner=` with `convert_success` toast; empty notes mint
@@ -165,10 +165,36 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    live. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is live.
    FAB-primary + Sonner suppress (#113/#116) is live. Home mint fail-closed
    idle remains live.
-   W1 live (named Pages go of #130/#131): convert-on-write for plain `/slug`.
+   W1 (named Pages go of #130/#131; not current live default): convert-on-write for plain `/slug`.
+   Same-canary origin SHA bump
+   2026-09-15 ~22:05 ICT:
+   live `deployedSha` `0cdcdc0f31eed7db7b9301c4e6fbe7c079cf69dd`, still
+   `capabilityRoutesEnabled` true. W2 free-edit + Legacy opt-in
+   (#135/#137/#138/#139) is live: canary-on plain `/slug` and SplitView panes
+   mount `CutoverNotePage` → editable `NotePage` (free-edit; no forced
+   convert). Legacy ON (owner) calls `convert-legacy` then soft-replaces to
+   `#owner=`; after Legacy ON, bare `/slug` is AC A3 RO. SQL
+   `capability_note_plain_upsert` / `capability_note_disable_secure` are
+   **applied** live. U1 SQL `capability_note_convert_legacy` remains
+   **applied** live. Edge `plain-upsert` / `disable-secure` / `convert-legacy`
+   are **published** (Pulse `umsg_01m21zhm…` for `convert-legacy`).
+   Duplicate securely (#128) remains on Legacy RO only (`import-legacy`).
+   A′ (#126) RO default is superseded; W1 convert-on-write as product default
+   is superseded; `?legacyRo=1` still RO + banner.
+   Encrypt is disabled on free-edit and becomes available after Legacy ON;
+   `#owner=` Encrypt stays active (#123). Pixel Legacy opt-in (#122) remains
+   live; PWA latch (#119) one hard-reload per Update apply remains live.
+   Phase B LNO and Phase C RawView+Home via LNO remain live on this canary.
+   Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi + New
+   Version FAB is live. FAB-primary + Sonner suppress (#113/#116) is live.
+   Home mint fail-closed idle remains live.
+   W2 live (named Pages go of #135/#137/#138/#139): free-edit for plain `/slug`.
    See [A′ Cutover restore](./a-prime-cutover-restore.md). SQL 240 already
-   applied; U1 SQL `capability_note_convert_legacy` applied live; Edge
-   `convert-legacy` published (Pulse `umsg_01m21zhm…`). Worker /
+   applied; W2 SQL `capability_note_plain_upsert` /
+   `capability_note_disable_secure` applied live; U1 SQL
+   `capability_note_convert_legacy` applied live; Edge `plain-upsert` /
+   `disable-secure` / `convert-legacy` published (Pulse `umsg_01m21zhm…` for
+   `convert-legacy`). Worker /
    `writes_enabled` / Realtime still HOLD. This docs PR still does not
    re-apply SQL U1 or re-publish Edge.
    This is not soak-complete.

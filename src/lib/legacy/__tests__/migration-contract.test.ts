@@ -34,7 +34,7 @@ const capabilityEdge = readFileSync(resolve(
 ), "utf8");
 
 describe("atomic cutover migration", () => {
-  it("pins documented SQL 240 migration identity at live product SHA 2ae9a230", () => {
+  it("pins documented SQL 240 migration identity at live product SHA 0cdcdc0f", () => {
     const sha256 = createHash("sha256").update(migration, "utf8").digest("hex");
     const lineCount = migration.endsWith("\n")
       ? migration.slice(0, -1).split("\n").length
@@ -68,10 +68,10 @@ describe("atomic cutover migration", () => {
     expect(contract).toContain("does **not** authorize apply");
     expect(preflight).toContain("does not authorize apply");
     expect(preflight).toContain("apply blocker");
-    expect(contract).toContain("2ae9a230");
-    expect(contract).toContain("fb35474a");
-    expect(contract).toContain("34306921753");
-    expect(contract).toContain("W1 is live");
+    expect(contract).toContain("0cdcdc0f");
+    expect(contract).toContain("1b9ed3d1");
+    expect(contract).toContain("34986611791");
+    expect(contract).toContain("W2 is live");
     expect(contract).toContain("HOLD");
     expect(contract).toContain("umsg_01m21zhm");
     expect(contract).toContain("**applied** live");
@@ -83,9 +83,9 @@ describe("atomic cutover migration", () => {
     expect(preflight).toContain("**published**");
     expect(preflight).not.toContain(staleU1NotLive);
     expect(preflight).not.toContain(staleGithubReady);
-    expect(preflight).toContain("2ae9a230");
-    expect(preflight).toContain("fb35474a");
-    expect(preflight).toContain("1788924147004-wx705xxn");
+    expect(preflight).toContain("0cdcdc0f");
+    expect(preflight).toContain("1b9ed3d1");
+    expect(preflight).toContain("1789484737351-s31qn3nf");
     expect(preflight).toContain("A′ live");
     expect(contract).toContain(
       "This is not SQL 240, not Realtime, not soak-complete.",

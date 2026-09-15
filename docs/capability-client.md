@@ -15,17 +15,28 @@ throw `capability API unavailable` without fetching, and default Auth
 minting stays off. Ordinary Vite builds follow `.env.example`
 (`VITE_CAPABILITY_ROUTES_ENABLED=false`) and attest
 `capabilityRoutesEnabled: false`. Live production `build:release` attests
-`capabilityRoutesEnabled: true` (findings §3e; live origin `2ae9a230`).
-Origin `2ae9a230` is W1 convert-on-write (#130 U1 SPA lineage on #131): canary-on
-plain `/slug` mounts `CutoverNotePage` → editable `NotePage` (no A′ RO banner).
-First persist converts existing legacy via `note-session` `convert-legacy` then
-soft-replaces to `#owner=` with `convert_success` toast; empty notes mint via
-live `create`. U1 SQL `capability_note_convert_legacy` is **applied** live.
-Edge `note-session` `convert-legacy` is **published** (Pulse `umsg_01m21zhm…`). Encrypt + Legacy Advanced
-remain opt-in on the owner path; Encrypt is disabled+honest on plain
-pre-convert; `#owner=` Encrypt stays active. Pixel Legacy opt-in (#122) and
-PWA latch (#119) one hard-reload per Update apply remain. Choice A (#118)
-editable-plain default and A′ (#126) RO default are **superseded**. Phase C is
+`capabilityRoutesEnabled: true` (findings §3e; live origin `0cdcdc0f`).
+Origin `0cdcdc0f` is W2 free-edit + Legacy opt-in (#135/#137/#138/#139; prior
+#130/#131 W1 convert-on-write as product default is **superseded**): canary-on
+plain `/slug` mounts `CutoverNotePage` → editable `NotePage` (free-edit; no
+forced convert; no `#owner=` required to edit). Plain persist uses Edge
+`plain-upsert`. Legacy ON (owner only) converts the current Y.Doc via
+`note-session` `convert-legacy` then soft-replaces to `#owner=` with Pixel
+success toast; Encrypt becomes available; `plain-upsert` returns HTTP 409
+`capability_managed`. After Legacy ON, bare `/{slug}` is read-only need-owner
+/ Legacy-on banner + Home CTA (AC A3; localStorage pin and/or LNO
+`managed:true`). Legacy OFF (owner `#owner=` only) calls `disable-secure` and
+soft-replaces to bare free-edit; `plain-upsert` returns 200 unmanaged again.
+SQL `capability_note_plain_upsert` and `capability_note_disable_secure` are
+**applied** live. U1 SQL `capability_note_convert_legacy` remains
+**applied** live. Edge `note-session` `plain-upsert`, `disable-secure`, and
+`convert-legacy` are **published** (`convert-legacy` Pulse `umsg_01m21zhm…`).
+Edge `legacy-note-open` is republished with `managed:true` for managed slugs.
+W1 convert-on-write as product default is **superseded**. Encrypt is disabled
+on free-edit (Legacy OFF) and becomes available after Legacy ON; `#owner=`
+Encrypt stays active. Pixel Legacy opt-in (#122) and PWA latch (#119) one
+hard-reload per Update apply remain. Choice A (#118) editable-plain default
+and A′ (#126) RO default are **superseded**. Phase C is
 also live: RawView `/:slug.md` loads via LNO `open`, and Home availability uses
 LNO `exists` (no `public.notes` SELECT; empty legacy rows are taken). Pixel HIGH UX
 H1–H6 is live on this origin. H2 opaque Mode/Export is live. Ko-fi +
@@ -33,28 +44,33 @@ New Version FAB is live. FAB-primary + Sonner suppress (#113/#116) is live.
 Choice A (#118) is superseded. PWA latch (#119) is live. Pixel Legacy opt-in
 (#122) is live as `?legacyRo=1` / Legacy Advanced. A′ (#126) RO default is
 superseded. Duplicate securely (#128) is enabled on Legacy RO only. Encrypt
-disabled+honest (#123) remains on plain pre-convert; `#owner=` Encrypt stays
-active.
+#123 `#owner=` Encrypt stays active.
 
 This origin compiles `SlugDispatcher` and SplitView pane embeds to mount
 `CutoverNotePage` → editable `NotePage` when that canary is on (lazy;
 `SlugDispatcher` keeps the `EditorSkeleton` fallback). A plain `/<slug>` with
-no matching `#owner`/`#edit` fragment mounts W1 editable `NotePage` (convert-on-write);
+no matching `#owner`/`#edit` fragment mounts W2 free-edit `NotePage` unless
+the slug is capability-managed (localStorage pin and/or LNO `managed:true` →
+AC A3 need-owner / Legacy-on RO banner + Home CTA);
 matching owner/edit fragments still render `NotePage`. Optional `?legacyRo=1`
 still RO + banner. Duplicate securely is enabled on Legacy RO only (PR #128;
 Edge `note-session` `import-legacy`). Flag-off builds keep `NotePage` with
 `legacyOnly` and do not import `CutoverNotePage`. Production `legacy-note-open`
-is the Phase B read-only exact-match Edge (live; findings §1b). This origin
+is the Phase B read-only exact-match Edge (live; findings §1b), republished
+with `managed:true` for managed slugs. This origin
 attest does not deploy Edge.
 
-**W1 live (named Pages go of #130/#131):** canary-on
+**W2 live (named Pages go of #135/#137/#138/#139):** canary-on
 `SlugDispatcher` / SplitView mount `CutoverNotePage` → editable `NotePage`
-(convert-on-write) for plain slugs. A′ (#126) Cutover/LNO RO default is
+(free-edit) for unmanaged plain slugs. W1 convert-on-write as product default
+is **superseded**. A′ (#126) Cutover/LNO RO default is
 **superseded**. `#owner=`/`#edit=` still render `NotePage`. `?legacyRo=1` still
 RO. Canary stays on. See [A′ Cutover restore](security/a-prime-cutover-restore.md)
-for the remaining Legacy RO path. SQL 240 already applied; U1 SQL
-`capability_note_convert_legacy` applied live; Edge `convert-legacy` published
-(Pulse `umsg_01m21zhm…`). Worker /
+for the remaining Legacy RO path. SQL 240 already applied; W2 SQL
+`capability_note_plain_upsert` / `capability_note_disable_secure` applied live;
+U1 SQL `capability_note_convert_legacy` applied live; Edge `plain-upsert` /
+`disable-secure` / `convert-legacy` published
+(Pulse `umsg_01m21zhm…` for `convert-legacy`). Worker /
 `writes_enabled` / Realtime still HOLD.
 
 When that canary is on, Home create waits until LNO `exists` is false
@@ -66,7 +82,7 @@ owner candidate in `sessionStorage`, calls `createCapabilityApi().createNote`
 that create succeeds, and navigates to `/<slug>#owner=<token>`. Random-note
 still mints a fresh slug without that wait. See
 [ADR-001](adr/001-home-capability-mint-before-sql-240.md).
-This Home mint path is live on origin `2ae9a230` (canary on; fail-closed idle; findings §3e).
+This Home mint path is live on origin `0cdcdc0f` (canary on; fail-closed idle; findings §3e).
 It is not SQL 240. Recents and
 pins store only the slug, never the owner token. Losing the fragment
 without another copy of the owner capability locks the note out. An

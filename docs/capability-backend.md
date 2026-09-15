@@ -50,7 +50,9 @@ The legacy credential-free `raw` Edge dump is a permanent `410` tombstone
 Git `legacy-note-open` is the Phase B exact-match `legacy-note-open` Edge Function:
 service-role SELECT-only `{ action: "exists" | "open", slug }` with
 `capability_managed = false AND sync_status = 'legacy' AND deleted_at IS NULL`.
-Capability-managed, non-legacy, and deleted rows are `exists: false`. Invalid
+Capability-managed, non-legacy, and deleted rows are `exists: false`. Live
+`open` on a capability-managed slug returns `{ exists: false, managed: true }`
+(republished; this attest does not redeploy Edge). Invalid
 action/slug is `400 { "error": "invalid request" }` without echoing the slug.
 The function never INSERT/UPDATE/DELETEs, never reads Bearer or query/path tokens,
 and never returns capability ciphertext. HMAC CF-Connecting-IP admission is omitted
@@ -59,8 +61,8 @@ would write; do not invent Turnstile. Do not restore a dump.
 Production Edge is this Phase B reader (see [security findings §1b](security-findings.md)).
 This document does not authorize an Edge deploy, origin Pages, Worker, SQL 240, or
 Realtime flip.
-SPA W1 (#130) is live: canary-on plain slug and SplitView panes mount `CutoverNotePage` → editable `NotePage` (convert-on-write; dual-mode canary on, findings §3e). Optional `?legacyRo=1` still RO + banner. Pixel Legacy opt-in (#122) is live as Legacy Advanced. Encrypt + Legacy Advanced remain opt-in on the owner path; Encrypt disabled+honest on plain pre-convert; `#owner=` Encrypt stays active (#123 lineage). Duplicate securely is enabled on Legacy RO only (PR #128; Edge `note-session` `import-legacy`). Phase C is live: RawView `/:slug.md` uses LNO `open`; Home availability uses LNO `exists`. Pixel HIGH UX H1–H6 is live on this origin. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress (#113/#116) is live. PWA latch (#119) one hard-reload per Update apply is live. Home create mints when canary is on (fail-closed idle). SQL 240 is already applied. U1 SQL `capability_note_convert_legacy` is **applied** live. Edge `note-session` `convert-legacy` is **published** (Pulse `umsg_01m21zhm…`).
-W1 live (named Pages go of #130/#131): canary-on plain slug and SplitView panes are editable `NotePage` (convert-on-write). A′ (#126) Cutover/LNO RO default is superseded. Choice A (#118) editable-plain default is superseded. Canary stays on. See [A′ Cutover restore](security/a-prime-cutover-restore.md) for the remaining Legacy RO path. SQL 240 already applied; U1 SQL `capability_note_convert_legacy` applied live; Edge `convert-legacy` published (Pulse `umsg_01m21zhm…`). Worker / `writes_enabled` / Realtime still HOLD. This does not deploy origin, does not re-apply SQL 240 or U1, and does not re-publish Edge.
+SPA W2 (#135/#137/#138/#139) is live: canary-on plain slug and SplitView panes mount `CutoverNotePage` → editable `NotePage` (free-edit; dual-mode canary on, findings §3e). Optional `?legacyRo=1` still RO + banner. Pixel Legacy opt-in (#122) is live as Legacy Advanced. Encrypt is disabled on free-edit (Legacy OFF) and becomes available after Legacy ON on the owner path; `#owner=` Encrypt stays active (#123 lineage). Duplicate securely is enabled on Legacy RO only (PR #128; Edge `note-session` `import-legacy`). Phase C is live: RawView `/:slug.md` uses LNO `open`; Home availability uses LNO `exists`. Pixel HIGH UX H1–H6 is live on this origin. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress (#113/#116) is live. PWA latch (#119) one hard-reload per Update apply is live. Home create mints when canary is on (fail-closed idle). SQL 240 is already applied. SQL `capability_note_plain_upsert` and `capability_note_disable_secure` are **applied** live. U1 SQL `capability_note_convert_legacy` remains **applied** live. Edge `note-session` `plain-upsert`, `disable-secure`, and `convert-legacy` are **published** (`convert-legacy` Pulse `umsg_01m21zhm…`). Edge `legacy-note-open` is republished with `managed:true` for managed slugs. W1 (#130/#131) convert-on-write as product default is superseded.
+W2 live (named Pages go of #135/#137/#138/#139): canary-on plain slug and SplitView panes are editable `NotePage` (free-edit). W1 convert-on-write as product default is superseded. A′ (#126) Cutover/LNO RO default is superseded. Choice A (#118) editable-plain default is superseded. Canary stays on. See [A′ Cutover restore](security/a-prime-cutover-restore.md) for the remaining Legacy RO path. SQL 240 already applied; W2 SQL `capability_note_plain_upsert` / `capability_note_disable_secure` applied live; U1 SQL `capability_note_convert_legacy` applied live; Edge `plain-upsert` / `disable-secure` / `convert-legacy` published (Pulse `umsg_01m21zhm…` for `convert-legacy`). Worker / `writes_enabled` / Realtime still HOLD. This does not deploy origin, does not re-apply SQL 240 or U1, and does not re-publish Edge.
 After the atomic cutover, browser roles still have no table grants; rollback keeps
 this read-only LNO and must never restore `anon`/`authenticated` `notes` GRANTs.
 See [the cutover runbook](security/atomic-capability-cutover.md)
@@ -85,12 +87,26 @@ the Bearer credential; retrying the same owner + checkpoint recovers a commit
 whose response was lost instead of leaving an unowned slug.
 Live Duplicate securely uses this action on Legacy RO only (new slug).
 
-`POST { "action": "convert-legacy", ...initialCheckpoint }` is the W1 same-slug
-convert path (U1). SQL U1 `capability_note_convert_legacy` is **applied** live.
+`POST { "action": "convert-legacy", ...initialCheckpoint }` is the same-slug
+convert path (U1), used live for Legacy ON (owner opt-in), not as the W2
+free-edit default. SQL U1 `capability_note_convert_legacy` is **applied** live.
 Edge `note-session` `convert-legacy` is **published** (Pulse `umsg_01m21zhm…`).
-Live SPA first persist on existing legacy calls this action. Empty new notes
-still use `action: "create"` (already live). This docs PR still does not
-re-apply SQL U1 or re-publish Edge.
+Live SPA Legacy ON (owner) calls this action from the current Y.Doc. Empty new
+notes still use `action: "create"` (already live). W1 convert-on-write as
+product default is **superseded**. This docs PR still does not re-apply SQL U1
+or re-publish Edge.
+
+`POST { "action": "plain-upsert", ... }` is the W2 free-edit persist path.
+SQL `capability_note_plain_upsert` is **applied** live. Edge `note-session`
+`plain-upsert` is **published**. Unmanaged slugs return 200; capability-managed
+slugs return HTTP 409 `capability_managed`. This docs PR does not re-apply SQL
+or re-publish Edge.
+
+`POST { "action": "disable-secure", ... }` is the W2 Legacy OFF path (owner
+`#owner=` only). SQL `capability_note_disable_secure` is **applied** live.
+Edge `note-session` `disable-secure` is **published**. After success the SPA
+soft-replaces to bare free-edit and `plain-upsert` returns 200 unmanaged
+again. This docs PR does not re-apply SQL or re-publish Edge.
 
 Otherwise, send `Authorization: Bearer <capability>` and optionally
 `{ "afterSequence": 42 }`. The response contains a `NoteSession`:
