@@ -481,7 +481,7 @@ export type Database = {
       capability_admission_consume: {
         Args: {
           p_byte_cost?: number
-          p_operation: "create" | "sync" | "membership"
+          p_operation: string
           p_request_cost?: number
           p_subject_hash: string
         }
