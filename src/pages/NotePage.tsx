@@ -49,6 +49,12 @@ import {
   markNoteEncrypted,
   clearNoteEncryptionPin,
 } from "@/lib/encryption-pin";
+import {
+  clearLegacySecurePin,
+  clearPlainNoteIndexedDb,
+  hasLegacySecurePin,
+  markLegacySecurePin,
+} from "@/lib/legacy/legacy-secure-pin";
 
 const SLUG_RE = /^[a-zA-Z0-9_-]{1,64}$/;
 const SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000;
@@ -346,6 +352,8 @@ export default function NotePage({
         currentEncTargetRef.current.slug !== startedSlug
         || currentEncTargetRef.current.metaVersion !== startedMeta
       ) return;
+      markLegacySecurePin(startedSlug);
+      clearPlainNoteIndexedDb(startedSlug);
       navigate(path, { replace: true });
       toast({
         title: tRef.current("security.legacy_secure_success_on"),
@@ -401,6 +409,7 @@ export default function NotePage({
         currentEncTargetRef.current.slug !== startedSlug
         || currentEncTargetRef.current.metaVersion !== startedMeta
       ) return;
+      clearLegacySecurePin(startedSlug);
       clearNoteEncryptionPin(startedSlug);
       navigate(`/${startedSlug}`, { replace: true });
       toast({
@@ -465,7 +474,7 @@ export default function NotePage({
       || encPhase !== "ready"
       || !encTargetIsCurrent
       || (capabilityAccess && !admittedCapability)
-      || convertError === "converted"
+      || (convertError === "converted" && !capabilityAccess)
       || (
         !capabilityAccess
         && !legacyOnly
@@ -590,6 +599,8 @@ export default function NotePage({
           ) {
             throw new Error("capability session unavailable");
           }
+          convertErrorRef.current = null;
+          setConvertError(null);
           setCapabilityAdmission({
             access: capabilityAccess,
             session,
@@ -606,6 +617,14 @@ export default function NotePage({
         } else if (!legacyOnly && import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true") {
           setCapabilityAdmission(null);
           setPlainProviderCtor(null);
+          if (hasLegacySecurePin(slug)) {
+            convertErrorRef.current = "converted";
+            setConvertError("converted");
+            setEncryption(null);
+            setEncPhase("ready");
+            setResolvedEncTarget(requestTarget);
+            return;
+          }
           const runtime = plainRuntime ?? await loadPlainRuntime();
           if (!isCurrentRequest()) return;
           const note = await runtime.createLegacyNoteApi().open(slug);

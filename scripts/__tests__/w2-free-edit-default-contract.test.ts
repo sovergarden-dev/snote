@@ -57,6 +57,12 @@ describe("W2 free-edit default + Legacy opt-in contract", () => {
     expect(notePage).toContain("convertPlainNoteOnWrite");
     expect(notePage).toContain("security.legacy_secure_reopen_banner");
     expect(notePage).toContain("security.legacy_secure_reopen_cta");
+    expect(notePage).toContain("hasLegacySecurePin");
+    expect(notePage).toContain("markLegacySecurePin");
+    expect(notePage).toContain("clearLegacySecurePin");
+    expect(notePage).toContain("clearPlainNoteIndexedDb");
+    expect(source("src/lib/legacy/legacy-secure-pin.ts")).toContain("snote:legacy-secure:");
+    expect(source("src/lib/legacy/legacy-secure-pin.ts")).toContain("note:");
     const runConvertAt = notePage.indexOf("const runConvert = useCallback");
     const persistAt = notePage.indexOf("upsertPlainNote");
     expect(runConvertAt).toBeGreaterThan(0);
@@ -73,6 +79,14 @@ describe("W2 free-edit default + Legacy opt-in contract", () => {
     expect(runConvert).toContain("security.legacy_secure_fail_on");
     expect(runConvert).toContain("security.legacy_secure_success_on");
     expect(runConvert).toContain("navigate(path, { replace: true })");
+    expect(runConvert).toContain("markLegacySecurePin");
+    expect(runConvert).toContain("clearPlainNoteIndexedDb");
+    const runDisable = notePage.slice(
+      notePage.indexOf("const runDisable = useCallback"),
+      notePage.indexOf("const observeHash = useCallback"),
+    );
+    expect(runDisable).toContain("clearLegacySecurePin");
+    expect(runDisable).toContain("clearNoteEncryptionPin");
   });
 
   it("keeps U1 convert-legacy for Legacy ON only and parks W1 convert-as-default", () => {
