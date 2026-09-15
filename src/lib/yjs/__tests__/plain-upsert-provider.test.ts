@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import { CapabilityApiError } from "@/lib/capability/client";
 import { bytesToBase64 } from "../base64";
-import { PlainUpsertProvider } from "../plain-upsert-provider";
+import { PlainUpsertProvider, type PlainUpsertFn } from "../plain-upsert-provider";
 
 describe("PlainUpsertProvider", () => {
   beforeEach(() => {
@@ -19,7 +19,7 @@ describe("PlainUpsertProvider", () => {
     const doc = new Y.Doc();
     const source = new Y.Doc();
     source.getText("content").insert(0, "from lno");
-    const upsert = vi.fn(async () => ({ noteId: "n", created: true }));
+    const upsert = vi.fn<PlainUpsertFn>(async () => ({ noteId: "n", created: true }));
     const onManaged = vi.fn();
     const provider = new PlainUpsertProvider("daily", doc, upsert, onManaged);
     const events: string[] = [];

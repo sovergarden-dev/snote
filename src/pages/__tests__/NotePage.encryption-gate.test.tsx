@@ -48,8 +48,12 @@ const harness = vi.hoisted(() => ({
     throw new Error("convert-on-write is mocked in this harness");
   }),
   hasStoredConvertRecovery: vi.fn<(...args: unknown[]) => boolean>(() => false),
-  upsertPlainNote: vi.fn(async () => ({ noteId: "n", created: true })),
-  disableSecureNote: vi.fn(async () => ({ noteId: "n", recovered: false })),
+  upsertPlainNote: vi.fn<(...args: unknown[]) => Promise<{ noteId: string; created: boolean }>>(
+    async () => ({ noteId: "n", created: true }),
+  ),
+  disableSecureNote: vi.fn<(...args: unknown[]) => Promise<{ noteId: string; recovered: boolean }>>(
+    async () => ({ noteId: "n", recovered: false }),
+  ),
   translate: (key: string) => key,
   metaPromise: Promise.resolve({ data: null as Record<string, unknown> | null }),
 }));

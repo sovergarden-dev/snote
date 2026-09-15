@@ -14,6 +14,16 @@ export class CapabilityManagedError extends Error {
   }
 }
 
+export type LegacyNote = {
+  slug: string;
+  content: string;
+  ydocState: string;
+  isEncrypted: boolean;
+  salt: string | null;
+  check: string | null;
+  iterations: number | null;
+};
+
 type LegacyApiOptions = {
   baseUrl?: string;
   fetcher?: typeof fetch;
