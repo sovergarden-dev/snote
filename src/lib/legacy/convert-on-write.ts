@@ -6,7 +6,7 @@ import {
   persistPendingOwnerCandidate,
   type PendingOwnerStore,
 } from "@/lib/capability/owner-candidate";
-import { capabilityPayloadId, encodeCapabilityPayload } from "@/lib/capability/encoding";
+import { capabilityPayloadId, encodeCapabilityPayload, newOwnerCandidate } from "@/lib/capability/encoding";
 import { buildCapabilityUrl, parseCapabilityLocation } from "@/lib/capability/url";
 import type { Encryption } from "@/lib/yjs/provider";
 import {
@@ -292,21 +292,29 @@ export function convertPlainNoteOnWrite(input: {
         }
       }
 
-      const ownerBefore = loadPendingOwnerCandidate(input.slug, input.pendingOwnerStore);
-      if (ownerBefore && !input.encryption) {
+      // W2 Legacy ON: convert-legacy from the current editor checkpoint even
+      // when LNO open missed (vacant-at-open, later plain-upsert). Never mint
+      // via create while an unmanaged row already occupies the slug.
+      if (!input.encryption) {
+        const ownerBefore = loadPendingOwnerCandidate(input.slug, input.pendingOwnerStore);
+        const owner = ownerBefore ?? newOwnerCandidate();
+        if (!ownerBefore) {
+          try {
+            persistPendingOwnerCandidate(input.slug, owner, input.pendingOwnerStore);
+          } catch {
+            // Convert still sends the owner as bearer.
+          }
+        }
         try {
           return await convertFromOwnerCandidate({
             slug: input.slug,
             doc: input.doc,
-            owner: ownerBefore,
+            owner,
             api: input.api,
             pendingOwnerStore: input.pendingOwnerStore,
           });
         } catch (error) {
-          if (
-            mapMintFailure(error).kind !== "slug_unavailable"
-            && !isLegacyNotFound(error)
-          ) throw error;
+          if (!isLegacyNotFound(error)) throw error;
         }
       }
 
