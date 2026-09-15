@@ -19,8 +19,7 @@ disabled on free-edit (Legacy OFF) and becomes available after Legacy ON on
 the owner path; `#owner=` Encrypt stays active (#123); A′ (#126) RO default is
 **superseded**; Duplicate securely (#128) remains enabled on Legacy RO only
 (Edge `note-session` `import-legacy`); W2 + A3 live on origin `0cdcdc0f`;
-Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings
-§3e): `capabilityRoutesEnabled` true. Plain slug URLs persist via Edge
+Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e): `capabilityRoutesEnabled` true. Plain slug URLs persist via Edge
 `plain-upsert` (free-edit for anyone with the link). Legacy (Secure) opt-in
 ON (owner only) converts the current Y.Doc via `note-session`
 `convert-legacy`, soft-replaces to `#owner=` with Pixel success toast «Đã
@@ -41,8 +40,7 @@ unmanaged again. SQL `capability_note_plain_upsert` and
 banner (`LegacyNotePage`; Phase B `legacy-note-open` read-only). RawView
 `/:slug.md` loads via LNO `open`; Home availability uses LNO `exists`
 (empty legacy rows are taken). Duplicate securely is enabled on Legacy RO
-only (PR #128; Edge `note-session` `import-legacy`). Home mints capabilities
-when canary is on (fail-closed on idle). Additive SQL 220 and 270 are
+only (PR #128; Edge `note-session` `import-legacy`). Home mints capabilities when canary is on (fail-closed on idle). Additive SQL 220 and 270 are
 applied on production; `writes_enabled=true` and
 `private_realtime_enabled=false` (findings §3d). SQL 240 is already applied;
 soak ≥48h started from the first canary (not soak-complete) — see
