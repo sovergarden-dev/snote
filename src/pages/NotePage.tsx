@@ -356,11 +356,6 @@ export default function NotePage({
         || currentEncTargetRef.current.metaVersion !== startedMeta
       ) return;
       const kind = (plainRuntime ?? await loadPlainRuntime()).mapDuplicateFailure(error);
-      if (kind === "converted" || kind === "slug_unavailable") {
-        convertErrorRef.current = "converted";
-        setConvertError("converted");
-        return;
-      }
       const feedback = kind === "permission" || kind === "network" ? kind : "retry";
       convertErrorRef.current = feedback;
       setConvertError(feedback);

@@ -1004,9 +1004,60 @@ describe("NotePage encryption gate", () => {
       expect(harness.toast).toHaveBeenCalledWith({ title: "security.legacy_secure_success_on" });
     });
     expect(harness.convertPlainNoteOnWrite).toHaveBeenCalledOnce();
+    expect(harness.convertPlainNoteOnWrite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        slug: "secret",
+        source: _label === "empty new note"
+          ? null
+          : expect.objectContaining({ slug: "secret", content: "keep me" }),
+      }),
+    );
     expect(screen.getByTestId("loc")).toHaveTextContent(`/secret#owner=${owner}`);
     expect(harness.toast).not.toHaveBeenCalledWith(
       expect.objectContaining({ title: "security.legacy_secure_fail_on" }),
+    );
+  });
+
+  it.each([
+    ["slug_unavailable", { code: "slug_unavailable", status: 409 }],
+    ["converted_slug_unrecoverable", { code: "converted_slug_unrecoverable", status: 409 }],
+  ])("stays editable and toasts fail when Legacy ON hits %s", async (_label, failure) => {
+    harness.metaForSlug.mockResolvedValue({ data: null, error: null });
+    harness.convertPlainNoteOnWrite.mockRejectedValue(failure);
+
+    function ConvertLocationProbe() {
+      const loc = useLocation();
+      return <div data-testid="loc">{`${loc.pathname}${loc.hash}`}</div>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <Routes>
+          <Route path="/:slug" element={<><ConvertLocationProbe /><NotePage /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("editor")).toBeInTheDocument());
+    const enable = harness.topbarProps.mock.calls.at(-1)?.[0] as { onLegacyEnable?: () => void };
+    await act(async () => {
+      enable.onLegacyEnable?.();
+    });
+
+    await waitFor(() => {
+      expect(harness.toast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "security.legacy_secure_fail_on" }),
+      );
+    });
+    expect(harness.convertPlainNoteOnWrite).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("editor")).toBeInTheDocument();
+    expect(screen.queryByText("security.legacy_secure_reopen_banner")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "security.legacy_secure_reopen_cta" })).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("security.legacy_secure_fail_on");
+    expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
+    expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
+    expect(harness.toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "security.legacy_secure_success_on" }),
     );
   });
 

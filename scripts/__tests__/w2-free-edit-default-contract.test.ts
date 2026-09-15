@@ -62,9 +62,30 @@ describe("W2 free-edit default + Legacy opt-in contract", () => {
     expect(runConvertAt).toBeGreaterThan(0);
     expect(persistAt).toBeGreaterThan(0);
     expect(notePage).toContain("createLegacyNoteApi().open");
+    const runConvert = notePage.slice(
+      runConvertAt,
+      notePage.indexOf("const runDisable = useCallback"),
+    );
+    expect(runConvert).toContain("convertPlainNoteOnWrite");
+    expect(runConvert).toContain("source: legacySourceRef.current");
+    expect(runConvert).not.toMatch(/kind === "converted" \|\| kind === "slug_unavailable"/);
+    expect(runConvert).not.toContain('setConvertError("converted")');
+    expect(runConvert).toContain("security.legacy_secure_fail_on");
+    expect(runConvert).toContain("security.legacy_secure_success_on");
+    expect(runConvert).toContain("navigate(path, { replace: true })");
   });
 
   it("keeps U1 convert-legacy for Legacy ON only and parks W1 convert-as-default", () => {
+    const convert = source("src/lib/legacy/convert-on-write.ts");
+    const ownerConvertAt = convert.indexOf("async function convertFromOwnerCandidate");
+    const sourceNullOwnerAt = convert.indexOf("const ownerBefore = loadPendingOwnerCandidate");
+    const createAt = convert.lastIndexOf("input.api.createNote");
+    expect(ownerConvertAt).toBeGreaterThan(0);
+    expect(sourceNullOwnerAt).toBeGreaterThan(ownerConvertAt);
+    expect(createAt).toBeGreaterThan(sourceNullOwnerAt);
+    expect(convert.slice(sourceNullOwnerAt, createAt)).toContain("convertFromOwnerCandidate");
+    expect(convert.slice(sourceNullOwnerAt, createAt)).toContain("isLegacyNotFound");
+    expect(convert.slice(sourceNullOwnerAt, createAt)).not.toContain('kind !== "slug_unavailable"');
     expect(source("src/lib/legacy/convert-on-write.ts")).toContain("convertLegacyNote");
     expect(source("src/lib/yjs/local-convert-provider.ts")).toContain("Parked W1");
     expect(source("knip.json")).toContain("src/lib/yjs/local-convert-provider.ts");
