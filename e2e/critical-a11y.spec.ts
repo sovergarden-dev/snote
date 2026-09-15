@@ -103,6 +103,8 @@ for (const device of [
   { name: "mobile", width: 390, height: 844 },
 ] as const) {
   test(`critical pages pass axe (${device.name})`, async ({ page }, info) => {
+    // Five serial axe.analyze() calls exceed Playwright's 30s default on CI WebKit desktop.
+    test.setTimeout(90_000);
     await page.setViewportSize({ width: device.width, height: device.height });
     await seedStableUi(page);
 
