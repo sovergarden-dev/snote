@@ -31,6 +31,15 @@ const SECURITY_KEYS = [
   "security.legacy_confirm_body",
   "security.legacy_confirm_body_short",
   "security.legacy_confirm_turn_on",
+  "security.legacy_secure_label",
+  "security.legacy_secure_helper_off",
+  "security.legacy_secure_helper_on",
+  "security.legacy_secure_confirm_title",
+  "security.legacy_secure_confirm_body",
+  "security.legacy_secure_confirm_body_short",
+  "security.legacy_confirm_off_title",
+  "security.legacy_confirm_off_body",
+  "security.legacy_confirm_turn_off",
   "security.legacy_banner",
   "security.legacy_banner_cta",
   "security.owner_only",
@@ -104,6 +113,18 @@ describe("Note security panel i18n", () => {
     expect(dict.vi["security.legacy_confirm_title"]).toBe("Bật định dạng Legacy?");
     expect(dict.en["security.legacy_confirm_turn_on"]).toBe("Turn on Legacy");
     expect(dict.vi["security.legacy_confirm_turn_on"]).toBe("Bật Legacy");
+    expect(dict.en["security.legacy_secure_label"]).toBe("Legacy (Secure)");
+    expect(dict.vi["security.legacy_secure_label"]).toBe("Legacy (Bảo mật)");
+    expect(dict.en["security.legacy_secure_helper_off"]).toMatch(/anyone who knows this slug can edit/i);
+    expect(dict.vi["security.legacy_secure_helper_off"]).toMatch(/slug/);
+    expect(dict.en["security.legacy_secure_helper_on"]).toMatch(/#owner=/);
+    expect(dict.vi["security.legacy_secure_helper_on"]).toMatch(/#owner=/);
+    expect(dict.en["security.legacy_secure_confirm_title"]).toBe("Turn on Legacy (Secure)?");
+    expect(dict.vi["security.legacy_secure_confirm_title"]).toBe("Bật Legacy (Bảo mật)?");
+    expect(dict.en["security.legacy_confirm_off_title"]).toBe("Turn off Legacy (Secure)?");
+    expect(dict.vi["security.legacy_confirm_off_title"]).toBe("Tắt Legacy (Bảo mật)?");
+    expect(dict.en["security.legacy_confirm_turn_off"]).toBe("Turn off Legacy");
+    expect(dict.vi["security.legacy_confirm_turn_off"]).toBe("Tắt Legacy");
     expect(dict.en["security.legacy_banner"]).toBe(
       "View only. Create an editable copy from Home.",
     );

@@ -12,6 +12,7 @@ type RpcResult = {
   encryptionVersion?: number;
   checkpointVersion?: number;
   recovered?: boolean;
+  created?: boolean;
   session?: {
     checkpointPayload?: string | null;
     missingUpdates?: Array<{ payload: string }>;
@@ -37,6 +38,8 @@ const capabilityMigrationPaths = [
   "supabase/migrations/20260724000000_atomic_capability_cutover.sql",
   "supabase/migrations/20260727000000_capability_sync_conflict_codes.sql",
   "supabase/migrations/20260908000000_capability_note_convert_legacy.sql",
+  "supabase/migrations/20260915000000_capability_note_plain_upsert.sql",
+  "supabase/migrations/20260915000001_capability_note_disable_secure.sql",
 ] as const;
 
 async function applyCapabilityMigrations(
@@ -1198,6 +1201,138 @@ it("executes capability isolation, sync, management, and Realtime RLS in Postgre
       "capability_runtime_set",
       [true, true],
     )).rejects.toThrow("capability runtime row missing");
+  } finally {
+    await db.close();
+  }
+}, 30_000);
+
+it("upserts unmanaged slugs and reverses secure notes without notes table GRANTs", async () => {
+  const db = await createCapabilityFixture();
+  try {
+    await applyCapabilityMigrations(db, capabilityMigrationPaths);
+    await db.exec("SET ROLE service_role");
+    expect(await rpc<RuntimeState>(db, "capability_runtime_set", [true, true])).toMatchObject({
+      writesEnabled: true,
+    });
+
+    const upsertTypes = ["", "", "", "::integer", "::text[]", "", "", "", "::integer"];
+    const created = await rpc(db, "capability_note_plain_upsert", [
+      "free-edit",
+      "YQ",
+      "hello",
+      5,
+      [],
+      false,
+      null,
+      null,
+      null,
+    ], upsertTypes);
+    expect(created).toMatchObject({ status: "ok", created: true });
+    const updated = await rpc(db, "capability_note_plain_upsert", [
+      "free-edit",
+      "YQ",
+      "hello!",
+      6,
+      [],
+      false,
+      null,
+      null,
+      null,
+    ], upsertTypes);
+    expect(updated).toMatchObject({
+      status: "ok",
+      created: false,
+      noteId: created.noteId,
+    });
+    expect((await db.query<{ content: string; managed: boolean }>(`
+      SELECT content, capability_managed AS managed FROM public.notes WHERE slug = 'free-edit'
+    `)).rows[0]).toEqual({ content: "hello!", managed: false });
+
+    const convertBytes = Buffer.alloc(60, 31);
+    const convertOwner = hash([211]);
+    const convertEdit = hash([212]);
+    const convertView = hash([213]);
+    const converted = await rpc(db, "capability_note_convert_legacy", [
+      "free-edit",
+      convertOwner,
+      convertEdit,
+      convertView,
+      createHash("sha256").update(convertBytes).digest("hex"),
+      convertBytes.toString("base64url"),
+      false,
+      null,
+      null,
+      null,
+    ], ["", "", "", "", "", "", "", "", "", "::integer"]);
+    expect(converted.status).toBe("ok");
+    expect((await rpc(db, "capability_note_plain_upsert", [
+      "free-edit",
+      "YQ",
+      "nope",
+      4,
+      [],
+      false,
+      null,
+      null,
+      null,
+    ], upsertTypes)).status).toBe("capability_managed");
+
+    const disableTypes = ["", "", "", "", "::integer", "::text[]", "", "", "", "::integer"];
+    expect((await rpc(db, "capability_note_disable_secure", [
+      hash([999]),
+      "free-edit",
+      "YQ",
+      "plain again",
+      11,
+      [],
+      false,
+      null,
+      null,
+      null,
+    ], disableTypes)).status).toBe("unauthorized");
+    const disabled = await rpc(db, "capability_note_disable_secure", [
+      convertOwner,
+      "free-edit",
+      "YQ",
+      "plain again",
+      11,
+      [],
+      false,
+      null,
+      null,
+      null,
+    ], disableTypes);
+    expect(disabled).toMatchObject({ status: "ok", recovered: false });
+    expect((await db.query<{ content: string; managed: boolean }>(`
+      SELECT content, capability_managed AS managed FROM public.notes WHERE slug = 'free-edit'
+    `)).rows[0]).toEqual({ content: "plain again", managed: false });
+    const recovered = await rpc(db, "capability_note_disable_secure", [
+      convertOwner,
+      "free-edit",
+      "YQ",
+      "plain again",
+      11,
+      [],
+      false,
+      null,
+      null,
+      null,
+    ], disableTypes);
+    expect(recovered).toMatchObject({ status: "ok", recovered: true });
+
+    await db.exec("RESET ROLE");
+    for (const role of ["anon", "authenticated"]) {
+      await db.exec(`SET ROLE ${role}`);
+      await expect(db.query(
+        "SELECT public.capability_note_plain_upsert($1,$2,$3,$4::integer,$5::text[],$6,$7,$8,$9::integer)",
+        ["role-denied", "YQ", "x", 1, [], false, null, null, null],
+      )).rejects.toMatchObject({ code: "42501" });
+      await expect(db.query(
+        "SELECT public.capability_note_disable_secure($1,$2,$3,$4,$5::integer,$6::text[],$7,$8,$9,$10::integer)",
+        [convertOwner, "free-edit", "YQ", "x", 1, [], false, null, null, null],
+      )).rejects.toMatchObject({ code: "42501" });
+      await db.exec("RESET ROLE");
+    }
   } finally {
     await db.close();
   }

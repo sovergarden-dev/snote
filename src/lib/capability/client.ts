@@ -333,6 +333,46 @@ export function createCapabilityApi(options: ApiOptions = {}) {
       };
     },
 
+    async upsertPlainNote(body: {
+      slug: string;
+      ydocState: string;
+      content: string;
+      charCount: number;
+      tags: string[];
+      isEncrypted: boolean;
+      salt: string | null;
+      check: string | null;
+      iterations: number | null;
+    }, keepalive = false) {
+      if (!isUsableSlug(body.slug)) throw new Error("invalid slug");
+      const data = await post("note-session", { action: "plain-upsert", ...body }, undefined, keepalive);
+      if (data.status !== "ok") throw new Error("invalid plain upsert");
+      return {
+        noteId: typeof data.noteId === "string" ? data.noteId : null,
+        created: data.created === true,
+      };
+    },
+
+    async disableSecureNote(body: {
+      slug: string;
+      ydocState: string;
+      content: string;
+      charCount: number;
+      tags: string[];
+      isEncrypted: boolean;
+      salt: string | null;
+      check: string | null;
+      iterations: number | null;
+    }, ownerToken: string) {
+      if (!isUsableSlug(body.slug)) throw new Error("invalid slug");
+      const data = await post("note-session", { action: "disable-secure", ...body }, ownerToken);
+      if (data.status !== "ok") throw new Error("invalid disable secure");
+      return {
+        noteId: typeof data.noteId === "string" ? data.noteId : null,
+        recovered: data.recovered === true,
+      };
+    },
+
     async openSession(token: string, initialAfterSequence = 0): Promise<NoteSession> {
       let afterSequence = initialAfterSequence;
       let aggregate: NoteSession | null = null;

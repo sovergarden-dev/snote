@@ -215,6 +215,7 @@ export default function LegacyNotePage({
       isEncrypted={state.kind === "ready" || state.kind === "needs-key" ? state.note.isEncrypted : false}
       allowEncryptionTransitions={false}
       legacyOn
+      hideEncrypt
       open={securityOpen}
       onOpenChange={setSecurityOpen}
       onDuplicateSecurely={state.kind === "ready" ? onDuplicateSecurely : undefined}

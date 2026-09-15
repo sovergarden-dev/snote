@@ -19,7 +19,7 @@ export type LegacyNoteRow = {
 
 export type LegacyNoteLookup = {
   exists(slug: string): Promise<boolean | "unavailable">;
-  open(slug: string): Promise<LegacyNoteRow | null | "unavailable">;
+  open(slug: string): Promise<LegacyNoteRow | null | "unavailable" | "managed">;
 };
 
 function jsonResponse(body: unknown, status: number) {
@@ -131,6 +131,7 @@ export async function handleLegacyNoteOpen(
     if (row === "unavailable") {
       return jsonResponse({ error: "temporarily unavailable" }, 503);
     }
+    if (row === "managed") return jsonResponse({ exists: false, managed: true }, 200);
     if (!row) return jsonResponse({ exists: false }, 200);
     const note = mapLegacyNote(row, slug);
     // Incomplete encrypted metadata is fail-closed 503, not exists:false:

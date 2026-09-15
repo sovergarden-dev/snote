@@ -138,6 +138,28 @@ describe("capability API client", () => {
     await expect(api.convertLegacyNote(LEGACY_IMPORT, TOKEN)).rejects.toThrow(
       "capability API unavailable",
     );
+    await expect(api.upsertPlainNote({
+      slug: "daily",
+      ydocState: "YQ",
+      content: "hello",
+      charCount: 5,
+      tags: [],
+      isEncrypted: false,
+      salt: null,
+      check: null,
+      iterations: null,
+    })).rejects.toThrow("capability API unavailable");
+    await expect(api.disableSecureNote({
+      slug: "daily",
+      ydocState: "YQ",
+      content: "hello",
+      charCount: 5,
+      tags: [],
+      isEncrypted: false,
+      salt: null,
+      check: null,
+      iterations: null,
+    }, TOKEN)).rejects.toThrow("capability API unavailable");
     await expect(api.openSession(TOKEN)).rejects.toThrow("capability API unavailable");
     await expect(api.sync(TOKEN, {
       updates: [],
@@ -893,6 +915,94 @@ describe("capability API client", () => {
 
     expect(converted.capabilities.owner).toBe(TOKEN);
     expect(converted.session.checkpointPayload).toBe("AQID");
+  });
+
+  it("upserts a plain note without a capability bearer", async () => {
+    const source = authSource("must-not-mint");
+    const fetcher = vi.fn<typeof fetch>(async (input, init) => {
+      expect(String(input)).toBe(
+        "https://project.supabase.co/functions/v1/note-session",
+      );
+      expect(init).toMatchObject({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: false,
+      });
+      expect(init?.headers).not.toHaveProperty("Authorization");
+      expect(init?.headers).not.toHaveProperty("X-Snote-Auth");
+      expect(JSON.parse(String(init?.body))).toEqual({
+        action: "plain-upsert",
+        slug: "daily",
+        ydocState: "YQ",
+        content: "hello",
+        charCount: 5,
+        tags: [],
+        isEncrypted: false,
+        salt: null,
+        check: null,
+        iterations: null,
+      });
+      return Response.json({
+        status: "ok",
+        noteId: NOTE_ID,
+        created: true,
+      }, { status: 201 });
+    });
+    const api = createCapabilityApi({
+      baseUrl: "https://project.supabase.co",
+      fetcher,
+      authSource: source,
+    });
+
+    await expect(api.upsertPlainNote({
+      slug: "daily",
+      ydocState: "YQ",
+      content: "hello",
+      charCount: 5,
+      tags: [],
+      isEncrypted: false,
+      salt: null,
+      check: null,
+      iterations: null,
+    })).resolves.toEqual({ noteId: NOTE_ID, created: true });
+    expect(source.accessTokenFor).not.toHaveBeenCalled();
+  });
+
+  it("disables a secure note with the owner bearer only", async () => {
+    const source = authSource(AUTH_TOKEN);
+    const fetcher = vi.fn<typeof fetch>(async (_input, init) => {
+      expect(init?.headers).toMatchObject({
+        Authorization: `Bearer ${TOKEN}`,
+        "X-Snote-Auth": AUTH_TOKEN,
+      });
+      expect(JSON.parse(String(init?.body))).toMatchObject({
+        action: "disable-secure",
+        slug: "daily",
+      });
+      expect(String(init?.body)).not.toContain(TOKEN);
+      return Response.json({
+        status: "ok",
+        noteId: NOTE_ID,
+        recovered: false,
+      });
+    });
+    const api = createCapabilityApi({
+      baseUrl: "https://project.supabase.co",
+      fetcher,
+      authSource: source,
+    });
+
+    await expect(api.disableSecureNote({
+      slug: "daily",
+      ydocState: "YQ",
+      content: "hello",
+      charCount: 5,
+      tags: [],
+      isEncrypted: false,
+      salt: null,
+      check: null,
+      iterations: null,
+    }, TOKEN)).resolves.toEqual({ noteId: NOTE_ID, recovered: false });
   });
 
   it("syncs an idempotent update batch without serializing either secret", async () => {

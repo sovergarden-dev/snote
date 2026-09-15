@@ -59,6 +59,10 @@ interface TopbarProps {
   allowEncryptionTransitions?: boolean;
   /** True when this view is Legacy RO (`?legacyRo=1` or A′ plain Cutover/LNO). */
   legacyOn?: boolean;
+  onLegacyEnable?: () => void;
+  onLegacyDisable?: () => void;
+  hideEncrypt?: boolean;
+  loading?: boolean;
   currentShareUrl?: string;
   paginated: boolean;
   onTogglePagination: () => void;
@@ -96,6 +100,10 @@ export function Topbar({
   capabilityAccess = null,
   allowEncryptionTransitions = true,
   legacyOn = false,
+  onLegacyEnable,
+  onLegacyDisable,
+  hideEncrypt = false,
+  loading = false,
   currentShareUrl,
   paginated,
   onTogglePagination,
@@ -218,6 +226,10 @@ export function Topbar({
                 encryption={encryption}
                 allowEncryptionTransitions={showEncrypt}
                 legacyOn={legacyOn}
+                onLegacyEnable={onLegacyEnable}
+                onLegacyDisable={onLegacyDisable}
+                hideEncrypt={hideEncrypt}
+                loading={loading}
               />
             )}
             <ShareDialog
@@ -285,6 +297,10 @@ export function Topbar({
                 encryption={encryption}
                 allowEncryptionTransitions={showEncrypt}
                 legacyOn={legacyOn}
+                onLegacyEnable={onLegacyEnable}
+                onLegacyDisable={onLegacyDisable}
+                hideEncrypt={hideEncrypt}
+                loading={loading}
               />
             )}
 

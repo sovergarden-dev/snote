@@ -37,7 +37,8 @@
     "*.{config.ts,config.js}"
   ],
   "ignore": [
-    "src/integrations/supabase/types.ts"
+    "src/integrations/supabase/types.ts",
+    "src/lib/yjs/local-convert-provider.ts"
   ],
   "ignoreDependencies": [
     "@vitest/coverage-v8",

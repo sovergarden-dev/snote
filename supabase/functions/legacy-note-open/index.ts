@@ -39,7 +39,15 @@ function serviceLookup(): LegacyNoteLookup | null {
         slug,
       );
       if (error) return "unavailable";
-      return (data as LegacyNoteRow | null) ?? null;
+      if (data) return data as LegacyNoteRow;
+      const { data: taken, error: takenError } = await client
+        .from("notes")
+        .select("capability_managed")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (takenError) return "unavailable";
+      if (taken?.capability_managed) return "managed";
+      return null;
     },
   };
 }
