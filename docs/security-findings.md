@@ -29,6 +29,9 @@ CTA (AC A3; localStorage pin and/or LNO `managed:true`). Legacy OFF (owner
 **applied** live. Edge `note-session` `plain-upsert`, `disable-secure`, and
 `convert-legacy` are **published** (`convert-legacy` Pulse `umsg_01m21zhm…`).
 Edge `legacy-note-open` is republished with `managed:true` for managed slugs.
+SQL `capability_note_bulk_disable_secure` is **applied** live (Syringa Go A
+then B; Pulse **PASS**; git tip `bd11deed` / #142; #143 is git-only PWA smoke
+harden). Live SPA origin remains `0cdcdc0f`. Go C pin heal **HOLD**. See §3f.
 W1 convert-on-write as product default is **superseded**.
 Optional `?legacyRo=1` still RO + banner. Phase C is live: RawView `/:slug.md` loads via LNO `open`;
 Home availability uses LNO `exists` (empty legacy rows are taken). Duplicate securely is enabled on Legacy RO only (PR #128; Edge `note-session` `import-legacy`). Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress (#113/#116) is live. Choice A (#118) editable-plain default is **superseded**. PWA latch (#119) one hard-reload per Update apply is live. Pixel Legacy opt-in (#122) is live as Legacy Advanced. Encrypt is disabled on free-edit (Legacy OFF) and becomes available after Legacy ON on the owner path; `#owner=` Encrypt stays active. A′ (#126) RO default is **superseded**. Duplicate securely (#128) remains on Legacy RO. Home mints capabilities when canary is on
@@ -1483,6 +1486,44 @@ This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
 not soak-complete. Origin attest only.
+
+## 3f. Production bulk Legacy/Secure OFF — verified; origin unchanged
+
+Docs attestation only (2026-09-16). This section does not deploy origin /
+Pages / Worker / Edge and does not re-apply SQL.
+
+Syringa named Go A then B; Pulse **PASS**. Git tip when applied: `bd11deed`
+(`bd11deedf95bec1f2e207a59fecdad974d861ff7`; migration
+`20260916000000_capability_note_bulk_disable_secure.sql` SHA-256
+`a5d6623fda2ca811388396f7945ab19a305a95c84d423dc206d168f4425ab850` from #142;
+tip also includes #143 `pwa-update-smoke` harden). Live SPA origin remains
+`0cdcdc0f` / Pages `1b9ed3d1` from the prior A3 attest (#140). Bulk OFF is
+SQL/ops, not a SPA ship. Do not claim origin moved. Origin is `0cdcdc0f`.
+
+Go A: RPC `capability_note_bulk_disable_secure` **applied** live;
+`service_role` EXECUTE only; anon/authenticated EXECUTE false.
+
+Go B: `managed_live` 26→0; skipped_encrypted=0; errors=[]; plaintext
+converted; `note_id` rotated. Pulse evidence `/workspace/pulse-bulk-off-ab2c4de9/`
+(`SUMMARY.md` + `REPORT.json` verdict PASS).
+
+Go C pin heal **HOLD**. Known residual: stale SPA `snote:legacy-secure:*`
+may keep bare RO until heal / local pin clear. Server LNO for converted
+slugs is unmanaged.
+
+Sentinel live verify: **READY WITH KNOWN RISKS** (API + cold SPA free-edit
+PASS; BLOCKER/HIGH none; MEDIUM = Go C residual in `FINDINGS-API.md`).
+Evidence `/workspace/sentinel-qa-bulk-off-live/` (`FINDINGS.md` +
+`FINDINGS-API.md`). Live `version.json` still `deployedSha`
+`0cdcdc0f31eed7db7b9301c4e6fbe7c079cf69dd`.
+
+Pixel cold-browser: **PASS WITH KNOWN RISKS** (`hage`, `design` bare
+editable + Synced; evidence `/workspace/pixel-qa/bulk-off-verify/`).
+Aegis: khớp design.
+
+Walls: no Worker / Realtime / origin / Pages / Edge from this attest.
+
+This is not SQL 240, not Realtime, not soak-complete. Origin attest unchanged.
 
 ## 4. Public `notes` access — cutover migration applied; soak still required
 

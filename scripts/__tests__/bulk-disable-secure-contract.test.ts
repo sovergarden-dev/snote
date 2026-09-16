@@ -71,14 +71,27 @@ describe("B1 bulk disable-secure contract", () => {
       .toContain("capability_note_bulk_disable_secure:");
   });
 
-  it("documents a GitHub-only ops runbook and defers Go C pin heal", () => {
+  it("records live Go A+B PASS, origin unchanged, and Go C pin heal HOLD", () => {
     const runbook = source(RUNBOOK);
-    expect(runbook).toMatch(/do not apply/i);
     expect(runbook).toContain("capability_note_bulk_disable_secure");
     expect(runbook).toContain("service_role");
     expect(runbook).toContain("skipped_encrypted");
     expect(runbook).toContain("note_id");
     expect(runbook).toMatch(/Go C/i);
+    expect(runbook).toContain("HOLD");
+    expect(runbook).toContain("**applied** live");
+    expect(runbook).toContain("does not re-apply");
+    expect(runbook).toContain("attestation");
+    expect(runbook).toContain("0cdcdc0f");
+    expect(runbook).toContain("bd11deed");
+    expect(runbook).toContain(
+      "a5d6623fda2ca811388396f7945ab19a305a95c84d423dc206d168f4425ab850",
+    );
+    expect(runbook).toContain("26→0");
+    expect(runbook).toContain("snote:legacy-secure:");
+    expect(runbook).toContain("/workspace/pulse-bulk-off-ab2c4de9/");
+    expect(runbook).toContain("/workspace/pixel-qa/bulk-off-verify/");
+    expect(runbook).toContain("/workspace/sentinel-qa-bulk-off-live/");
     expect(runbook).not.toContain("supabase db push");
     expect(runbook).not.toContain("convert-legacy");
   });

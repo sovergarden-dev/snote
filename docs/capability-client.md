@@ -72,6 +72,11 @@ U1 SQL `capability_note_convert_legacy` applied live; Edge `plain-upsert` /
 `disable-secure` / `convert-legacy` published
 (Pulse `umsg_01m21zhm…` for `convert-legacy`). Worker /
 `writes_enabled` / Realtime still HOLD.
+SQL `capability_note_bulk_disable_secure` is **applied** live (Go A+B Pulse
+PASS; git tip `bd11deed` / #142). Live origin remains `0cdcdc0f`. Go C pin
+heal **HOLD**: stale `snote:legacy-secure:*` may still latch bare RO until
+heal. This docs attest does not re-apply SQL and does not deploy origin /
+Pages / Worker / Edge.
 
 When that canary is on, Home create waits until LNO `exists` is false
 (`available`; it does not mint while `idle` or `checking`, and

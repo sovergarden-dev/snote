@@ -52,6 +52,22 @@ READY WITH KNOWN RISKS live A3 @ `0cdcdc0f` / Pages `1b9ed3d1`
 new-version reminder; one owner-link load needing hard reload; optional cold
 localStorage-clear not run. Not soak-complete.
 
+**Bulk Legacy/Secure OFF (docs attest only — not a SPA ship):** Syringa named
+Go A then B, executed by Pulse, **PASS**. Git tip when applied: `bd11deed`
+(migration `20260916000000_capability_note_bulk_disable_secure.sql` from #142;
+tip also includes #143 `pwa-update-smoke` harden). Live SPA origin remains
+`0cdcdc0f` / Pages `1b9ed3d1` from the prior A3 attest (bulk OFF is SQL/ops).
+Go A: RPC `capability_note_bulk_disable_secure` **applied**; `service_role`
+EXECUTE only; anon/authenticated EXECUTE false. Go B: `managed_live` 26→0;
+skipped_encrypted=0; errors=[]; plaintext converted; `note_id` rotated. Go C
+pin heal **HOLD** — stale `snote:legacy-secure:*` may keep bare RO until heal.
+Pulse evidence `/workspace/pulse-bulk-off-ab2c4de9/`. Sentinel: READY WITH
+KNOWN RISKS (API+cold SPA free-edit PASS; evidence
+`/workspace/sentinel-qa-bulk-off-live/`). Pixel cold-browser: PASS WITH KNOWN RISKS
+(`hage`, `design` bare editable + Synced; evidence
+`/workspace/pixel-qa/bulk-off-verify/`). Aegis: khớp design. This PR does not
+deploy origin / Pages / Worker / Edge and does not re-apply SQL.
+
 **W2 live (named Pages go of #135/#137/#138/#139):** canary-on plain `/<slug>`
 is free-edit (no convert-on-write default). W1 convert-on-write as product
 default is **superseded**. A′ (#126) Cutover/LNO RO default is

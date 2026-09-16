@@ -1,11 +1,30 @@
 # Bulk disable Secure (ops runbook)
 
-Status: **GitHub-only.** This document does **not** authorize apply to
-production, staging, Origin, or a live Supabase project.
+Status: **Go A+B applied live** (Syringa named go; Pulse **PASS**). This
+document is a **docs attestation**. It does **not** re-apply SQL and does
+**not** deploy origin / Pages / Worker / Edge. Go C pin heal remains **HOLD**.
 
 RPC: `public.capability_note_bulk_disable_secure(p_limit int, p_include_encrypted bool default false)`  
 Migration: `supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql`  
-Named apply: separate Syringa go (Go A SQL / Go B ops). **Do not apply from this PR.**
+SHA-256: `a5d6623fda2ca811388396f7945ab19a305a95c84d423dc206d168f4425ab850`  
+Git tip when applied: `bd11deed` (#142 lineage; tip also includes #143
+`pwa-update-smoke` harden). Live SPA origin remains `0cdcdc0f` / Pages
+`1b9ed3d1` (bulk OFF is SQL/ops, not a SPA ship).
+
+## Live go (2026-09-16)
+
+- Go A: `CREATE OR REPLACE` `capability_note_bulk_disable_secure` **applied** live;
+  anon/authenticated EXECUTE false; `service_role` EXECUTE true.
+- Go B: `managed_live` 26→0; skipped_encrypted=0; errors=[]; plaintext
+  converted; `note_id` rotated. Pulse `/workspace/pulse-bulk-off-ab2c4de9/`.
+- Go C: **HOLD**. Residual stale `snote:legacy-secure:*` may keep bare RO until
+  heal / local pin clear. Server LNO for converted slugs is unmanaged.
+- Sentinel: READY WITH KNOWN RISKS (API+cold SPA free-edit PASS) —
+  `/workspace/sentinel-qa-bulk-off-live/`.
+- Pixel: PASS WITH KNOWN RISKS (`hage`, `design` bare editable + Synced) —
+  `/workspace/pixel-qa/bulk-off-verify/`. Aegis: khớp design.
+
+Do not re-apply this RPC from this attest PR.
 
 ## B1 + Syringa locks
 
@@ -19,26 +38,27 @@ Named apply: separate Syringa go (Go A SQL / Go B ops). **Do not apply from this
   markdown `content` / tags / `char_count` use empty plaintext defaults.
   Notes with no checkpoint (for example Home mint never synced) become empty
   unmanaged slugs.
-- Go C (stale SPA pin `snote:legacy-secure:${slug}` heal) is **out of this PR**.
+- Go C (stale SPA pin `snote:legacy-secure:${slug}` heal) remains **HOLD**.
   After bulk OFF, browsers that still hold a pin can show residual bare RO until
   a later pin-heal change or a local storage clear. Server LNO for converted
   slugs is unmanaged.
 
-## Walls (this PR)
+## Walls (this attest)
 
 - No notes table GRANT changes.
-- No Edge republish, no SPA/Worker/Realtime, no auto-ON.
+- No Edge republish, no SPA/Worker/Realtime, no auto-ON, no origin/Pages ship.
 - Do not invoke U1 convert from this job.
 - `SECURITY DEFINER`, `service_role` EXECUTE only; PUBLIC / anon / authenticated
   revoked.
+- This attestation does not re-apply the RPC.
 
 ## Pre-apply inventory (read-only; named go)
 
 Count live managed vs encrypted. Confirm the identity trigger still forbids
 `UPDATE` managed→false. Backup managed `notes` + `note_checkpoints` before any
-apply go. This runbook is not that go.
+apply go. Go A+B already ran; do not treat this attest as another apply.
 
-## Execute (only after written Syringa accept)
+## Execute (historical; already ran — do not re-apply)
 
 Maintenance window. `writes_enabled` must already be true (same gate as other
 capability writes). As `service_role`:
