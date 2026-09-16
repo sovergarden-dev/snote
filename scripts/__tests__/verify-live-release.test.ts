@@ -3,6 +3,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { githubPathsFilterMatches } from "../spa-ship-globs";
 import {
   verifyLiveRelease,
   waitForLiveRelease,
@@ -384,54 +385,12 @@ describe("wait for live release after origin deploy", () => {
   });
 });
 
-/** Sequential GitHub Actions `paths` matching for this workflow's `*` / `**` / `!` subset (`?`, `+`, `[]` not modeled). */
-function githubGlobToRegExp(glob: string): RegExp {
-  let out = "^";
-  for (let i = 0; i < glob.length; ) {
-    if (glob.startsWith("**/", i)) {
-      out += "(?:.*/)?";
-      i += 3;
-      continue;
-    }
-    if (glob.startsWith("**", i)) {
-      out += ".*";
-      i += 2;
-      continue;
-    }
-    if (glob[i] === "*") {
-      out += "[^/]*";
-      i += 1;
-      continue;
-    }
-    out += glob[i]!.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
-    i += 1;
-  }
-  return new RegExp(`${out}$`);
-}
-
 function parseQuotedPushPathPatterns(workflow: string): string[] {
   const pushBlock =
     workflow.match(
       /\n  push:\n    branches: \[main\]\n    paths:\n([\s\S]*?)\n  workflow_dispatch:/,
     )?.[1] ?? "";
   return [...pushBlock.matchAll(/^[ \t]*- "(.+)"$/gm)].map((match) => match[1]!);
-}
-
-function githubPathsFilterMatches(
-  patterns: readonly string[],
-  changedFiles: readonly string[],
-): boolean {
-  return changedFiles.some((file) => {
-    let included = false;
-    for (const pattern of patterns) {
-      const negated = pattern.startsWith("!");
-      const glob = negated ? pattern.slice(1) : pattern;
-      if (githubGlobToRegExp(glob).test(file)) {
-        included = !negated;
-      }
-    }
-    return included;
-  });
 }
 
 describe("post-deploy workflow wiring", () => {
@@ -471,7 +430,7 @@ describe("post-deploy workflow wiring", () => {
     const pushBlock = workflow.match(/\n  push:\n    branches: \[main\]\n    paths:\n([\s\S]*?)\n  workflow_dispatch:/)?.[1] ?? "";
     expect(pushBlock).toContain('- "src/**"');
     expect(pushBlock).toMatch(
-      /^ {6}- "src\/\*\*"\n {6}- "!src\/\*\*\/__tests__\/\*\*"\n {6}- "!src\/\*\*\/\*\.test\.\*"\n {6}- "!src\/\*\*\/\*\.spec\.\*"$/m,
+      /^ {6}- "src\/\*\*"\n {6}- "!src\/\*\*\/__tests__\/\*\*"\n {6}- "!src\/\*\*\/\*\.test\.\*"\n {6}- "!src\/\*\*\/\*\.spec\.\*"\n {6}- "!src\/integrations\/supabase\/types\.ts"$/m,
     );
     expect(pushBlock).not.toContain("docs/");
     expect(pushBlock).not.toContain("README");
@@ -479,11 +438,15 @@ describe("post-deploy workflow wiring", () => {
     expect(pushBlock).not.toContain(".github/workflows");
     expect(pushBlock).not.toContain("cloudflare-worker");
     expect(pushPathPatterns[0]).toBe("src/**");
-    expect(pushPathPatterns.slice(1, 4)).toEqual([
+    expect(pushPathPatterns.slice(1, 5)).toEqual([
       "!src/**/__tests__/**",
       "!src/**/*.test.*",
       "!src/**/*.spec.*",
+      "!src/integrations/supabase/types.ts",
     ]);
+    expect(workflow).toMatch(
+      /generated from SQL|not Pages-shipped|not a Pages-shipped/i,
+    );
   });
 
   it("does not start PWA smoke for test-only src merges", () => {
@@ -511,6 +474,25 @@ describe("post-deploy workflow wiring", () => {
     ).toBe(false);
   });
 
+  it("does not start PWA smoke for SQL + docs + script tests + generated types", () => {
+    const sqlDocsTypesOnly = [
+      "docs/security/bulk-disable-secure-ops.md",
+      "scripts/__tests__/bulk-disable-secure-contract.test.ts",
+      "scripts/__tests__/capability-backend-contract.test.ts",
+      "scripts/__tests__/capability-migration.integration.test.ts",
+      "src/integrations/supabase/types.ts",
+      "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql",
+    ];
+    expect(
+      githubPathsFilterMatches(pushPathPatterns, sqlDocsTypesOnly),
+    ).toBe(false);
+    expect(
+      githubPathsFilterMatches(pushPathPatterns, [
+        "src/integrations/supabase/types.ts",
+      ]),
+    ).toBe(false);
+  });
+
   it("still starts PWA smoke when real SPA source ships", () => {
     expect(
       githubPathsFilterMatches(pushPathPatterns, [
@@ -526,10 +508,28 @@ describe("post-deploy workflow wiring", () => {
     expect(
       githubPathsFilterMatches(pushPathPatterns, ["public/sw.js"]),
     ).toBe(true);
+    expect(
+      githubPathsFilterMatches(pushPathPatterns, [
+        "src/integrations/supabase/client.ts",
+      ]),
+    ).toBe(true);
+    expect(
+      githubPathsFilterMatches(pushPathPatterns, [
+        "src/integrations/supabase/types.ts",
+        "src/integrations/supabase/client.ts",
+      ]),
+    ).toBe(true);
   });
 
-  it("runs the smoke job for push, manual dispatch, or a successful deployment status", () => {
+  it("gates the smoke job on the decide output instead of every push", () => {
+    expect(workflow).toMatch(/^ {2}decide:\n {4}name: decide$/m);
+    expect(workflow).toMatch(/^ {2}smoke:\n {4}name: pwa-update-smoke$/m);
+    expect(workflow).toMatch(/^\s{4}needs: decide$/m);
     expect(workflow).toMatch(
+      /if: needs\.decide\.outputs\.run_smoke == 'true'/,
+    );
+    expect(workflow).toContain("bun run scripts/spa-ship-globs.ts");
+    expect(workflow).not.toMatch(
       /if: >-\n      github\.event_name == 'workflow_dispatch' \|\|\n      github\.event_name == 'push' \|\|\n      github\.event\.deployment_status\.state == 'success'/,
     );
   });
