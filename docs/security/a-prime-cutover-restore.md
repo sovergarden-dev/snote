@@ -96,6 +96,11 @@ legacy-on, bare-after-on, bare-tab2, legacy-off; evidence
 `0cdcdc0f` / Pages `1b9ed3d1` (BLOCKER/HIGH/MEDIUM none; evidence
 `sentinel-qa-a3-0cdcdc0f/`). LOW: normal new-version reminder; one owner-link
 load needing hard reload; optional cold localStorage-clear not run.
+Bulk Legacy/Secure OFF (docs attest): RPC `capability_note_bulk_disable_secure`
+**applied** live (Go A+B Pulse PASS; git tip `bd11deed` / #142). Live origin
+still `0cdcdc0f`. Go C pin heal **HOLD**. Pixel cold-browser PASS WITH KNOWN
+RISKS (`hage`, `design` bare editable + Synced; evidence
+`pixel-qa/bulk-off-verify/` / `/workspace/pixel-qa/bulk-off-verify/`).
 
 ## Walls
 

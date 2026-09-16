@@ -49,6 +49,14 @@ describe("canonical production origin", () => {
     expect(readme).toContain("#137");
     expect(readme).toContain("#138");
     expect(readme).toContain("#139");
+    expect(readme).toContain("#142");
+    expect(readme).toContain("#143");
+    expect(readme).toContain("capability_note_bulk_disable_secure");
+    expect(readme).toContain("bd11deed");
+    expect(readme).toContain("Go C");
+    expect(readme).toContain("pixel-qa/bulk-off-verify/");
+    expect(readme).toContain("sentinel-qa-bulk-off-live/");
+    expect(readme).toContain("/workspace/pulse-bulk-off-ab2c4de9/");
     expect(readme).toContain("PWA latch");
     expect(readme).toContain("hard-reload");
     expect(readme).toContain("free-edit");
@@ -237,6 +245,10 @@ describe("canonical production origin", () => {
     expect(findings).toContain("#137");
     expect(findings).toContain("#138");
     expect(findings).toContain("#139");
+    expect(findings).toContain("#142");
+    expect(findings).toContain("## 3f.");
+    expect(findings).toContain("capability_note_bulk_disable_secure");
+    expect(findings).toContain("Go C");
     expect(findings).toContain("Choice A");
     expect(findings).toContain("A′");
     expect(findings).toContain("superseded");
@@ -1575,5 +1587,95 @@ describe("canonical production origin", () => {
       /This is not `LEGACY_SHARE_CUTOFF`, canary, soak, SQL 240/,
     );
     expect(cutover).toContain("Do not skip remaining order");
+  });
+
+  it("records live bulk Legacy/Secure OFF without moving origin", () => {
+    const readme = readFileSync("README.md", "utf8");
+    const findings = readFileSync("docs/security-findings.md", "utf8");
+    const runbook = readFileSync("docs/security/bulk-disable-secure-ops.md", "utf8");
+    const backend = readFileSync("docs/capability-backend.md", "utf8");
+    const client = readFileSync("docs/capability-client.md", "utf8");
+    const aPrime = readFileSync("docs/security/a-prime-cutover-restore.md", "utf8");
+    const contract = readFileSync(
+      "docs/security/sql-240-readiness-contract.md",
+      "utf8",
+    );
+    const preflight = readFileSync(
+      "docs/security/sql-240-ops-preflight.md",
+      "utf8",
+    );
+    const adr = readFileSync(
+      "docs/adr/001-home-capability-mint-before-sql-240.md",
+      "utf8",
+    );
+    const worker = readFileSync("cloudflare-worker/README.md", "utf8");
+    const rollout = readFileSync(
+      "docs/security/immediate-containment-rollout.md",
+      "utf8",
+    );
+    const cutover = readFileSync(
+      "docs/security/atomic-capability-cutover.md",
+      "utf8",
+    );
+
+    for (const source of [
+      readme,
+      findings,
+      runbook,
+      backend,
+      client,
+      aPrime,
+      contract,
+      preflight,
+      adr,
+      worker,
+      rollout,
+      cutover,
+    ]) {
+      expect(source).toContain("0cdcdc0f");
+      expect(source).toContain("capability_note_bulk_disable_secure");
+      expect(source).toMatch(/Go C/i);
+      expect(source).toContain("HOLD");
+      expect(source).not.toContain("Origin is `bd11deed`");
+      expect(source).not.toContain("live origin `bd11deed`");
+    }
+
+    expect(readme).toContain("docs attest");
+    expect(readme).toContain("not a SPA ship");
+    expect(readme).toContain("26→0");
+    expect(readme).toContain("skipped_encrypted=0");
+    expect(readme).toContain("PASS WITH KNOWN RISKS");
+    expect(readme).toContain("khớp design");
+    expect(readme).toContain("snote:legacy-secure:");
+    expect(readme).toContain("/workspace/pixel-qa/bulk-off-verify/");
+    expect(readme).toContain("/workspace/sentinel-qa-bulk-off-live/");
+    expect(readme).toContain("does not re-apply");
+
+    expect(findings).toContain(
+      "## 3f. Production bulk Legacy/Secure OFF — verified; origin unchanged",
+    );
+    expect(findings).toContain("bd11deedf95bec1f2e207a59fecdad974d861ff7");
+    expect(findings).toContain(
+      "a5d6623fda2ca811388396f7945ab19a305a95c84d423dc206d168f4425ab850",
+    );
+    expect(findings).toContain("Pulse **PASS**");
+    expect(findings).toContain("service_role");
+    expect(findings).toContain("26→0");
+    expect(findings).toContain("snote:legacy-secure:");
+    expect(findings).toContain("/workspace/pulse-bulk-off-ab2c4de9/");
+    expect(findings).toContain("Origin is `0cdcdc0f`");
+    expect(findings).toContain("This is not SQL 240, not Realtime, not soak-complete.");
+
+    expect(runbook).toContain("**applied** live");
+    expect(runbook).toContain("attestation");
+    expect(backend).toContain("**applied** live");
+    expect(client).toContain("snote:legacy-secure:");
+    expect(aPrime).toContain("pixel-qa/bulk-off-verify/");
+    expect(contract).toContain("bd11deed");
+    expect(preflight).toContain("bd11deed");
+    expect(adr).toContain("bd11deed");
+    expect(worker).toContain("không đổi origin");
+    expect(rollout).toContain("Go C");
+    expect(cutover).toContain("Bulk Legacy/Secure OFF");
   });
 });

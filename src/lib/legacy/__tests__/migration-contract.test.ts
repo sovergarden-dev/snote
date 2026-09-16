@@ -95,6 +95,39 @@ describe("atomic cutover migration", () => {
     );
   });
 
+  it("pins bulk disable-secure migration identity as applied live without moving origin", () => {
+    const bulk = readFileSync(resolve(
+      process.cwd(),
+      "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql",
+    ), "utf8");
+    const sha256 = createHash("sha256").update(bulk, "utf8").digest("hex");
+    const runbook = readFileSync(resolve(
+      process.cwd(),
+      "docs/security/bulk-disable-secure-ops.md",
+    ), "utf8");
+    const findings = readFileSync(resolve(
+      process.cwd(),
+      "docs/security-findings.md",
+    ), "utf8");
+    const contract = readFileSync(resolve(
+      process.cwd(),
+      "docs/security/sql-240-readiness-contract.md",
+    ), "utf8");
+
+    expect(sha256).toBe(
+      "a5d6623fda2ca811388396f7945ab19a305a95c84d423dc206d168f4425ab850",
+    );
+    expect(runbook).toContain(sha256);
+    expect(findings).toContain(sha256);
+    expect(runbook).toContain("**applied** live");
+    expect(findings).toContain("capability_note_bulk_disable_secure");
+    expect(contract).toContain("capability_note_bulk_disable_secure");
+    expect(contract).toContain("0cdcdc0f");
+    expect(contract).toContain("bd11deed");
+    expect(runbook).toContain("0cdcdc0f");
+    expect(findings).toContain("Origin is `0cdcdc0f`");
+  });
+
   it("removes every direct notes policy and privilege in one transaction", () => {
     expect(migration).toMatch(/^BEGIN;/m);
     expect(migration).toMatch(/pg_catalog\.pg_policy/);

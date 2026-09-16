@@ -4,9 +4,9 @@
 - Date: 2026-09-15
 - Repo: `sovergarden-dev/snote`
 - Live pin (product): origin `0cdcdc0f` / Pages `1b9ed3d1` / canary true / smoke `34986611791`
-- Main tip: `0cdcdc0f` (#135 W2 free-edit + #137 Legacy ON handoff + #138 A3 bare RO + #139 lint/types) — this docs attest does not change origin
+- Git tip (apply): `bd11deed` (#142 bulk RPC + #143 PWA smoke harden) — live origin still `0cdcdc0f`; this docs attest does not change origin
 - Owners: Aegis (gates) · Pulse (ops) · Forge (docs PR) · Atlas (coord) · Syringa (named apply)
-- Walls: SQL 240 already applied; W2 SQL `capability_note_plain_upsert` / `capability_note_disable_secure` applied live; U1 SQL `capability_note_convert_legacy` applied live; Edge `plain-upsert` / `disable-secure` / `convert-legacy` published (Pulse `umsg_01m21zhm…` for `convert-legacy`); Worker HOLD (no redeploy), `writes_enabled` HOLD, Realtime HOLD; this docs PR does not re-apply SQL U1 or re-publish Edge / couple Pages
+- Walls: SQL 240 already applied; W2 SQL `capability_note_plain_upsert` / `capability_note_disable_secure` applied live; U1 SQL `capability_note_convert_legacy` applied live; bulk RPC `capability_note_bulk_disable_secure` **applied** live (Go A+B Pulse PASS; Go C HOLD); Edge `plain-upsert` / `disable-secure` / `convert-legacy` published (Pulse `umsg_01m21zhm…` for `convert-legacy`); Worker HOLD (no redeploy), `writes_enabled` HOLD, Realtime HOLD; this docs PR does not re-apply SQL U1 or bulk OFF and does not re-publish Edge / couple Pages
 
 This is not SQL 240, not Realtime, not soak-complete.
 

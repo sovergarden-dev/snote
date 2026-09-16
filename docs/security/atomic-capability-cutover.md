@@ -197,6 +197,12 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    `convert-legacy`). Worker /
    `writes_enabled` / Realtime still HOLD. This docs PR still does not
    re-apply SQL U1 or re-publish Edge.
+   Bulk Legacy/Secure OFF (2026-09-16 docs attest): RPC
+   `capability_note_bulk_disable_secure` **applied** live (Go A+B Pulse PASS;
+   git tip `bd11deed` / #142). Live `deployedSha` remains
+   `0cdcdc0f31eed7db7b9301c4e6fbe7c079cf69dd`. Go C pin heal **HOLD**.
+   This docs PR does not re-apply SQL and does not deploy origin / Worker /
+   Edge.
    This is not soak-complete.
    Do not treat snapshot verify as `capability_runtime_set`.
    This is not `LEGACY_SHARE_CUTOFF`, soak-complete,
