@@ -63,6 +63,17 @@ BEGIN
     LIMIT p_limit
   LOOP
     BEGIN
+      v_note_id := NULL;
+      v_slug := NULL;
+      v_managed := NULL;
+      v_deleted := NULL;
+      v_encrypted := NULL;
+      v_enc_salt := NULL;
+      v_enc_check := NULL;
+      v_enc_iterations := NULL;
+      v_payload := NULL;
+      v_ydoc := NULL;
+
       SELECT n.note_id, n.slug, n.capability_managed, n.deleted_at,
              n.is_encrypted, n.enc_salt, n.enc_check, n.enc_iterations
       INTO v_note_id, v_slug, v_managed, v_deleted,
@@ -87,9 +98,14 @@ BEGIN
           v_ydoc := replace(replace(encode(v_payload, 'base64'), E'\n', ''), E'\r', '');
         END IF;
 
-        IF length(v_ydoc) > 5592406 THEN
+        -- Padded base64 of the 4MiB checkpoint CHECK is 5592408 chars.
+        IF length(v_ydoc) > 5592408 THEN
           v_errors := v_errors || jsonb_build_array(
-            jsonb_build_object('reason', 'payload_too_large')
+            jsonb_build_object(
+              'reason', 'payload_too_large',
+              'slug', v_slug,
+              'noteId', v_note_id
+            )
           );
         ELSE
           DELETE FROM public.notes WHERE note_id = v_note_id;
@@ -127,7 +143,11 @@ BEGIN
       END IF;
     EXCEPTION WHEN OTHERS THEN
       v_errors := v_errors || jsonb_build_array(
-        jsonb_build_object('sqlstate', SQLSTATE)
+        jsonb_build_object(
+          'sqlstate', SQLSTATE,
+          'slug', v_slug,
+          'noteId', v_note_id
+        )
       );
     END;
   END LOOP;

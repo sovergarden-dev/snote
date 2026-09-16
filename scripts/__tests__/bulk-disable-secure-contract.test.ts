@@ -54,6 +54,8 @@ describe("B1 bulk disable-secure contract", () => {
     expect(fn).toContain("'skipped_encrypted'");
     expect(fn).toContain("'skipped_not_managed'");
     expect(fn).toContain("'errors'");
+    expect(fn).toContain("'slug'");
+    expect(fn).toContain("'noteId'");
     expect(fn).not.toContain("capability_note_convert_legacy");
     expect(fn).not.toContain("capability_note_plain_upsert");
 

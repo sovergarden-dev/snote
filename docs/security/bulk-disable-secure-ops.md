@@ -48,11 +48,24 @@ SELECT public.capability_note_bulk_disable_secure(500);
 -- jsonb: status, converted, skipped_encrypted, skipped_not_managed, errors[]
 ```
 
-`p_limit` is 1–10000 eligible plaintext rows per call (encrypted live rows are
-reported in `skipped_encrypted` and left in place). Re-run until `converted=0`.
-Idempotent: already unmanaged rows are not rewritten.
+`p_limit` is 1–10000 eligible rows per call (plaintext by default; encrypted
+live rows are reported in `skipped_encrypted` and left in place). Re-run
+until `converted=0` **and** `errors` is empty. Then leftover live managed
+plaintext should be 0, and leftover live managed encrypted should equal
+`skipped_encrypted`. `converted=0` with a nonempty `errors[]` is **not**
+success: those slugs stay at the head of `ORDER BY created_at, note_id` and
+will block later batches until inspected. `skipped_not_managed` counts
+lock-time races (already unmanaged / deleted after the candidate scan), not
+the fleet of unmanaged rows. Idempotent: already unmanaged rows are not
+rewritten.
 
-Save the jsonb report as the go artifact. Spot-check N slugs: DB unmanaged, new
+Each converted row keeps only the newest `note_checkpoints` payload. Later
+`note_updates` after that checkpoint’s `through_seq` are cascade-deleted with
+the old `note_id` and are **not** folded into the new ydoc. Compact or accept
+that tail loss before Go B.
+
+Save the jsonb report as the go artifact (`errors[]` includes `slug` /
+`noteId` when a row fails; no bodies). Spot-check N slugs: DB unmanaged, new
 `note_id`, no `note_capabilities` on the new id, LNO not `managed:true`,
 plain-upsert allowed. Encrypted control slug stays managed until a later
 include-encrypted go.

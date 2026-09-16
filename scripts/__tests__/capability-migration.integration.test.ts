@@ -1585,3 +1585,90 @@ it("bulk-disables managed notes, skips encrypted, and leaves unmanaged rows", as
     await db.close();
   }
 }, 30_000);
+
+it("copies the newest checkpoint into unmanaged ydoc and drops later updates", async () => {
+  const db = await createCapabilityFixture();
+  try {
+    await applyCapabilityMigrations(db, capabilityMigrationPaths);
+    await db.exec("SET ROLE service_role");
+    expect(await rpc<RuntimeState>(db, "capability_runtime_set", [true, true])).toMatchObject({
+      writesEnabled: true,
+    });
+
+    const upsertTypes = ["", "", "", "::integer", "::text[]", "", "", "", "::integer"];
+    await rpc(db, "capability_note_plain_upsert", [
+      "bulk-ckpt",
+      "YQ",
+      "source",
+      6,
+      [],
+      false,
+      null,
+      null,
+      null,
+    ], upsertTypes);
+    const firstBytes = Buffer.alloc(60, 51);
+    const newerBytes = Buffer.alloc(60, 53);
+    const convertTypes = ["", "", "", "", "", "", "", "", "", "::integer"];
+    const converted = await rpc(db, "capability_note_convert_legacy", [
+      "bulk-ckpt",
+      hash([251]),
+      hash([252]),
+      hash([253]),
+      createHash("sha256").update(firstBytes).digest("hex"),
+      firstBytes.toString("base64url"),
+      false,
+      null,
+      null,
+      null,
+    ], convertTypes);
+    expect(converted.status).toBe("ok");
+    const noteId = converted.noteId as string;
+    await db.exec("RESET ROLE");
+    await db.query(
+      `INSERT INTO public.note_checkpoints(
+         note_id, version, through_seq, checkpoint_id, payload, encryption_version
+       ) VALUES ($1::uuid, 2, 1, $2, $3::bytea, 0)`,
+      [noteId, createHash("sha256").update(newerBytes).digest("hex"), newerBytes],
+    );
+    await db.query(
+      `INSERT INTO public.note_updates(note_id, update_id, payload, encryption_version)
+       VALUES ($1::uuid, $2, $3::bytea, 0)`,
+      [noteId, hash([254]), Buffer.from([1, 2, 3])],
+    );
+    await db.exec("SET ROLE service_role");
+    const report = await rpc<{
+      status: string;
+      converted: number;
+      errors: unknown[];
+    }>(db, "capability_note_bulk_disable_secure", [10], ["::integer"]);
+    expect(report).toMatchObject({ status: "ok", converted: 1, errors: [] });
+    await db.exec("RESET ROLE");
+
+    const row = (await db.query<{
+      managed: boolean;
+      ydoc_state: string;
+      note_id: string;
+      updates: number;
+      checkpoints: number;
+    }>(`
+      SELECT
+        n.capability_managed AS managed,
+        n.ydoc_state,
+        n.note_id::text,
+        (SELECT count(*)::integer FROM public.note_updates u WHERE u.note_id = n.note_id) AS updates,
+        (SELECT count(*)::integer FROM public.note_checkpoints c WHERE c.note_id = n.note_id) AS checkpoints
+      FROM public.notes AS n
+      WHERE n.slug = 'bulk-ckpt'
+    `)).rows[0];
+    expect(row.note_id).not.toBe(noteId);
+    expect(row).toMatchObject({
+      managed: false,
+      ydoc_state: newerBytes.toString("base64"),
+      updates: 0,
+      checkpoints: 0,
+    });
+  } finally {
+    await db.close();
+  }
+}, 30_000);
