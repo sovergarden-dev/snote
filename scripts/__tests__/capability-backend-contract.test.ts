@@ -27,6 +27,7 @@ const capabilityMigrationPaths = [
   "supabase/migrations/20260908000000_capability_note_convert_legacy.sql",
   "supabase/migrations/20260915000000_capability_note_plain_upsert.sql",
   "supabase/migrations/20260915000001_capability_note_disable_secure.sql",
+  "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql",
 ];
 const allCapabilityMigrations = capabilityMigrationPaths.map(source).join("\n");
 const allCapabilitySources = [
@@ -231,6 +232,7 @@ describe("capability database boundary", () => {
     "capability_note_convert_legacy",
     "capability_note_plain_upsert",
     "capability_note_disable_secure",
+    "capability_note_bulk_disable_secure",
   ])("%s is fenced by the database runtime row", (functionName) => {
     const body = sqlFunction(allCapabilityMigrations, functionName);
     const gate = body.indexOf("IF NOT public.capability_writes_acquire()");

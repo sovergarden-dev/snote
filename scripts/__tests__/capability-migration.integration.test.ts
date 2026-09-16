@@ -40,6 +40,7 @@ const capabilityMigrationPaths = [
   "supabase/migrations/20260908000000_capability_note_convert_legacy.sql",
   "supabase/migrations/20260915000000_capability_note_plain_upsert.sql",
   "supabase/migrations/20260915000001_capability_note_disable_secure.sql",
+  "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql",
 ] as const;
 
 async function applyCapabilityMigrations(
@@ -1334,6 +1335,249 @@ it("upserts unmanaged slugs and reverses secure notes without notes table GRANTs
       await expect(db.query(
         "SELECT public.capability_note_disable_secure($1,$2,$3,$4,$5::integer,$6::text[],$7,$8,$9,$10::integer)",
         [convertOwner, "free-edit", "YQ", "x", 1, [], false, null, null, null],
+      )).rejects.toMatchObject({ code: "42501" });
+      await db.exec("RESET ROLE");
+    }
+  } finally {
+    await db.close();
+  }
+}, 30_000);
+
+it("bulk-disables managed notes, skips encrypted, and leaves unmanaged rows", async () => {
+  const db = await createCapabilityFixture();
+  try {
+    await applyCapabilityMigrations(db, capabilityMigrationPaths);
+    await db.exec("SET ROLE service_role");
+    expect(await rpc<RuntimeState>(db, "capability_runtime_set", [true, true])).toMatchObject({
+      writesEnabled: true,
+    });
+
+    const upsertTypes = ["", "", "", "::integer", "::text[]", "", "", "", "::integer"];
+    await rpc(db, "capability_note_plain_upsert", [
+      "bulk-free",
+      "YQ",
+      "keep me",
+      7,
+      [],
+      false,
+      null,
+      null,
+      null,
+    ], upsertTypes);
+    await rpc(db, "capability_note_plain_upsert", [
+      "bulk-plain",
+      "YQ",
+      "soon managed",
+      12,
+      [],
+      false,
+      null,
+      null,
+      null,
+    ], upsertTypes);
+    await rpc(db, "capability_note_plain_upsert", [
+      "bulk-enc",
+      "YQ",
+      "cipher source",
+      13,
+      [],
+      false,
+      null,
+      null,
+      null,
+    ], upsertTypes);
+
+    const plainBytes = Buffer.alloc(60, 41);
+    const encBytes = Buffer.alloc(60, 43);
+    const convertTypes = ["", "", "", "", "", "", "", "", "", "::integer"];
+    const convertedPlain = await rpc(db, "capability_note_convert_legacy", [
+      "bulk-plain",
+      hash([221]),
+      hash([222]),
+      hash([223]),
+      createHash("sha256").update(plainBytes).digest("hex"),
+      plainBytes.toString("base64url"),
+      false,
+      null,
+      null,
+      null,
+    ], convertTypes);
+    expect(convertedPlain.status).toBe("ok");
+    const convertedEnc = await rpc(db, "capability_note_convert_legacy", [
+      "bulk-enc",
+      hash([231]),
+      hash([232]),
+      hash([233]),
+      createHash("sha256").update(encBytes).digest("hex"),
+      encBytes.toString("base64url"),
+      true,
+      "s".repeat(16),
+      "c".repeat(16),
+      100000,
+    ], convertTypes);
+    expect(convertedEnc.status).toBe("ok");
+    const minted = await rpc(db, "capability_note_create", [
+      "bulk-mint",
+      hash([241]),
+      hash([242]),
+      hash([243]),
+    ]);
+    expect(minted.status).toBe("ok");
+    await db.exec("RESET ROLE");
+
+    const before = await db.query<{
+      slug: string;
+      note_id: string;
+      managed: boolean;
+      encrypted: boolean;
+    }>(`
+      SELECT slug, note_id::text, capability_managed AS managed, is_encrypted AS encrypted
+      FROM public.notes
+      WHERE slug IN ('bulk-free', 'bulk-plain', 'bulk-enc', 'bulk-mint')
+      ORDER BY slug
+    `);
+    const beforeBySlug = Object.fromEntries(before.rows.map((row) => [row.slug, row]));
+    expect(beforeBySlug["bulk-free"].managed).toBe(false);
+    expect(beforeBySlug["bulk-plain"].managed).toBe(true);
+    expect(beforeBySlug["bulk-enc"].managed).toBe(true);
+    expect(beforeBySlug["bulk-enc"].encrypted).toBe(true);
+    expect(beforeBySlug["bulk-mint"].managed).toBe(true);
+
+    await db.exec("SET ROLE service_role");
+    expect((await rpc(db, "capability_note_bulk_disable_secure", [0], ["::integer"]))
+      .status).toBe("invalid");
+    const limited = await rpc<{
+      status: string;
+      converted: number;
+      skipped_encrypted: number;
+      skipped_not_managed: number;
+      errors: unknown[];
+    }>(db, "capability_note_bulk_disable_secure", [1], ["::integer"]);
+    expect(limited).toMatchObject({
+      status: "ok",
+      converted: 1,
+      skipped_encrypted: 1,
+      skipped_not_managed: 0,
+      errors: [],
+    });
+    const report = await rpc<{
+      status: string;
+      converted: number;
+      skipped_encrypted: number;
+      skipped_not_managed: number;
+      errors: unknown[];
+    }>(db, "capability_note_bulk_disable_secure", [10], ["::integer"]);
+    expect(report).toMatchObject({
+      status: "ok",
+      converted: 1,
+      skipped_encrypted: 1,
+      skipped_not_managed: 0,
+      errors: [],
+    });
+    const rerun = await rpc<{
+      converted: number;
+      skipped_encrypted: number;
+    }>(db, "capability_note_bulk_disable_secure", [10], ["::integer"]);
+    expect(rerun).toMatchObject({ converted: 0, skipped_encrypted: 1 });
+    await db.exec("RESET ROLE");
+
+    const after = await db.query<{
+      slug: string;
+      note_id: string;
+      managed: boolean;
+      sync_status: string;
+      content: string;
+      ydoc_state: string;
+      encrypted: boolean;
+      caps: number;
+    }>(`
+      SELECT
+        n.slug,
+        n.note_id::text,
+        n.capability_managed AS managed,
+        n.sync_status::text,
+        n.content,
+        n.ydoc_state,
+        n.is_encrypted AS encrypted,
+        (SELECT count(*)::integer FROM public.note_capabilities c WHERE c.note_id = n.note_id) AS caps
+      FROM public.notes AS n
+      WHERE n.slug IN ('bulk-free', 'bulk-plain', 'bulk-enc', 'bulk-mint')
+      ORDER BY n.slug
+    `);
+    const afterBySlug = Object.fromEntries(after.rows.map((row) => [row.slug, row]));
+    expect(afterBySlug["bulk-free"]).toMatchObject({
+      note_id: beforeBySlug["bulk-free"].note_id,
+      managed: false,
+      content: "keep me",
+      caps: 0,
+    });
+    expect(afterBySlug["bulk-plain"].note_id).not.toBe(beforeBySlug["bulk-plain"].note_id);
+    expect(afterBySlug["bulk-plain"]).toMatchObject({
+      managed: false,
+      sync_status: "legacy",
+      content: "",
+      ydoc_state: plainBytes.toString("base64"),
+      encrypted: false,
+      caps: 0,
+    });
+    expect(afterBySlug["bulk-mint"].note_id).not.toBe(beforeBySlug["bulk-mint"].note_id);
+    expect(afterBySlug["bulk-mint"]).toMatchObject({
+      managed: false,
+      sync_status: "legacy",
+      content: "",
+      ydoc_state: "",
+      caps: 0,
+    });
+    expect(afterBySlug["bulk-enc"]).toMatchObject({
+      note_id: beforeBySlug["bulk-enc"].note_id,
+      managed: true,
+      encrypted: true,
+      caps: 3,
+    });
+
+    await db.exec("SET ROLE service_role");
+    const included = await rpc<{
+      converted: number;
+      skipped_encrypted: number;
+    }>(db, "capability_note_bulk_disable_secure", [10, true], ["::integer", ""]);
+    expect(included).toMatchObject({ converted: 1, skipped_encrypted: 0 });
+    await db.exec("RESET ROLE");
+    const encAfter = (await db.query<{
+      managed: boolean;
+      encrypted: boolean;
+      content: string;
+      salt: string | null;
+      caps: number;
+    }>(`
+      SELECT
+        capability_managed AS managed,
+        is_encrypted AS encrypted,
+        content,
+        enc_salt AS salt,
+        (SELECT count(*)::integer FROM public.note_capabilities c WHERE c.note_id = n.note_id) AS caps
+      FROM public.notes AS n
+      WHERE slug = 'bulk-enc'
+    `)).rows[0];
+    expect(encAfter).toMatchObject({
+      managed: false,
+      encrypted: true,
+      content: "",
+      salt: "s".repeat(16),
+      caps: 0,
+    });
+
+    await db.exec("SET ROLE service_role");
+    await rpc<RuntimeState>(db, "capability_runtime_set", [false, false]);
+    expect((await rpc(db, "capability_note_bulk_disable_secure", [10], ["::integer"]))
+      .status).toBe("writes_disabled");
+    await rpc<RuntimeState>(db, "capability_runtime_set", [true, true]);
+    await db.exec("RESET ROLE");
+
+    for (const role of ["anon", "authenticated"]) {
+      await db.exec(`SET ROLE ${role}`);
+      await expect(db.query(
+        "SELECT public.capability_note_bulk_disable_secure($1::integer)",
+        [10],
       )).rejects.toMatchObject({ code: "42501" });
       await db.exec("RESET ROLE");
     }
