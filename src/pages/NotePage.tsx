@@ -620,18 +620,14 @@ export default function NotePage({
         } else if (!legacyOnly && import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true") {
           setCapabilityAdmission(null);
           setPlainProviderCtor(null);
-          if (hasLegacySecurePin(slug)) {
-            convertErrorRef.current = "converted";
-            setConvertError("converted");
-            setEncryption(null);
-            setEncPhase("ready");
-            setResolvedEncTarget(requestTarget);
-            return;
-          }
           const runtime = plainRuntime ?? await loadPlainRuntime();
           if (!isCurrentRequest()) return;
           const note = await runtime.createLegacyNoteApi().open(slug);
           if (!isCurrentRequest()) return;
+          // LNO-wins: leftover pin after bulk OFF must not latch A3. Only
+          // clear after a successful unmanaged/vacant open. LNO errors keep
+          // the pin (fail-closed) via the catch path.
+          if (hasLegacySecurePin(slug)) clearLegacySecurePin(slug);
           legacySourceRef.current = note;
           setPlainProviderCtor(() => runtime.PlainUpsertProvider);
           if (!note) {

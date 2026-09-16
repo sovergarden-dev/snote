@@ -72,6 +72,12 @@ describe("W2 free-edit default + Legacy opt-in contract", () => {
     expect(runConvertAt).toBeGreaterThan(0);
     expect(persistAt).toBeGreaterThan(0);
     expect(notePage).toContain("createLegacyNoteApi().open");
+    const openAt = notePage.indexOf("createLegacyNoteApi().open", canaryArm);
+    expect(openAt).toBeGreaterThan(canaryArm);
+    expect(openAt).toBeLessThan(notesArm);
+    // Go C LNO-wins: never short-circuit the fetch on pin before LNO open.
+    expect(notePage.slice(canaryArm, openAt)).not.toContain("hasLegacySecurePin");
+    expect(notePage.slice(openAt, notesArm)).toContain("clearLegacySecurePin");
     const runConvert = notePage.slice(
       runConvertAt,
       notePage.indexOf("const runDisable = useCallback"),
