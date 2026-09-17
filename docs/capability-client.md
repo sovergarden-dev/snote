@@ -15,8 +15,8 @@ throw `capability API unavailable` without fetching, and default Auth
 minting stays off. Ordinary Vite builds follow `.env.example`
 (`VITE_CAPABILITY_ROUTES_ENABLED=false`) and attest
 `capabilityRoutesEnabled: false`. Live production `build:release` attests
-`capabilityRoutesEnabled: true` (findings §3e; live origin `0cdcdc0f`).
-Origin `0cdcdc0f` is W2 free-edit + Legacy opt-in (#135/#137/#138/#139; prior
+`capabilityRoutesEnabled: true` (findings §3e; live origin `9a80930a`).
+Prior origin `0cdcdc0f` is W2 free-edit + Legacy opt-in (#135/#137/#138/#139; prior
 #130/#131 W1 convert-on-write as product default is **superseded**): canary-on
 plain `/slug` mounts `CutoverNotePage` → editable `NotePage` (free-edit; no
 forced convert; no `#owner=` required to edit). Plain persist uses Edge
@@ -73,9 +73,10 @@ U1 SQL `capability_note_convert_legacy` applied live; Edge `plain-upsert` /
 (Pulse `umsg_01m21zhm…` for `convert-legacy`). Worker /
 `writes_enabled` / Realtime still HOLD.
 SQL `capability_note_bulk_disable_secure` is **applied** live (Go A+B Pulse
-PASS; git tip `bd11deed` / #142). Live origin remains `0cdcdc0f`. Go C pin
-heal **HOLD**: stale `snote:legacy-secure:*` may still latch bare RO until
-heal. This docs attest does not re-apply SQL and does not deploy origin /
+PASS; git tip `bd11deed` / #142). Live origin is `9a80930a`. Go C pin
+heal **shipped** live (#145 LNO-wins): stale `snote:legacy-secure:*` no longer
+latches unmanaged bare RO. Historical bulk OFF `managed_live` 26→0 is not the
+current fleet (`managed_live=3`). This docs attest does not re-apply SQL and does not deploy origin /
 Pages / Worker / Edge.
 
 When that canary is on, Home create waits until LNO `exists` is false
@@ -87,7 +88,7 @@ owner candidate in `sessionStorage`, calls `createCapabilityApi().createNote`
 that create succeeds, and navigates to `/<slug>#owner=<token>`. Random-note
 still mints a fresh slug without that wait. See
 [ADR-001](adr/001-home-capability-mint-before-sql-240.md).
-This Home mint path is live on origin `0cdcdc0f` (canary on; fail-closed idle; findings §3e).
+This Home mint path is live on origin `9a80930a` (canary on; fail-closed idle; findings §3e).
 It is not SQL 240. Recents and
 pins store only the slug, never the owner token. Losing the fragment
 without another copy of the owner capability locks the note out. An

@@ -168,7 +168,7 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    W1 (named Pages go of #130/#131; not current live default): convert-on-write for plain `/slug`.
    Same-canary origin SHA bump
    2026-09-15 ~22:05 ICT:
-   live `deployedSha` `0cdcdc0f31eed7db7b9301c4e6fbe7c079cf69dd`, still
+   `deployedSha` `0cdcdc0f31eed7db7b9301c4e6fbe7c079cf69dd`, still
    `capabilityRoutesEnabled` true. W2 free-edit + Legacy opt-in
    (#135/#137/#138/#139) is live: canary-on plain `/slug` and SplitView panes
    mount `CutoverNotePage` → editable `NotePage` (free-edit; no forced
@@ -199,8 +199,9 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    re-apply SQL U1 or re-publish Edge.
    Bulk Legacy/Secure OFF (2026-09-16 docs attest): RPC
    `capability_note_bulk_disable_secure` **applied** live (Go A+B Pulse PASS;
-   git tip `bd11deed` / #142). Live `deployedSha` remains
-   `0cdcdc0f31eed7db7b9301c4e6fbe7c079cf69dd`. Go C pin heal **HOLD**.
+   git tip `bd11deed` / #142). Historical `deployedSha` at that attest
+   `0cdcdc0f31eed7db7b9301c4e6fbe7c079cf69dd`. Go C pin heal subsequently
+   **shipped** live (#145). Current live `deployedSha` `9a80930aec5d7c018879bd2a406a35c055477f06`.
    This docs PR does not re-apply SQL and does not deploy origin / Worker /
    Edge.
    This is not soak-complete.

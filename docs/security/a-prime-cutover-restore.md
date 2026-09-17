@@ -1,7 +1,7 @@
 # A′ Cutover restore — SPA routing (superseded as live default by W2)
 
-- Status: **Superseded as live default** by W2 free-edit + Legacy opt-in on origin `0cdcdc0f` / Pages `1b9ed3d1` (named Pages go of #135/#137/#138/#139). Remaining live path: `?legacyRo=1` / Legacy Advanced → Cutover/LNO RO, plus AC A3 bare-after-Legacy-ON RO. Prior W1 pin was `2ae9a230` / Pages `fb35474a` (#130/#131). Prior A′+Duplicate pin was `f84183ba` / Pages `74637d87` (#128 on #126).
-- Date: 2026-09-08 (A′ ship); superseded 2026-09-09 (W1); superseded 2026-09-15 (W2 A3)
+- Status: **Superseded as live default** by W2 free-edit + Legacy opt-in on origin `9a80930a` / Pages `8e64829c` (named Pages go of #135/#137/#138/#139 + Go C #145). Remaining live path: `?legacyRo=1` / Legacy Advanced → Cutover/LNO RO, plus AC A3 bare-after-Legacy-ON RO. Prior W2 A3 pin was `0cdcdc0f` / Pages `1b9ed3d1`. Prior W1 pin was `2ae9a230` / Pages `fb35474a` (#130/#131). Prior A′+Duplicate pin was `f84183ba` / Pages `74637d87` (#128 on #126).
+- Date: 2026-09-08 (A′ ship); superseded 2026-09-09 (W1); superseded 2026-09-15 (W2 A3); Go C live 2026-09-17
 - Owners: Aegis (contract) · Pixel (UX) · Atlas (coord) · Syringa (named go)
 - Canary: keep `VITE_CAPABILITY_ROUTES_ENABLED` / `capabilityRoutesEnabled` **on**
 
@@ -11,7 +11,7 @@ Choice A (#118) made canary-on plain `/<slug>` mount editable `NotePage`
 default was superseded by W2** (#135): plain `/slug` is free-edit, without
 forced convert-on-write and without the Choice A table path.
 
-Live origin `0cdcdc0f` is W2 free-edit + Legacy opt-in: plain `/slug` =
+Live origin `9a80930a` is W2 free-edit + Legacy opt-in + Go C LNO-wins: plain `/slug` =
 editable `NotePage` (anyone with the link; no `#owner=` required to edit).
 Legacy ON (owner only) converts via `convert-legacy` then soft-replaces to
 `#owner=`. After Legacy ON, bare `/{slug}` is AC A3 need-owner / Legacy-on RO
@@ -28,7 +28,7 @@ Realtime still HOLD.
 
 ## Mount table (canary on) — A′ design; live default is W2
 
-W2 live default (origin `0cdcdc0f`):
+W2 live default (origin `9a80930a`):
 
 | URL | Mount |
 |---|---|
@@ -96,10 +96,15 @@ legacy-on, bare-after-on, bare-tab2, legacy-off; evidence
 `0cdcdc0f` / Pages `1b9ed3d1` (BLOCKER/HIGH/MEDIUM none; evidence
 `sentinel-qa-a3-0cdcdc0f/`). LOW: normal new-version reminder; one owner-link
 load needing hard reload; optional cold localStorage-clear not run.
+Current live origin `9a80930a` / Pages `8e64829c`: Go C (#145) **shipped**.
+Pixel READY WITH KNOWN RISKS (heal `/design` PASS; `/hage` A3 = still-managed
+after Secure ON probe, not heal FAIL; evidence `pixel-qa/go-c-live-9a80930a/`).
+Sentinel READY WITH KNOWN RISKS (evidence `sentinel-qa-go-c-live/`).
 Bulk Legacy/Secure OFF (docs attest): RPC `capability_note_bulk_disable_secure`
-**applied** live (Go A+B Pulse PASS; git tip `bd11deed` / #142). Live origin
-still `0cdcdc0f`. Go C pin heal **HOLD**. Pixel cold-browser PASS WITH KNOWN
-RISKS (`hage`, `design` bare editable + Synced; evidence
+**applied** live (Go A+B Pulse PASS; git tip `bd11deed` / #142). Historical
+origin at that attest was still `0cdcdc0f`. Go C pin heal subsequently
+**shipped**. Pixel cold-browser PASS WITH KNOWN RISKS (`hage`, `design` bare
+editable + Synced; evidence
 `pixel-qa/bulk-off-verify/` / `/workspace/pixel-qa/bulk-off-verify/`).
 
 ## Walls

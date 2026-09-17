@@ -18,7 +18,8 @@ one hard-reload per Update apply still on this line; Pixel Legacy opt-in
 disabled on free-edit (Legacy OFF) and becomes available after Legacy ON on
 the owner path; `#owner=` Encrypt stays active (#123); A′ (#126) RO default is
 **superseded**; Duplicate securely (#128) remains enabled on Legacy RO only
-(Edge `note-session` `import-legacy`); W2 + A3 live on origin `0cdcdc0f`;
+(Edge `note-session` `import-legacy`); W2 + A3 + Go C (#145 LNO-wins) live on
+origin `9a80930a`;
 Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e): `capabilityRoutesEnabled` true. Plain slug URLs persist via Edge
 `plain-upsert` (free-edit for anyone with the link). Legacy (Secure) opt-in
 ON (owner only) converts the current Y.Doc via `note-session`
@@ -44,32 +45,41 @@ only (PR #128; Edge `note-session` `import-legacy`). Home mints capabilities whe
 applied on production; `writes_enabled=true` and
 `private_realtime_enabled=false` (findings §3d). SQL 240 is already applied;
 soak ≥48h started from the first canary (not soak-complete) — see
-[security findings](docs/security-findings.md). Pixel PASS live A3 @ origin
+[security findings](docs/security-findings.md). Historical Pixel PASS live A3 @ origin
 `0cdcdc0f` / Pages `1b9ed3d1` (panel, free-edit, legacy-on, bare-after-on,
-bare-tab2, legacy-off; evidence `pixel-qa/a3-0cdcdc0f/`). Sentinel pin:
+bare-tab2, legacy-off; evidence `pixel-qa/a3-0cdcdc0f/`). Historical Sentinel:
 READY WITH KNOWN RISKS live A3 @ `0cdcdc0f` / Pages `1b9ed3d1`
 (BLOCKER/HIGH/MEDIUM none; evidence `sentinel-qa-a3-0cdcdc0f/`). LOW: normal
 new-version reminder; one owner-link load needing hard reload; optional cold
-localStorage-clear not run. Not soak-complete.
+localStorage-clear not run. Current live origin `9a80930a` / Pages `8e64829c`
+(`8e64829c-c182-45d1-ba27-5f43af7d20fd`): Go C LNO-wins pin heal (#145)
+shipped. Stale pin (`snote:legacy-secure:*`) + unmanaged LNO → silent free-edit; still-managed → A3 RO;
+LNO error fail-closed; no auto-ON. Pixel READY WITH KNOWN RISKS (heal
+`/design` PASS; `/hage` A3 = still-managed after Secure ON probe, not heal
+FAIL; evidence `pixel-qa/go-c-live-9a80930a/`). Sentinel READY WITH KNOWN RISKS
+(BLOCKER/HIGH none; evidence `/workspace/sentinel-qa-go-c-live/`). Not soak-complete.
 
-**Bulk Legacy/Secure OFF (docs attest only — not a SPA ship):** Syringa named
+**Bulk Legacy/Secure OFF (historical docs attest — not a SPA ship):** Syringa named
 Go A then B, executed by Pulse, **PASS**. Git tip when applied: `bd11deed`
 (migration `20260916000000_capability_note_bulk_disable_secure.sql` from #142;
-tip also includes #143 `pwa-update-smoke` harden). Live SPA origin remains
-`0cdcdc0f` / Pages `1b9ed3d1` from the prior A3 attest (bulk OFF is SQL/ops).
+tip also includes #143 `pwa-update-smoke` harden). At that attest, live SPA
+origin was still `0cdcdc0f` / Pages `1b9ed3d1` (bulk OFF is SQL/ops).
 Go A: RPC `capability_note_bulk_disable_secure` **applied**; `service_role`
-EXECUTE only; anon/authenticated EXECUTE false. Go B: `managed_live` 26→0;
-skipped_encrypted=0; errors=[]; plaintext converted; `note_id` rotated. Go C
-pin heal **HOLD** — stale `snote:legacy-secure:*` may keep bare RO until heal.
-Pulse evidence `/workspace/pulse-bulk-off-ab2c4de9/`. Sentinel: READY WITH
-KNOWN RISKS (API+cold SPA free-edit PASS; evidence
-`/workspace/sentinel-qa-bulk-off-live/`). Pixel cold-browser: PASS WITH KNOWN RISKS
-(`hage`, `design` bare editable + Synced; evidence
-`/workspace/pixel-qa/bulk-off-verify/`). Aegis: khớp design. This PR does not
-deploy origin / Pages / Worker / Edge and does not re-apply SQL.
+EXECUTE only; anon/authenticated EXECUTE false. Go B: `managed_live` 26→0
+(2026-09-16); skipped_encrypted=0; errors=[]; plaintext converted; `note_id`
+rotated. That post-count is **historical**; the fleet is not still 0 managed.
+Pulse RO inventory at Go C live: `managed_live=3` (`hage`, `xqmqh53z`,
+`svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged. Go C pin heal
+subsequently **shipped** live (#145 LNO-wins) on origin `9a80930a`.
+Pulse evidence `/workspace/pulse-bulk-off-ab2c4de9/`. Historical Sentinel:
+READY WITH KNOWN RISKS (API+cold SPA free-edit PASS; evidence
+`/workspace/sentinel-qa-bulk-off-live/`). Historical Pixel cold-browser:
+PASS WITH KNOWN RISKS (`hage`, `design` bare editable + Synced; evidence
+`/workspace/pixel-qa/bulk-off-verify/`). Aegis: khớp design. This PR does not deploy origin / Pages / Worker / Edge and does not re-apply SQL.
 
-**W2 live (named Pages go of #135/#137/#138/#139):** canary-on plain `/<slug>`
-is free-edit (no convert-on-write default). W1 convert-on-write as product
+**W2 live (named Pages go of #135/#137/#138/#139 + Go C #145):** canary-on
+plain `/<slug>` is free-edit (no convert-on-write default). Go C LNO-wins pin
+heal is live on origin `9a80930a`. W1 convert-on-write as product
 default is **superseded**. A′ (#126) Cutover/LNO RO default is
 **superseded**. `#owner=`/`#edit=` still render `NotePage`. `?legacyRo=1`
 still RO + banner. Canary stays on. SQL 240 already applied; W2 SQL
