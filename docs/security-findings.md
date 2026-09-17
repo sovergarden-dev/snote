@@ -1524,8 +1524,7 @@ Pulse RO inventory: `managed_live=3` (`hage`, `xqmqh53z`,
 `svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged. Historical
 Go B `managed_live` 26→0 is not the current fleet.
 PWA auto-smoke on the #145 merge (`35136042556`) failed identity wait because
-origin was not yet live at merge time; this attest does not claim a later PWA
-smoke PASS and does not dispatch one. Historical PWA `34986611791` remains
+origin was not yet live at merge time; this attest does not claim a later PWA smoke PASS and does not dispatch one. Historical PWA `34986611791` remains
 the `0cdcdc0f` pin.
 #145 is live on this line. Worker remains `931430c0` / `5f94ab6c`. Walls HOLD:
 Worker / Realtime / `writes_enabled`. SQL 240 already applied. No Edge / no
@@ -1538,7 +1537,8 @@ not soak-complete. Origin attest only. Origin is `9a80930a`.
 ## 3f. Production bulk Legacy/Secure OFF — verified; origin unchanged
 
 Docs attestation only (2026-09-16). This section does not deploy origin /
-Pages / Worker / Edge and does not re-apply SQL.
+Pages / Worker / Edge and does not re-apply SQL. Origin later moved to
+`9a80930a`; see §3g.
 
 Syringa named Go A then B; Pulse **PASS**. Git tip when applied: `bd11deed`
 (`bd11deedf95bec1f2e207a59fecdad974d861ff7`; migration

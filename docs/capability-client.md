@@ -16,7 +16,7 @@ minting stays off. Ordinary Vite builds follow `.env.example`
 (`VITE_CAPABILITY_ROUTES_ENABLED=false`) and attest
 `capabilityRoutesEnabled: false`. Live production `build:release` attests
 `capabilityRoutesEnabled: true` (findings §3e; live origin `9a80930a`).
-Prior origin `0cdcdc0f` is W2 free-edit + Legacy opt-in (#135/#137/#138/#139; prior
+Prior origin `0cdcdc0f` shipped W2 free-edit + Legacy opt-in (#135/#137/#138/#139; prior
 #130/#131 W1 convert-on-write as product default is **superseded**): canary-on
 plain `/slug` mounts `CutoverNotePage` → editable `NotePage` (free-edit; no
 forced convert; no `#owner=` required to edit). Plain persist uses Edge

@@ -90,9 +90,9 @@ converted slug does NOT go `#owner=` → note-session `create` → 409
 `slug_unavailable` (does not call convert-legacy) → Sync error (bookmark
 residual; needs follow-up recovery / «open secure link»). MEDIUM: SW A′
 false RO until hard-reload.
-Pixel PASS live A3 @ `0cdcdc0f` / Pages `1b9ed3d1` (panel, free-edit,
+Historical Pixel PASS live A3 @ `0cdcdc0f` / Pages `1b9ed3d1` (panel, free-edit,
 legacy-on, bare-after-on, bare-tab2, legacy-off; evidence
-`pixel-qa/a3-0cdcdc0f/`). Sentinel pin: READY WITH KNOWN RISKS live A3 @
+`pixel-qa/a3-0cdcdc0f/`). Historical Sentinel pin: READY WITH KNOWN RISKS live A3 @
 `0cdcdc0f` / Pages `1b9ed3d1` (BLOCKER/HIGH/MEDIUM none; evidence
 `sentinel-qa-a3-0cdcdc0f/`). LOW: normal new-version reminder; one owner-link
 load needing hard reload; optional cold localStorage-clear not run.

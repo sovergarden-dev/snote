@@ -1763,6 +1763,9 @@ describe("canonical production origin", () => {
     expect(findings).toContain("LNO-wins");
     expect(findings).toContain("shipped");
     expect(findings).toContain("managed_live=3");
+    expect(findings).toContain("35136042556");
+    expect(findings).toContain("does not claim a later PWA smoke PASS");
+    expect(findings).not.toContain("Go C pin heal **HOLD**");
     expect(findings).toContain("This is not SQL 240, not Realtime, not soak-complete.");
 
     expect(runbook).toContain("9a80930a");
