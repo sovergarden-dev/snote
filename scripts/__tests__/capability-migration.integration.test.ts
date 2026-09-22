@@ -41,6 +41,7 @@ const capabilityMigrationPaths = [
   "supabase/migrations/20260915000000_capability_note_plain_upsert.sql",
   "supabase/migrations/20260915000001_capability_note_disable_secure.sql",
   "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql",
+  "supabase/migrations/20260922000000_capability_note_bulk_disable_secure_p_slugs.sql",
 ] as const;
 
 async function applyCapabilityMigrations(
@@ -1668,6 +1669,244 @@ it("copies the newest checkpoint into unmanaged ydoc and drops later updates", a
       updates: 0,
       checkpoints: 0,
     });
+  } finally {
+    await db.close();
+  }
+}, 30_000);
+
+it("scopes bulk disable-secure by p_slugs; empty array is no-op; NULL is fleet", async () => {
+  const db = await createCapabilityFixture();
+  try {
+    await applyCapabilityMigrations(db, capabilityMigrationPaths);
+    await db.exec("SET ROLE service_role");
+    expect(await rpc<RuntimeState>(db, "capability_runtime_set", [true, true])).toMatchObject({
+      writesEnabled: true,
+    });
+
+    expect((await db.query<{
+      dropped_two_arg: boolean;
+      three_arg: boolean;
+    }>(`
+      SELECT
+        to_regprocedure('public.capability_note_bulk_disable_secure(integer, boolean)') IS NULL
+          AS dropped_two_arg,
+        to_regprocedure('public.capability_note_bulk_disable_secure(integer, boolean, text[])') IS NOT NULL
+          AS three_arg
+    `)).rows[0]).toEqual({ dropped_two_arg: true, three_arg: true });
+
+    const upsertTypes = ["", "", "", "::integer", "::text[]", "", "", "", "::integer"];
+    for (const slug of ["allow-a", "allow-b", "allow-enc", "allow-free"]) {
+      await rpc(db, "capability_note_plain_upsert", [
+        slug,
+        "YQ",
+        slug,
+        slug.length,
+        [],
+        false,
+        null,
+        null,
+        null,
+      ], upsertTypes);
+    }
+
+    const convertTypes = ["", "", "", "", "", "", "", "", "", "::integer"];
+    const plainA = Buffer.alloc(60, 61);
+    const plainB = Buffer.alloc(60, 62);
+    const encBytes = Buffer.alloc(60, 63);
+    expect((await rpc(db, "capability_note_convert_legacy", [
+      "allow-a",
+      hash([261]),
+      hash([262]),
+      hash([263]),
+      createHash("sha256").update(plainA).digest("hex"),
+      plainA.toString("base64url"),
+      false,
+      null,
+      null,
+      null,
+    ], convertTypes)).status).toBe("ok");
+    expect((await rpc(db, "capability_note_convert_legacy", [
+      "allow-b",
+      hash([271]),
+      hash([272]),
+      hash([273]),
+      createHash("sha256").update(plainB).digest("hex"),
+      plainB.toString("base64url"),
+      false,
+      null,
+      null,
+      null,
+    ], convertTypes)).status).toBe("ok");
+    expect((await rpc(db, "capability_note_convert_legacy", [
+      "allow-enc",
+      hash([281]),
+      hash([282]),
+      hash([283]),
+      createHash("sha256").update(encBytes).digest("hex"),
+      encBytes.toString("base64url"),
+      true,
+      "s".repeat(16),
+      "c".repeat(16),
+      100000,
+    ], convertTypes)).status).toBe("ok");
+
+    const slugCast = ["::integer", "", "::text[]"] as const;
+    const empty = await rpc<{
+      status: string;
+      converted: number;
+      skipped_encrypted: number;
+      skipped_allowlist_miss: number;
+      skipped_limit: number;
+      scope: string;
+      allowlist_requested: number;
+      allowlist_matched_managed: number;
+    }>(db, "capability_note_bulk_disable_secure", [10, false, []], [...slugCast]);
+    expect(empty).toMatchObject({
+      status: "ok",
+      converted: 0,
+      skipped_encrypted: 0,
+      skipped_allowlist_miss: 0,
+      skipped_limit: 0,
+      scope: "allowlist",
+      allowlist_requested: 0,
+      allowlist_matched_managed: 0,
+    });
+    await db.exec("RESET ROLE");
+
+    const managedAfterEmpty = await db.query<{ slug: string; managed: boolean }>(`
+      SELECT slug, capability_managed AS managed
+      FROM public.notes
+      WHERE slug IN ('allow-a', 'allow-b', 'allow-enc', 'allow-free')
+      ORDER BY slug
+    `);
+    expect(Object.fromEntries(managedAfterEmpty.rows.map((row) => [row.slug, row.managed])))
+      .toEqual({
+        "allow-a": true,
+        "allow-b": true,
+        "allow-enc": true,
+        "allow-free": false,
+      });
+
+    await db.exec("SET ROLE service_role");
+    const trimmed = await rpc<{
+      status: string;
+      converted: number;
+      skipped_encrypted: number;
+      skipped_allowlist_miss: number;
+      skipped_limit: number;
+      scope: string;
+      allowlist_requested: number;
+      allowlist_matched_managed: number;
+    }>(
+      db,
+      "capability_note_bulk_disable_secure",
+      [1, false, ["allow-a", "allow-b"]],
+      [...slugCast],
+    );
+    expect(trimmed).toMatchObject({
+      status: "ok",
+      converted: 1,
+      skipped_encrypted: 0,
+      skipped_allowlist_miss: 0,
+      skipped_limit: 1,
+      scope: "allowlist",
+      allowlist_requested: 2,
+      allowlist_matched_managed: 2,
+    });
+
+    const scoped = await rpc<{
+      status: string;
+      converted: number;
+      skipped_encrypted: number;
+      skipped_allowlist_miss: number;
+      skipped_limit: number;
+      scope: string;
+      allowlist_requested: number;
+      allowlist_matched_managed: number;
+    }>(
+      db,
+      "capability_note_bulk_disable_secure",
+      [10, false, ["allow-a", "missing-slug", "allow-enc"]],
+      [...slugCast],
+    );
+    expect(scoped).toMatchObject({
+      status: "ok",
+      converted: 0,
+      skipped_encrypted: 1,
+      skipped_allowlist_miss: 2,
+      skipped_limit: 0,
+      scope: "allowlist",
+      allowlist_requested: 3,
+      allowlist_matched_managed: 0,
+    });
+    await db.exec("RESET ROLE");
+
+    const afterScoped = await db.query<{ slug: string; managed: boolean; encrypted: boolean }>(`
+      SELECT slug, capability_managed AS managed, is_encrypted AS encrypted
+      FROM public.notes
+      WHERE slug IN ('allow-a', 'allow-b', 'allow-enc', 'allow-free')
+      ORDER BY slug
+    `);
+    expect(Object.fromEntries(afterScoped.rows.map((row) => [row.slug, row])))
+      .toMatchObject({
+        "allow-a": { managed: false, encrypted: false },
+        "allow-b": { managed: true, encrypted: false },
+        "allow-enc": { managed: true, encrypted: true },
+        "allow-free": { managed: false, encrypted: false },
+      });
+
+    await db.exec("SET ROLE service_role");
+    const missRerun = await rpc<{
+      converted: number;
+      skipped_allowlist_miss: number;
+      allowlist_matched_managed: number;
+    }>(db, "capability_note_bulk_disable_secure", [10, false, ["allow-a"]], [...slugCast]);
+    expect(missRerun).toMatchObject({
+      converted: 0,
+      skipped_allowlist_miss: 1,
+      allowlist_matched_managed: 0,
+    });
+
+    const limited = await rpc<{
+      converted: number;
+      skipped_limit: number;
+      allowlist_matched_managed: number;
+      scope: string;
+    }>(db, "capability_note_bulk_disable_secure", [1, false, null], [...slugCast]);
+    expect(limited).toMatchObject({
+      converted: 1,
+      skipped_limit: 0,
+      allowlist_matched_managed: 1,
+      scope: "fleet",
+    });
+    await db.exec("RESET ROLE");
+
+    const afterFleet = (await db.query<{ managed: boolean }>(`
+      SELECT capability_managed AS managed FROM public.notes WHERE slug = 'allow-b'
+    `)).rows[0];
+    expect(afterFleet.managed).toBe(false);
+    expect((await db.query<{ managed: boolean }>(`
+      SELECT capability_managed AS managed FROM public.notes WHERE slug = 'allow-enc'
+    `)).rows[0].managed).toBe(true);
+
+    await db.exec("SET ROLE service_role");
+    const oversized = await rpc<{ status: string }>(
+      db,
+      "capability_note_bulk_disable_secure",
+      [10, false, Array.from({ length: 10001 }, () => "x")],
+      [...slugCast],
+    );
+    expect(oversized.status).toBe("invalid");
+    await db.exec("RESET ROLE");
+
+    for (const role of ["anon", "authenticated"]) {
+      await db.exec(`SET ROLE ${role}`);
+      await expect(db.query(
+        "SELECT public.capability_note_bulk_disable_secure($1::integer, $2::boolean, $3::text[])",
+        [10, false, ["allow-a"]],
+      )).rejects.toMatchObject({ code: "42501" });
+      await db.exec("RESET ROLE");
+    }
   } finally {
     await db.close();
   }

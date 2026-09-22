@@ -28,6 +28,7 @@ const capabilityMigrationPaths = [
   "supabase/migrations/20260915000000_capability_note_plain_upsert.sql",
   "supabase/migrations/20260915000001_capability_note_disable_secure.sql",
   "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql",
+  "supabase/migrations/20260922000000_capability_note_bulk_disable_secure_p_slugs.sql",
 ];
 const allCapabilityMigrations = capabilityMigrationPaths.map(source).join("\n");
 const allCapabilitySources = [
@@ -39,7 +40,7 @@ const allCapabilitySources = [
   source("supabase/functions/note-manage/index.ts"),
 ].join("\n");
 const sqlFunction = (sql: string, functionName: string) => {
-  const start = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${functionName}`);
+  const start = sql.lastIndexOf(`CREATE OR REPLACE FUNCTION public.${functionName}`);
   if (start < 0) return "";
   const end = sql.indexOf("\n$$;", start);
   return end < 0 ? sql.slice(start) : sql.slice(start, end + 4);
