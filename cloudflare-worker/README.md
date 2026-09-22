@@ -13,6 +13,8 @@ Origin SPA hiện là `9a80930a` (xem §3e); bulk Legacy OFF
 (`capability_note_bulk_disable_secure`, historical Go C HOLD at #144 on
 `0cdcdc0f`) không đổi origin at apply time; Go C #145 later shipped on `9a80930a`;
 re-bulk OFF ALL 6 (2026-09-22) không đổi origin (vẫn `9a80930a`);
+Go SQL allowlist `p_slugs` (2026-09-22, tip `46ddaf01`) không đổi origin
+(vẫn `9a80930a`);
 Worker identity HOLD; không được coi origin là `931430c0`.
 Observability và invocation logs đã live trên production, không chỉ committed.
 Việc ghi nhận identity này không cho phép một deployment mới.

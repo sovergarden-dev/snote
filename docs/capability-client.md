@@ -78,9 +78,11 @@ heal **shipped** live (#145 LNO-wins): stale `snote:legacy-secure:*` no longer
 latches unmanaged bare RO. Historical bulk OFF `managed_live` 26→0 is not a
 claim the fleet stayed 0 (`managed_live=3` at Go C live; later preflight 6).
 Re-bulk OFF ALL 6 (2026-09-22) Pulse post-verify `managed_live=0` + Sentinel
-spot; anon fleet count unavailable (401). This docs attest does not re-apply
-SQL, does not re-run bulk RPC, and does not deploy origin /
-Pages / Worker / Edge.
+spot is **historical**. 3-arg `p_slugs` allowlist is **applied live** (Go SQL
+Pulse PASS; git tip `46ddaf01` / #148; 2-arg DROP). Residual
+`managed_live=1` (`aggadagdade`) still managed — **no bulk OFF**. Anon fleet
+count unavailable (401). This docs attest does not re-apply SQL, does not
+run bulk convert, and does not deploy origin / Pages / Worker / Edge.
 
 When that canary is on, Home create waits until LNO `exists` is false
 (`available`; it does not mint while `idle` or `checking`, and

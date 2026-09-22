@@ -105,8 +105,10 @@ Bulk Legacy/Secure OFF (docs attest): RPC `capability_note_bulk_disable_secure`
 **applied** live (Go A+B Pulse PASS; git tip `bd11deed` / #142). Historical
 origin at that attest was still `0cdcdc0f`. Go C pin heal subsequently
 **shipped**. Re-bulk OFF ALL 6 (2026-09-22) Pulse PASS (`converted=6`;
-post-verify `managed_live=0` + Sentinel spot; anon fleet count unavailable).
-Live origin remains `9a80930a`. Historical Pixel cold-browser PASS WITH KNOWN
+post-verify `managed_live=0` + Sentinel spot) is **historical**. 3-arg
+`p_slugs` allowlist **applied live** (Go SQL Pulse PASS; git tip `46ddaf01`
+/ #148). Residual `managed_live=1` (`aggadagdade`) still managed — **no bulk
+OFF**. Live origin remains `9a80930a`. Historical Pixel cold-browser PASS WITH KNOWN
 RISKS at first bulk OFF (`hage`, `design` bare editable + Synced; evidence
 `pixel-qa/bulk-off-verify/` / `/workspace/pixel-qa/bulk-off-verify/`).
 

@@ -111,7 +111,7 @@ describe("B1 bulk disable-secure contract", () => {
     expect(runbook).not.toContain("convert-legacy");
   });
 
-  it("hard-drops the 2-arg RPC and creates a 3-arg allowlist function (GitHub-only)", () => {
+  it("hard-drops the 2-arg RPC and creates a 3-arg allowlist function", () => {
     const sql = source(ALLOWLIST_MIGRATION);
     const fn = sqlFunction(sql, "capability_note_bulk_disable_secure");
     const types = source("src/integrations/supabase/types.ts");
@@ -196,12 +196,31 @@ describe("B1 bulk disable-secure contract", () => {
       .not.toContain("capability_note_bulk_disable_secure");
   });
 
-  it("documents GitHub-only allowlist Q1 semantics and the named-go checklist", () => {
+  it("records Go SQL allowlist p_slugs applied live without fleet OFF or origin ship", () => {
     const runbook = source(RUNBOOK);
-    expect(runbook).toContain("**not applied**");
-    expect(runbook).toContain("GitHub-only");
+    expect(runbook).toContain("**applied live**");
+    expect(runbook).not.toContain("**not applied**");
+    expect(runbook).not.toContain("GitHub-only");
+    expect(runbook).not.toContain("Live production still has the 2-arg");
     expect(runbook).toContain("p_slugs");
     expect(runbook).toContain("20260922000000_capability_note_bulk_disable_secure_p_slugs.sql");
+    expect(runbook).toContain("46ddaf01");
+    expect(runbook).toContain("46ddaf012bea1d01a6235e2be7e9132555d6cd84");
+    expect(runbook).toContain(
+      "f16a20a661dc96523bf9a717a830dbe51df2d2427206a72a7c9c373b4a782132",
+    );
+    expect(runbook).toContain("/workspace/pulse-allowlist-sql-46ddaf01/");
+    expect(runbook).toContain("/workspace/sentinel-qa-allowlist-sql-46ddaf01/");
+    expect(runbook).toContain("converted=0");
+    expect(runbook).toContain("scope=allowlist");
+    expect(runbook).toContain("skipped_allowlist_miss=1");
+    expect(runbook).toContain("aggadagdade");
+    expect(runbook).toContain("managed_live=1");
+    expect(runbook).toContain("**No bulk OFF.**");
+    expect(runbook).toContain("NULL fleet **not**");
+    expect(runbook).toContain("schema_migrations");
+    expect(runbook).toContain("9a80930a");
+    expect(runbook).toContain("does not move Pages");
     expect(runbook).toMatch(/NULL\/omit = fleet-wide/);
     expect(runbook).toMatch(/`\{\}` \/ cardinality 0 = \*\*no-op\*\*/);
     expect(runbook).toContain("skipped_allowlist_miss");
@@ -214,6 +233,7 @@ describe("B1 bulk disable-secure contract", () => {
     expect(runbook).toContain("skipped_encrypted");
     expect(runbook).toContain("DROP FUNCTION");
     expect(runbook).toContain("No `p_strict` in v1");
+    expect(runbook).toContain("HOLD");
     expect(runbook).not.toContain("supabase db push");
   });
 });

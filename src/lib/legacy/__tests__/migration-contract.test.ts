@@ -138,6 +138,15 @@ describe("atomic cutover migration", () => {
     expect(runbook).toContain("no re-migrate");
     expect(findings).toContain("## 3h.");
     expect(findings).toContain("managed_live=0");
+    expect(findings).toContain("## 3i.");
+    expect(findings).toContain(
+      "f16a20a661dc96523bf9a717a830dbe51df2d2427206a72a7c9c373b4a782132",
+    );
+    expect(findings).toContain("46ddaf01");
+    expect(findings).toContain("aggadagdade");
+    expect(findings).toContain("managed_live=1");
+    expect(runbook).toContain("46ddaf01");
+    expect(runbook).toContain("aggadagdade");
   });
 
   it("removes every direct notes policy and privilege in one transaction", () => {
