@@ -9,12 +9,12 @@ import { legacyOptInConfirmStorageKey, markLegacyOptInConfirmed } from "@/lib/le
 import type { CapabilityAccess } from "@/lib/capability/url";
 
 vi.mock("@/components/note/LockButton", () => ({
-  LockButton: ({ disabled }: { disabled?: boolean }) => (
+  LockButton: ({ disabled, isEncrypted }: { disabled?: boolean; isEncrypted?: boolean }) => (
     <button
       type="button"
       role="switch"
       aria-labelledby="security-encrypt-label"
-      aria-checked="false"
+      aria-checked={isEncrypted ? "true" : "false"}
       disabled={disabled}
     >
       encrypt-control
@@ -433,11 +433,11 @@ describe("NoteSecurityPanel", () => {
     expect(screen.getByRole("button", { name: "security.duplicate_retry" })).not.toBeDisabled();
   });
 
-  it("uses W2 Legacy (Secure) copy, keeps Encrypt honest until ON, and confirms ON without ?legacyRo=1", async () => {
+  it("uses W2 Legacy (Secure) copy and keeps Encrypt available on free-edit", async () => {
     const onLegacyEnable = vi.fn();
     renderPanel({
       onLegacyEnable,
-      allowEncryptionTransitions: false,
+      allowEncryptionTransitions: true,
     });
     await openPanel();
 
@@ -447,8 +447,9 @@ describe("NoteSecurityPanel", () => {
       "aria-checked",
       "false",
     );
-    expect(screen.getByRole("switch", { name: "security.encrypt_label" })).toBeDisabled();
-    expect(screen.getByText("security.encrypt_helper_unavailable")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "security.encrypt_label" })).not.toBeDisabled();
+    expect(screen.getByText("security.encrypt_helper")).toBeInTheDocument();
+    expect(screen.queryByText("security.encrypt_helper_unavailable")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("switch", { name: "security.legacy_secure_label" }));
     const dialog = await screen.findByRole("dialog", { name: "security.legacy_secure_confirm_title" });
@@ -487,5 +488,43 @@ describe("NoteSecurityPanel", () => {
     });
     await openPanel();
     expect(screen.getByRole("switch", { name: "security.legacy_secure_label" })).toBeDisabled();
+  });
+
+  it("disables Legacy and shows mutex copy while Encrypt is on", async () => {
+    const onLegacyEnable = vi.fn();
+    renderPanel({
+      isEncrypted: true,
+      onLegacyEnable,
+      allowEncryptionTransitions: true,
+    });
+    await openPanel();
+
+    const encrypt = screen.getByRole("switch", { name: "security.encrypt_label" });
+    const legacy = screen.getByRole("switch", { name: "security.legacy_secure_label" });
+    expect(encrypt).toHaveAttribute("aria-checked", "true");
+    expect(legacy).toBeDisabled();
+    expect(legacy).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByText("security.legacy_helper_mutex")).toBeInTheDocument();
+    await userEvent.click(legacy);
+    expect(screen.queryByTestId("legacy-opt-in-confirm")).not.toBeInTheDocument();
+    expect(onLegacyEnable).not.toHaveBeenCalled();
+  });
+
+  it("disables Encrypt and shows mutex copy while Legacy is on", async () => {
+    renderPanel({
+      legacyOn: true,
+      onLegacyEnable: vi.fn(),
+      onLegacyDisable: vi.fn(),
+      allowEncryptionTransitions: false,
+    });
+    await openPanel();
+
+    const encrypt = screen.getByRole("switch", { name: "security.encrypt_label" });
+    const legacy = screen.getByRole("switch", { name: "security.legacy_secure_label" });
+    expect(legacy).toHaveAttribute("aria-checked", "true");
+    expect(encrypt).toBeDisabled();
+    expect(encrypt).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByText("security.encrypt_helper_mutex")).toBeInTheDocument();
+    expect(screen.queryByText("security.encrypt_helper_unavailable")).not.toBeInTheDocument();
   });
 });

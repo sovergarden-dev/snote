@@ -83,7 +83,7 @@ describe("production note access hotfix", () => {
       "allowEncryptionTransitions={false}",
     );
     expect(source("src/pages/NotePage.tsx")).toContain(
-      "allowEncryptionTransitions={!legacyContainment}",
+      "allowEncryptionTransitions = !legacyOnly && !isManaged",
     );
     expect(source("src/pages/CutoverNotePage.tsx")).toContain("isLegacyRoSearch");
     expect(source("src/pages/CutoverNotePage.tsx")).not.toMatch(
@@ -130,8 +130,9 @@ describe("production note access hotfix", () => {
     expect(home).not.toMatch(
       /import\s*\{[^}]*createCapabilityApi[^}]*\}\s*from\s*["']@\/lib\/capability\/client["']/,
     );
-    expect(withoutTypeImports(home)).toContain('import("@/lib/capability/client")');
-    expectValueImportBehindRoutesGuard(home, "@/lib/capability/client");
+    expect(withoutTypeImports(home)).not.toContain('import("@/lib/capability/client")');
+    expect(home).not.toContain("mintAndOpen");
+    expect(home).not.toContain("mintCapabilityNote");
     expectValueImportBehindRoutesGuard(home, "@/lib/legacy/cutover");
     expect(home).not.toContain("note-snapshot:");
     expect(raw).not.toContain('import { supabase } from "@/integrations/supabase/client";');
@@ -213,12 +214,11 @@ describe("production note access hotfix", () => {
     expect(sharePage).not.toMatch(staticCapabilityProvider);
     expect(withoutTypeImports(notePage)).toContain('import("@/lib/capability/client")');
     expect(withoutTypeImports(sharePage)).toContain('import("@/lib/capability/client")');
-    expect(withoutTypeImports(home)).toContain('import("@/lib/capability/client")');
+    expect(withoutTypeImports(home)).not.toContain('import("@/lib/capability/client")');
     expect(withoutTypeImports(notePage)).toContain('import("@/lib/yjs/capability-provider")');
     expect(withoutTypeImports(sharePage)).toContain('import("@/lib/yjs/capability-provider")');
     expectValueImportBehindRoutesGuard(notePage, "@/lib/capability/client");
     expectValueImportBehindRoutesGuard(sharePage, "@/lib/capability/client");
-    expectValueImportBehindRoutesGuard(home, "@/lib/capability/client");
     expectValueImportBehindRoutesGuard(notePage, "@/lib/yjs/capability-provider");
     expectValueImportBehindRoutesGuard(sharePage, "@/lib/yjs/capability-provider");
     expect(notePage).toContain("export function CutoverNotePage");

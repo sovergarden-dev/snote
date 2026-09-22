@@ -194,7 +194,7 @@ describe("Home legacy note navigation", () => {
   });
 });
 
-describe("Home capability mint navigation", () => {
+describe("Home capability canary navigation", () => {
   let previousFlag: unknown;
 
   function mockCreateNote() {
@@ -256,7 +256,7 @@ describe("Home capability mint navigation", () => {
     expect(harness.from).not.toHaveBeenCalled();
   });
 
-  it("mints a free slug via note-session create and navigates to the owner fragment", async () => {
+  it("seeds a free slug as a bare /slug and never mints an owner fragment", async () => {
     mockExists(false);
     const createNote = mockCreateNote();
     renderHome();
@@ -265,22 +265,11 @@ describe("Home capability mint navigation", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "home.btn.open" }));
 
-    await waitFor(() => {
-      expect(createNote).toHaveBeenCalledTimes(1);
-    });
-    const owner = createNote.mock.calls[0][1];
-    expect(owner).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    expect(createNote.mock.calls[0][0]).toBe("daily");
-    await waitFor(() => {
-      expect(harness.softNavigate).toHaveBeenCalledWith(
-        expect.any(Function),
-        `/daily#owner=${owner}`,
-      );
-    });
-    expect(harness.softNavigate.mock.calls[0][1]).not.toContain("?");
-    expect(harness.softNavigate.mock.calls[0][1].split("#")[0]).not.toContain(owner);
+    expect(createNote).not.toHaveBeenCalled();
+    expect(harness.createCapabilityApi).not.toHaveBeenCalled();
+    expect(harness.softNavigate).toHaveBeenCalledWith(expect.any(Function), "/daily");
+    expect(harness.softNavigate.mock.calls[0][1]).not.toMatch(/#(?:owner|edit|view)=/);
     expect(sessionStorage.getItem("snote:pending-owner:daily")).toBeNull();
-    expect(JSON.stringify(localStorage.getItem("note.recents"))).not.toContain(owner);
     expect(harness.from).not.toHaveBeenCalled();
   });
 
@@ -330,16 +319,10 @@ describe("Home capability mint navigation", () => {
       await Promise.resolve();
     });
 
-    await waitFor(() => {
-      expect(createNote).toHaveBeenCalledTimes(1);
-    });
-    const owner = createNote.mock.calls[0][1];
-    await waitFor(() => {
-      expect(harness.softNavigate).toHaveBeenCalledWith(
-        expect.any(Function),
-        `/daily#owner=${owner}`,
-      );
-    });
+    expect(createNote).not.toHaveBeenCalled();
+    expect(harness.createCapabilityApi).not.toHaveBeenCalled();
+    expect(harness.softNavigate).toHaveBeenCalledWith(expect.any(Function), "/daily");
+    expect(harness.softNavigate.mock.calls[0][1]).not.toMatch(/#(?:owner|edit|view)=/);
   });
 
   it("does not seedAndOpen when a pending Open settles to idle after an exists error", async () => {
@@ -399,7 +382,7 @@ describe("Home capability mint navigation", () => {
     expect(exists.mock.calls.length).toBeGreaterThan(1);
   });
 
-  it("retries an idle lookup on Open and mints when the slug is available", async () => {
+  it("retries an idle lookup on Open and seeds a bare slug when available", async () => {
     const exists = mockExists(async () => {
       throw new Error("network unavailable");
     });
@@ -417,16 +400,10 @@ describe("Home capability mint navigation", () => {
     });
     vi.useRealTimers();
 
-    await waitFor(() => {
-      expect(createNote).toHaveBeenCalledTimes(1);
-    });
-    const owner = createNote.mock.calls[0][1];
-    await waitFor(() => {
-      expect(harness.softNavigate).toHaveBeenCalledWith(
-        expect.any(Function),
-        `/daily#owner=${owner}`,
-      );
-    });
+    expect(createNote).not.toHaveBeenCalled();
+    expect(harness.createCapabilityApi).not.toHaveBeenCalled();
+    expect(harness.softNavigate).toHaveBeenCalledWith(expect.any(Function), "/daily");
+    expect(harness.softNavigate.mock.calls[0][1]).not.toMatch(/#(?:owner|edit|view)=/);
   });
 
   it("retries an idle lookup on Open and opens a taken slug without an owner fragment", async () => {
@@ -489,7 +466,7 @@ describe("Home capability mint navigation", () => {
     expect(harness.softNavigate.mock.calls[0][1]).not.toMatch(/#(?:owner|edit|view)=/);
   });
 
-  it("mints a random slug without waiting for availability", async () => {
+  it("opens a random slug as a bare path without minting", async () => {
     mockExists(() => new Promise(() => {}));
     const createNote = mockCreateNote();
     renderHome();
@@ -497,109 +474,15 @@ describe("Home capability mint navigation", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "home.btn.random" }));
 
-    await waitFor(() => {
-      expect(createNote).toHaveBeenCalledTimes(1);
-    });
-    const slug = createNote.mock.calls[0][0];
-    const owner = createNote.mock.calls[0][1];
-    expect(slug).toMatch(/^[a-z0-9]{8}$/);
-    await waitFor(() => {
-      expect(harness.softNavigate).toHaveBeenCalledWith(
-        expect.any(Function),
-        `/${slug}#owner=${owner}`,
-      );
-    });
+    expect(createNote).not.toHaveBeenCalled();
+    expect(harness.createCapabilityApi).not.toHaveBeenCalled();
+    expect(harness.softNavigate).toHaveBeenCalledTimes(1);
+    const path = harness.softNavigate.mock.calls[0][1] as string;
+    expect(path).toMatch(/^\/[a-z0-9]{8}$/);
+    expect(path).not.toMatch(/#(?:owner|edit|view)=/);
   });
 
-  it("surfaces slug_unavailable without falling back to a legacy create", async () => {
-    mockExists(false);
-    const createNote = mockCreateNote();
-    createNote.mockRejectedValue({
-      status: 409,
-      code: "slug_unavailable",
-      retryAfterMs: null,
-      message: "slug unavailable",
-    });
-    renderHome();
-    await enterValidSlug();
-    vi.useRealTimers();
-
-    fireEvent.click(screen.getByRole("button", { name: "home.btn.open" }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent("home.error.slug_unavailable");
-    });
-    expect(harness.softNavigate).not.toHaveBeenCalled();
-    expect(sessionStorage.getItem("snote:pending-owner:daily")).toBeNull();
-    expect(harness.from).not.toHaveBeenCalled();
-  });
-
-  it("keeps the pending owner and stays on Home for 503 and 429", async () => {
-    mockExists(false);
-    const createNote = mockCreateNote();
-    createNote.mockRejectedValue({
-      status: 503,
-      code: "writes_disabled",
-      retryAfterMs: null,
-      message: "temporarily unavailable",
-    });
-    renderHome();
-    await enterValidSlug();
-    vi.useRealTimers();
-
-    fireEvent.click(screen.getByRole("button", { name: "home.btn.open" }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent("home.error.create_unavailable");
-    });
-    const owner = createNote.mock.calls[0][1];
-    expect(sessionStorage.getItem("snote:pending-owner:daily")).toBe(owner);
-    expect(harness.softNavigate).not.toHaveBeenCalled();
-
-    createNote.mockReset();
-    createNote.mockRejectedValue({
-      status: 429,
-      code: "rate_limited",
-      retryAfterMs: 3_600_000,
-      message: "capacity temporarily exceeded",
-    });
-    fireEvent.click(screen.getByRole("button", { name: "home.btn.open" }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent("home.error.create_rate_limited");
-    });
-    expect(createNote.mock.calls[0][1]).toBe(owner);
-    expect(sessionStorage.getItem("snote:pending-owner:daily")).toBe(owner);
-    expect(harness.softNavigate).not.toHaveBeenCalled();
-  });
-
-  it("retries a lost create with the same persisted owner fragment", async () => {
-    mockExists(false);
-    const createNote = mockCreateNote();
-    createNote.mockRejectedValueOnce({ message: "network lost after commit" });
-    renderHome();
-    await enterValidSlug();
-    vi.useRealTimers();
-
-    fireEvent.click(screen.getByRole("button", { name: "home.btn.open" }));
-    await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent("home.error.create_failed");
-    });
-    const owner = createNote.mock.calls[0][1];
-    expect(sessionStorage.getItem("snote:pending-owner:daily")).toBe(owner);
-
-    fireEvent.click(screen.getByRole("button", { name: "home.btn.open" }));
-    await waitFor(() => {
-      expect(harness.softNavigate).toHaveBeenCalledWith(
-        expect.any(Function),
-        `/daily#owner=${owner}`,
-      );
-    });
-    expect(createNote.mock.calls[1][1]).toBe(owner);
-    expect(sessionStorage.getItem("snote:pending-owner:daily")).toBeNull();
-  });
-
-  it("queues a template seed for the minted slug", async () => {
+  it("queues a template seed for the bare slug", async () => {
     mockExists(false);
     const createNote = mockCreateNote();
     const { consumeTemplateSeed } = await import("@/lib/note-templates");
@@ -614,50 +497,15 @@ describe("Home capability mint navigation", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "home.btn.open" }));
     await waitFor(() => {
-      expect(createNote).toHaveBeenCalledTimes(1);
+      expect(harness.softNavigate).toHaveBeenCalledWith(expect.any(Function), "/daily");
     });
-    const owner = createNote.mock.calls[0][1];
-    await waitFor(() => {
-      expect(harness.softNavigate).toHaveBeenCalledWith(
-        expect.any(Function),
-        `/daily#owner=${owner}`,
-      );
-    });
+    expect(createNote).not.toHaveBeenCalled();
+    expect(harness.createCapabilityApi).not.toHaveBeenCalled();
+    expect(harness.softNavigate.mock.calls[0][1]).not.toMatch(/#(?:owner|edit|view)=/);
     expect(consumeTemplateSeed("daily")).toBe("home.templates.meeting.body");
   });
 
-  it("does not leave a template seed when mint fails with 503", async () => {
-    mockExists(false);
-    const createNote = mockCreateNote();
-    createNote.mockRejectedValue({
-      status: 503,
-      code: "writes_disabled",
-      retryAfterMs: null,
-      message: "temporarily unavailable",
-    });
-    renderHome();
-    vi.useRealTimers();
-
-    fireEvent.change(await screen.findByLabelText("home.templates.aria"), {
-      target: { value: "meeting" },
-    });
-    fireEvent.change(screen.getByLabelText("home.placeholder"), {
-      target: { value: "daily" },
-    });
-    await waitFor(() => {
-      expect(screen.getByText("home.status.available")).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByRole("button", { name: "home.btn.open" }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent("home.error.create_unavailable");
-    });
-    expect(createNote).toHaveBeenCalledTimes(1);
-    expect(sessionStorage.getItem("note.template-seed:daily")).toBeNull();
-    expect(harness.softNavigate).not.toHaveBeenCalled();
-  });
-
-  it("rejects an invalid slug before minting", async () => {
+  it("rejects an invalid slug before opening", async () => {
     mockCreateNote();
     renderHome();
 
