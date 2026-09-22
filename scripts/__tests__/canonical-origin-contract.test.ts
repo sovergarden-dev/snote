@@ -1891,7 +1891,7 @@ describe("canonical production origin", () => {
     expect(readme).toContain("sentinel-qa-allowlist-sql-46ddaf01");
     expect(readme).toContain("schema_migrations");
     expect(readme).toContain("9a80930a");
-    expect(readme).toContain("does not move Pages");
+    expect(readme).toMatch(/does not\s+move Pages/);
     expect(readme).toContain("does not deploy origin");
     expect(readme).toContain("does not re-apply SQL");
     expect(readme).not.toContain("GitHub 3-arg `p_slugs` allowlist **not applied**");
