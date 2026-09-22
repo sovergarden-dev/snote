@@ -201,9 +201,11 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    `capability_note_bulk_disable_secure` **applied** live (Go A+B Pulse PASS;
    git tip `bd11deed` / #142). Historical `deployedSha` at that attest
    `0cdcdc0f31eed7db7b9301c4e6fbe7c079cf69dd`. Go C pin heal subsequently
-   **shipped** live (#145). Current live `deployedSha` `9a80930aec5d7c018879bd2a406a35c055477f06`.
-   This docs PR does not re-apply SQL and does not deploy origin / Worker /
-   Edge.
+   **shipped** live (#145). Re-bulk OFF ALL 6 (2026-09-22) Pulse PASS
+   (`converted=6`; post-verify `managed_live=0` + Sentinel spot).
+   Current live `deployedSha` `9a80930aec5d7c018879bd2a406a35c055477f06`.
+   This docs PR does not re-apply SQL, does not re-run bulk RPC, and does not
+   deploy origin / Worker / Edge.
    This is not soak-complete.
    Do not treat snapshot verify as `capability_runtime_set`.
    This is not `LEGACY_SHARE_CUTOFF`, soak-complete,

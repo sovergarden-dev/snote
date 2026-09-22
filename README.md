@@ -54,10 +54,16 @@ new-version reminder; one owner-link load needing hard reload; optional cold
 localStorage-clear not run. Current live origin `9a80930a` / Pages `8e64829c`
 (`8e64829c-c182-45d1-ba27-5f43af7d20fd`): Go C LNO-wins pin heal (#145)
 shipped. Stale pin (`snote:legacy-secure:*`) + unmanaged LNO → silent free-edit; still-managed → A3 RO;
-LNO error fail-closed; no auto-ON. Pixel READY WITH KNOWN RISKS (heal
-`/design` PASS; `/hage` A3 = still-managed after Secure ON probe, not heal
-FAIL; evidence `pixel-qa/go-c-live-9a80930a/`). Sentinel READY WITH KNOWN RISKS
-(BLOCKER/HIGH none; evidence `/workspace/sentinel-qa-go-c-live/`). Not soak-complete.
+LNO error fail-closed; no auto-ON. Live SPA remains `9a80930a` (this docs
+attest does not deploy origin). Historical Pixel READY WITH KNOWN RISKS at Go C
+(heal `/design` PASS; `/hage` A3 = still-managed after Secure ON probe, not
+heal FAIL; evidence `pixel-qa/go-c-live-9a80930a/`). Historical Sentinel READY
+WITH KNOWN RISKS at Go C (BLOCKER/HIGH none; evidence
+`/workspace/sentinel-qa-go-c-live/`). Re-bulk OFF ALL 6 (2026-09-22) Sentinel
+READY WITH KNOWN RISKS: LNO unmanaged for `hage`/`xqmqh53z`/`gr3l8g5e`;
+plain-upsert 200 (not 409); vacant create unmanaged (no auto-ON); bare SPA
+`/hage` + `/xqmqh53z` editable+synced, no A3/need-owner (evidence
+`/workspace/sentinel-qa-rebulk-all6-live/`). Not soak-complete.
 
 **Bulk Legacy/Secure OFF (historical docs attest — not a SPA ship):** Syringa named
 Go A then B, executed by Pulse, **PASS**. Git tip when applied: `bd11deed`
@@ -67,15 +73,32 @@ origin was still `0cdcdc0f` / Pages `1b9ed3d1` (bulk OFF is SQL/ops).
 Go A: RPC `capability_note_bulk_disable_secure` **applied**; `service_role`
 EXECUTE only; anon/authenticated EXECUTE false. Go B: `managed_live` 26→0
 (2026-09-16); skipped_encrypted=0; errors=[]; plaintext converted; `note_id`
-rotated. That post-count is **historical**; the fleet is not still 0 managed.
-Pulse RO inventory at Go C live: `managed_live=3` (`hage`, `xqmqh53z`,
-`svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged. Go C pin heal
+rotated. That post-count is **historical**; the fleet was **not** still 0
+managed after #144. Pulse RO inventory at Go C live: `managed_live=3` (`hage`,
+`xqmqh53z`, `svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged.
+That inventory is **historical** (leftovers; later preflight 6). Go C pin heal
 subsequently **shipped** live (#145 LNO-wins) on origin `9a80930a`.
 Pulse evidence `/workspace/pulse-bulk-off-ab2c4de9/`. Historical Sentinel:
 READY WITH KNOWN RISKS (API+cold SPA free-edit PASS; evidence
 `/workspace/sentinel-qa-bulk-off-live/`). Historical Pixel cold-browser:
 PASS WITH KNOWN RISKS (`hage`, `design` bare editable + Synced; evidence
-`/workspace/pixel-qa/bulk-off-verify/`). Aegis: khớp design. This PR does not deploy origin / Pages / Worker / Edge and does not re-apply SQL.
+`/workspace/pixel-qa/bulk-off-verify/`). Aegis: khớp design.
+
+**Re-bulk OFF ALL 6 (2026-09-22 docs attest — not a SPA ship):** Syringa named
+go; Pulse ran existing live RPC `capability_note_bulk_disable_secure(500,false)`
+— **no re-migrate**. Preflight: 6 managed plaintext, encrypted=0 (not the
+earlier scope-3). Slugs: `hage`, `xqmqh53z`, `svgoccbe2542573b`, `gr3l8g5e`,
+`svgocc0360f59afa`, `x915930e`. Pulse `converted=6`, drain=0, `errors=[]`;
+post-verify `managed_live=0`, encrypted=0. `note_id` rotation accepted (same
+as Go B). Claim `managed_live=0` only as Pulse post-verify + Sentinel spot;
+anon fleet RO count skipped (401). Live origin still `9a80930a` / Pages
+`8e64829c` / buildId `1789612258815-8yx2tdut` / `capabilityRoutesEnabled`
+true. Pulse `/workspace/pulse-rebulk-all6-20260922/`. Sentinel READY WITH
+KNOWN RISKS (BLOCKER/HIGH/MEDIUM none; LOWs: anon count 401, `hage`
+content_len drift still unmanaged, 1 CSP console error no edit/sync impact;
+evidence `/workspace/sentinel-qa-rebulk-all6-live/`). This docs attest
+does not deploy origin / Pages / Worker / Edge, does not re-apply SQL, and
+does not re-run bulk RPC. Worker / Realtime / `writes_enabled` still HOLD.
 
 **W2 live (named Pages go of #135/#137/#138/#139 + Go C #145):** canary-on
 plain `/<slug>` is free-edit (no convert-on-write default). Go C LNO-wins pin

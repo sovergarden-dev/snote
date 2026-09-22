@@ -71,7 +71,7 @@ describe("B1 bulk disable-secure contract", () => {
       .toContain("capability_note_bulk_disable_secure:");
   });
 
-  it("records historical Go A+B PASS and live Go C pin heal on origin 9a80930a", () => {
+  it("records historical Go A+B PASS, Go C ship, and re-bulk OFF ALL 6 on origin 9a80930a", () => {
     const runbook = source(RUNBOOK);
     expect(runbook).toContain("capability_note_bulk_disable_secure");
     expect(runbook).toContain("service_role");
@@ -90,11 +90,20 @@ describe("B1 bulk disable-secure contract", () => {
     );
     expect(runbook).toContain("26→0");
     expect(runbook).toContain("managed_live=3");
+    expect(runbook).toContain("managed_live=0");
+    expect(runbook).toContain("converted=6");
+    expect(runbook).toContain("no re-migrate");
     expect(runbook).toContain("snote:legacy-secure:");
     expect(runbook).toContain("/workspace/pulse-bulk-off-ab2c4de9/");
+    expect(runbook).toContain("/workspace/pulse-rebulk-all6-20260922/");
     expect(runbook).toContain("/workspace/pixel-qa/bulk-off-verify/");
     expect(runbook).toContain("/workspace/sentinel-qa-go-c-live/");
+    expect(runbook).toContain("/workspace/sentinel-qa-rebulk-all6-live/");
     expect(runbook).toContain("shipped");
+    expect(runbook).toContain("gr3l8g5e");
+    expect(runbook).toContain("svgocc0360f59afa");
+    expect(runbook).toContain("x915930e");
+    expect(runbook).toContain("Pulse post-verify");
     expect(runbook).not.toContain("supabase db push");
     expect(runbook).not.toContain("convert-legacy");
   });

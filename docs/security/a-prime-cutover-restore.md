@@ -103,8 +103,10 @@ Sentinel READY WITH KNOWN RISKS (evidence `sentinel-qa-go-c-live/`).
 Bulk Legacy/Secure OFF (docs attest): RPC `capability_note_bulk_disable_secure`
 **applied** live (Go A+B Pulse PASS; git tip `bd11deed` / #142). Historical
 origin at that attest was still `0cdcdc0f`. Go C pin heal subsequently
-**shipped**. Pixel cold-browser PASS WITH KNOWN RISKS (`hage`, `design` bare
-editable + Synced; evidence
+**shipped**. Re-bulk OFF ALL 6 (2026-09-22) Pulse PASS (`converted=6`;
+post-verify `managed_live=0` + Sentinel spot; anon fleet count unavailable).
+Live origin remains `9a80930a`. Pixel cold-browser PASS WITH KNOWN RISKS
+(`hage`, `design` bare editable + Synced; evidence
 `pixel-qa/bulk-off-verify/` / `/workspace/pixel-qa/bulk-off-verify/`).
 
 ## Walls

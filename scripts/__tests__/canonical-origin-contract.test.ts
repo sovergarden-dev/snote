@@ -64,6 +64,10 @@ describe("canonical production origin", () => {
     expect(readme).toContain("sentinel-qa-go-c-live/");
     expect(readme).toContain("managed_live=3");
     expect(readme).toContain("unmanaged_live=106");
+    expect(readme).toContain("pulse-rebulk-all6-20260922");
+    expect(readme).toContain("sentinel-qa-rebulk-all6-live/");
+    expect(readme).toContain("converted=6");
+    expect(readme).toContain("managed_live=0");
     expect(readme).toContain("PWA latch");
     expect(readme).toContain("hard-reload");
     expect(readme).toContain("free-edit");
@@ -810,6 +814,9 @@ describe("canonical production origin", () => {
     expect(findings).toContain("pixel-qa/go-c-live-9a80930a/");
     expect(findings).toContain("sentinel-qa-go-c-live/");
     expect(findings).toContain("managed_live=3");
+    expect(findings).toContain("## 3h.");
+    expect(findings).toContain("pulse-rebulk-all6-20260922");
+    expect(findings).toContain("managed_live=0");
     expect(findings).not.toContain("Origin is `0cdcdc0f`");
     expect(findings).toContain("Origin is `9a80930a`");
     expect(findings).toContain("new-version reminder");
@@ -1634,7 +1641,7 @@ describe("canonical production origin", () => {
     expect(cutover).toContain("Do not skip remaining order");
   });
 
-  it("records historical bulk Legacy/Secure OFF and current fleet after Go C origin ship", () => {
+  it("records historical bulk Legacy/Secure OFF, Go C leftovers, and re-bulk OFF ALL 6", () => {
     const readme = readFileSync("README.md", "utf8");
     const findings = readFileSync("docs/security-findings.md", "utf8");
     const runbook = readFileSync("docs/security/bulk-disable-secure-ops.md", "utf8");
@@ -1700,11 +1707,17 @@ describe("canonical production origin", () => {
     expect(readme).toContain("unmanaged_live=106");
     expect(readme).toContain("pixel-qa/go-c-live-9a80930a/");
     expect(readme).toContain("sentinel-qa-go-c-live");
+    expect(readme).toContain("pulse-rebulk-all6-20260922");
+    expect(readme).toContain("sentinel-qa-rebulk-all6-live");
+    expect(readme).toContain("converted=6");
+    expect(readme).toContain("managed_live=0");
+    expect(readme).toContain("no re-migrate");
 
     expect(findings).toContain(
       "## 3f. Production bulk Legacy/Secure OFF — verified; origin unchanged",
     );
     expect(findings).toContain("## 3g.");
+    expect(findings).toContain("## 3h. Production re-bulk OFF ALL 6 — verified; origin unchanged");
     expect(findings).toContain("bd11deedf95bec1f2e207a59fecdad974d861ff7");
     expect(findings).toContain(
       "a5d6623fda2ca811388396f7945ab19a305a95c84d423dc206d168f4425ab850",
@@ -1717,6 +1730,11 @@ describe("canonical production origin", () => {
     expect(findings).toContain("Origin is `9a80930a`");
     expect(findings).not.toContain("Origin is `0cdcdc0f`");
     expect(findings).toContain("This is not SQL 240, not Realtime, not soak-complete.");
+    expect(findings).toContain("converted=6");
+    expect(findings).toContain("no re-migrate");
+    expect(findings).toContain("/workspace/pulse-rebulk-all6-20260922/");
+    expect(findings).toContain("/workspace/sentinel-qa-rebulk-all6-live/");
+    expect(findings).toContain("Pulse post-verify");
 
     expect(runbook).toContain("**applied** live");
     expect(runbook).toContain("attestation");
@@ -1771,5 +1789,56 @@ describe("canonical production origin", () => {
     expect(runbook).toContain("9a80930a");
     expect(runbook).toContain("managed_live=3");
     expect(runbook).toContain("shipped");
+  });
+
+  it("records re-bulk OFF ALL 6 live PASS without claiming a new origin deploy", () => {
+    const readme = readFileSync("README.md", "utf8");
+    const findings = readFileSync("docs/security-findings.md", "utf8");
+    const runbook = readFileSync("docs/security/bulk-disable-secure-ops.md", "utf8");
+    const backend = readFileSync("docs/capability-backend.md", "utf8");
+    const client = readFileSync("docs/capability-client.md", "utf8");
+    const adr = readFileSync(
+      "docs/adr/001-home-capability-mint-before-sql-240.md",
+      "utf8",
+    );
+
+    expect(readme).toContain("Re-bulk OFF ALL 6");
+    expect(readme).toContain("converted=6");
+    expect(readme).toContain("no re-migrate");
+    expect(readme).toContain("gr3l8g5e");
+    expect(readme).toContain("svgocc0360f59afa");
+    expect(readme).toContain("x915930e");
+    expect(readme).toContain("managed_live=0");
+    expect(readme).toContain("Pulse post-verify");
+    expect(readme).toContain("pulse-rebulk-all6-20260922");
+    expect(readme).toContain("sentinel-qa-rebulk-all6-live");
+    expect(readme).toContain("content_len");
+    expect(readme).toContain("401");
+    expect(readme).toContain("9a80930a");
+    expect(readme).toContain("1789612258815-8yx2tdut");
+    expect(readme).toContain("does not deploy origin");
+    expect(readme).toContain("does not re-apply SQL");
+    expect(readme).toContain("does not re-run bulk RPC");
+
+    expect(findings).toContain("## 3h. Production re-bulk OFF ALL 6 — verified; origin unchanged");
+    expect(findings).toContain("capability_note_bulk_disable_secure(500,false)");
+    expect(findings).toContain("converted=6");
+    expect(findings).toContain("no re-migrate");
+    expect(findings).toContain("Pulse post-verify");
+    expect(findings).toContain("anon fleet RO count was unavailable (401)");
+    expect(findings).toContain("content_len drift");
+    expect(findings).toContain("1 CSP console error");
+    expect(findings).toContain("BLOCKER/HIGH/MEDIUM");
+    expect(findings).toContain("Origin is `9a80930a`");
+    expect(findings).not.toContain("Origin is `0cdcdc0f`");
+    expect(findings).not.toContain("Go C pin heal **HOLD**");
+
+    expect(runbook).toContain("/workspace/pulse-rebulk-all6-20260922/");
+    expect(runbook).toContain("converted=6");
+    expect(runbook).toContain("managed_live=0");
+    expect(runbook).toContain("no re-migrate");
+    expect(backend).toContain("Re-bulk OFF ALL 6");
+    expect(client).toContain("Re-bulk OFF ALL 6");
+    expect(adr).toContain("re-bulk OFF ALL 6");
   });
 });

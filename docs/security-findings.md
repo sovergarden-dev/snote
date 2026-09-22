@@ -33,7 +33,9 @@ SQL `capability_note_bulk_disable_secure` is **applied** live (Syringa Go A
 then B; Pulse **PASS**; git tip `bd11deed` / #142; #143 is git-only PWA smoke
 harden). Live SPA origin is `9a80930a`. Go C pin heal **shipped** live
 (#145 LNO-wins). See §3g. Historical bulk OFF Go B `managed_live` 26→0 is not
-the current fleet (`managed_live=3`). See §3f.
+a claim the fleet stayed 0 (`managed_live=3` at Go C live; later preflight 6).
+Re-bulk OFF ALL 6 (2026-09-22) Pulse post-verify `managed_live=0` + Sentinel
+spot; anon fleet count unavailable (401). See §3f / §3h.
 W1 convert-on-write as product default is **superseded**.
 Optional `?legacyRo=1` still RO + banner. Phase C is live: RawView `/:slug.md` loads via LNO `open`;
 Home availability uses LNO `exists` (empty legacy rows are taken). Duplicate securely is enabled on Legacy RO only (PR #128; Edge `note-session` `import-legacy`). Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress (#113/#116) is live. Choice A (#118) editable-plain default is **superseded**. PWA latch (#119) one hard-reload per Update apply is live. Pixel Legacy opt-in (#122) is live as Legacy Advanced. Encrypt is disabled on free-edit (Legacy OFF) and becomes available after Legacy ON on the owner path; `#owner=` Encrypt stays active. A′ (#126) RO default is **superseded**. Duplicate securely (#128) remains on Legacy RO. Home mints capabilities when canary is on
@@ -1520,15 +1522,17 @@ FAIL; evidence `pixel-qa/go-c-live-9a80930a/`). Sentinel READY WITH KNOWN
 RISKS live Go C @ `9a80930a` / Pages `8e64829c` (BLOCKER/HIGH none; MEDIUM =
 `hage` flipped unmanaged→managed mid-session, not vacant auto-ON; evidence
 `/workspace/sentinel-qa-go-c-live/` / `sentinel-qa-go-c-live/`).
-Pulse RO inventory: `managed_live=3` (`hage`, `xqmqh53z`,
-`svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged. Historical
-Go B `managed_live` 26→0 is not the current fleet.
+Pulse RO inventory at Go C live: `managed_live=3` (`hage`, `xqmqh53z`,
+`svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged. That inventory
+is **historical**. Historical Go B `managed_live` 26→0 is not a claim the
+fleet stayed 0. Re-bulk OFF ALL 6 (2026-09-22) is §3h.
 PWA auto-smoke on the #145 merge (`35136042556`) failed identity wait because
 origin was not yet live at merge time; this attest does not claim a later PWA smoke PASS and does not dispatch one. Historical PWA `34986611791` remains
 the `0cdcdc0f` pin.
 #145 is live on this line. Worker remains `931430c0` / `5f94ab6c`. Walls HOLD:
-Worker / Realtime / `writes_enabled`. SQL 240 already applied. No Edge / no
-SQL / no re-bulk OFF from this docs PR.
+Worker / Realtime / `writes_enabled`. SQL 240 already applied. The Go C origin
+attest did not re-bulk OFF; later Pulse re-bulk is §3h. This docs PR does not
+deploy origin / Edge / SQL schema.
 This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
@@ -1554,7 +1558,8 @@ Go A: RPC `capability_note_bulk_disable_secure` **applied** live;
 Go B: `managed_live` 26→0 (2026-09-16); skipped_encrypted=0; errors=[];
 plaintext converted; `note_id` rotated. Pulse evidence
 `/workspace/pulse-bulk-off-ab2c4de9/` (`SUMMARY.md` + `REPORT.json` verdict
-PASS). That post-count is **historical**. The fleet is not still 0 managed.
+PASS). That post-count is **historical**. The fleet was **not** still 0
+managed after #144.
 
 At the #144 attest, Go C pin heal was **HOLD**. Known residual then: stale SPA
 `snote:legacy-secure:*` could keep bare RO until heal / local pin clear.
@@ -1573,18 +1578,19 @@ Aegis: khớp design.
 
 Pulse RO inventory at Go C live (2026-09-17): `managed_live=3` (`hage`,
 `xqmqh53z`, `svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged.
-Do not reuse 26→0 or post-count 0 as the current fleet.
+Do not reuse 26→0 or that `managed_live=3` as the current fleet (later
+preflight 6; re-bulk is §3h).
 
-Walls: no Worker / Realtime / origin / Pages / Edge from this attest. No
-re-bulk OFF.
+Walls: no Worker / Realtime / origin / Pages / Edge from the #144 attest.
+That attest did not re-bulk OFF.
 
 This is not SQL 240, not Realtime, not soak-complete.
 
 ## 3g. Production Go C pin heal — verified; origin 9a80930a
 
 Docs attestation only (2026-09-17). This section does not deploy origin /
-Pages / Worker / Edge, does not re-apply SQL, and does not re-bulk OFF.
-Origin is `9a80930a`.
+Pages / Worker / Edge, does not re-apply SQL, and did not re-bulk OFF.
+Origin is `9a80930a`. Later re-bulk is §3h.
 
 #145 LNO-wins **shipped** live: always call LNO `open` on bare `/slug` (do not
 return early solely because `snote:legacy-secure:*` is set). Stale pin +
@@ -1605,8 +1611,46 @@ unmanaged→managed mid-session (not vacant auto-ON). Pixel: **READY WITH
 KNOWN RISKS** (heal `/design` PASS; `/hage` A3 = still-managed after Secure
 ON probe, not heal FAIL; evidence `pixel-qa/go-c-live-9a80930a/`).
 
-Pulse RO inventory: `managed_live=3` (`hage`, `xqmqh53z`,
-`svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged.
+Pulse RO inventory at Go C live: `managed_live=3` (`hage`, `xqmqh53z`,
+`svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged. Historical
+for that attest; later preflight 6 then re-bulk §3h.
+
+This is not SQL 240, not Realtime, not soak-complete.
+
+## 3h. Production re-bulk OFF ALL 6 — verified; origin unchanged
+
+Docs attestation only (2026-09-22). This section does not deploy origin /
+Pages / Worker / Edge, does not re-apply SQL schema, and does not re-run
+bulk RPC. Live SPA origin remains `9a80930a` / Pages `8e64829c` / buildId
+`1789612258815-8yx2tdut` / `capabilityRoutesEnabled` true. Git docs tip may
+advance; live stays `9a80930a`.
+
+Syringa named **re-bulk OFF ALL 6** managed plaintext. Pulse ran existing
+live RPC `capability_note_bulk_disable_secure(500,false)` — **no re-migrate**.
+Preflight (not the earlier scope-3): 6 managed plaintext, encrypted=0.
+Slugs: `hage`, `xqmqh53z`, `svgoccbe2542573b`, `gr3l8g5e`,
+`svgocc0360f59afa`, `x915930e`.
+
+Pulse **PASS**. Artifact `/workspace/pulse-rebulk-all6-20260922/`
+(`SUMMARY.md` + `REPORT.json`): `converted=6`, drain `converted=0`,
+`errors=[]`; post-verify `managed_live=0`, encrypted=0. `note_id` rotation +
+history wipe accepted (same as Go B; spot old→new in REPORT). Claim
+`managed_live=0` only as Pulse post-verify + Sentinel spot; anon fleet RO count was unavailable (401).
+Do **not** treat historical Go B 26→0 or Go C
+live `managed_live=3` as the current fleet.
+
+Sentinel independent smoke: **READY WITH KNOWN RISKS** (evidence
+`/workspace/sentinel-qa-rebulk-all6-live/` / FINDINGS-API). BLOCKER/HIGH/MEDIUM
+none. PASSED: LNO unmanaged for `hage`/`xqmqh53z`/`gr3l8g5e`; plain-upsert
+200 (not 409 `capability_managed`) with noteIds matching Pulse new ids;
+vacant create unmanaged (no auto-ON); bare SPA `/hage` + `/xqmqh53z`
+editable+synced, no A3/need-owner. Independent `version.json` still
+`deployedSha` `9a80930aec5d7c018879bd2a406a35c055477f06`. LOWs: (1) anon
+`managed_live` RO count skipped (401) — rely Pulse post=0 + spot LNO/upsert;
+(2) `hage` content_len drift after roundtrip still unmanaged; (3) 1 CSP console error, no edit/sync impact.
+
+Walls HOLD: no Worker / Edge / origin / SQL schema / Realtime /
+`writes_enabled` from this docs PR.
 
 This is not SQL 240, not Realtime, not soak-complete.
 
