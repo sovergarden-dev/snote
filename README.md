@@ -103,9 +103,9 @@ Pixel READY WITH KNOWN RISKS khớp. Current live origin `1b172544` / Pages
 preview `5527f154`). Earlier same-SHA first deploy was Pages `66a0df1a` /
 buildId `1790082984868-xjuz78gh` — this attest pins the **current** live
 buildId. Sentinel + Pixel **READY WITH KNOWN RISKS** (idle FAB equal
-`bottom-4`/`right-4` inset PASS; update cluster PASS: status-only «Có update
-mới», no MỚI badge, small heart snooze + strike, larger update heart; after
-hard-activate tip). Known risk: SW waiting can still serve pre-#153 update
+`bottom-4`/`right-4` inset PASS; update cluster PASS: status-only
+«Có update mới», no MỚI badge, small heart snooze + strike, larger update
+heart; after hard-activate tip). Known risk: SW waiting can still serve pre-#153 update
 cluster UI until tip activates (Pulse digests matched tip; not a miss-ship).
 Edge XOR 409 **NOT VERIFIED** (still PARKED / not deployed). Walls HOLD:
 Worker / Realtime / SQL / `writes_enabled`. This docs attest does not deploy
