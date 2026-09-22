@@ -37,8 +37,11 @@ pin heal **shipped** live (#145 LNO-wins). See §3g. Historical bulk OFF Go B
 `managed_live` 26→0 is not a claim the fleet stayed 0 (`managed_live=3` at
 Go C live; later preflight 6). Re-bulk OFF ALL 6 (2026-09-22) Pulse
 post-verify `managed_live=0` + Sentinel spot is **historical**. Go SQL
-residual `managed_live=1` (`aggadagdade`) still managed — **no bulk OFF**.
-Anon fleet count unavailable (401). See §3f / §3h / §3i.
+residual `managed_live=1` (`aggadagdade`) still managed — **no bulk OFF**
+— is **historical**. Later **Go Ops allowlist bulk OFF** 2→0 Pulse **PASS**
+(`aggadagdade`, `pbhcusvb`; converted=2; **not fleet**; residual **cleared**;
+post `managed_live=0`). Anon fleet count unavailable (401). See §3f / §3h /
+§3i / §3j.
 W1 convert-on-write as product default is **superseded**.
 Optional `?legacyRo=1` still RO + banner. Phase C is live: RawView `/:slug.md` loads via LNO `open`;
 Home availability uses LNO `exists` (empty legacy rows are taken). Duplicate securely is enabled on Legacy RO only (PR #128; Edge `note-session` `import-legacy`). Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress (#113/#116) is live. Choice A (#118) editable-plain default is **superseded**. PWA latch (#119) one hard-reload per Update apply is live. Pixel Legacy opt-in (#122) is live as Legacy Advanced. Encrypt is disabled on free-edit (Legacy OFF) and becomes available after Legacy ON on the owner path; `#owner=` Encrypt stays active. A′ (#126) RO default is **superseded**. Duplicate securely (#128) remains on Legacy RO. Home mints capabilities when canary is on
@@ -1644,7 +1647,7 @@ history wipe accepted (same as Go B; spot old→new in REPORT). Claim
 Do **not** treat historical Go B 26→0 or Go C
 live `managed_live=3` as the current fleet. That re-bulk post-verify is
 **historical**. Later Go SQL preflight found residual `managed_live=1`
-(`aggadagdade`); see §3i.
+(`aggadagdade`); see §3i. Later Go Ops allowlist bulk OFF is §3j.
 
 Sentinel independent smoke: **READY WITH KNOWN RISKS** (evidence
 `/workspace/sentinel-qa-rebulk-all6-live/` / FINDINGS-API). BLOCKER/HIGH/MEDIUM
@@ -1679,7 +1682,8 @@ revoked. Smoke `ARRAY[]` → `converted=0` `scope=allowlist`; miss →
 `skipped_allowlist_miss=1`. NULL fleet **not** executed (preflight
 `managed_live=1` residual slug `aggadagdade`; body RO confirms NULL→fleet).
 Post-smoke residual unchanged. **No bulk OFF.** Do not claim
-`managed_live=0` as the current fleet.
+`managed_live=0` as the current fleet **at this Go SQL attest**. Later Go
+Ops allowlist bulk OFF is §3j.
 
 Sentinel independent verify: **READY** (SQL contract; evidence
 `/workspace/sentinel-qa-allowlist-sql-46ddaf01/`). BLOCKER/HIGH/MEDIUM none.
@@ -1693,6 +1697,44 @@ Pulse artifact `/workspace/pulse-allowlist-sql-46ddaf01/` (`SUMMARY.md` +
 
 Walls HOLD: no Worker / Edge / origin / Realtime / `writes_enabled` / bulk
 OFF from this docs PR.
+
+This is not SQL 240, not Realtime, not soak-complete.
+
+## 3j. Production Go Ops allowlist bulk OFF 2→0 — verified; origin unchanged
+
+Docs attestation only (2026-09-22). This section does not deploy origin /
+Pages / Worker / Edge, does not re-apply SQL, and does not re-run bulk RPC
+or fleet NULL. Live SPA origin remains `9a80930a` / Pages `8e64829c` /
+buildId `1789612258815-8yx2tdut` / `capabilityRoutesEnabled` true. Ops
+apply does not move Pages. Git docs tip after #149 is `836753fe`; live
+stays `9a80930a`. Do **not** claim a SPA ship.
+
+Syringa named **Go Ops** allowlist (not fleet). Pulse **PASS** on existing
+live 3-arg RPC
+`capability_note_bulk_disable_secure(500,false,ARRAY[aggadagdade,pbhcusvb])`
+— **no re-migrate**. Pre: `managed_live=2` plaintext (`aggadagdade`,
+`pbhcusvb`); encrypted=0. Known residual at Go SQL was 1 (`aggadagdade`);
+Pulse count > known residual; allowlist both. Pulse `converted=2`,
+`scope=allowlist`, `allowlist_requested=2`, `allowlist_matched_managed=2`,
+`skipped_encrypted=0`, `errors=[]`; post-verify `managed_live=0`,
+encrypted=0. `note_id` rotation accepted (same as Go B). LNO both unmanaged
+(`managed` absent). plain-upsert `aggadagdade` HTTP 200 (not 409). Residual **cleared**. Claim `managed_live=0` only as Pulse post-verify + Sentinel
+spot; anon fleet RO count unavailable (401). Do **not** claim a fleet NULL
+convert.
+
+Pulse artifact `/workspace/pulse-bulk-off-allowlist-20260922/` (`SUMMARY.md`
++ `REPORT.json` verdict PASS). Independent `version.json` still
+`deployedSha` `9a80930aec5d7c018879bd2a406a35c055477f06`.
+
+Sentinel independent verify: **READY** (bulk OFF live gate; evidence
+`/workspace/sentinel-qa-bulk-off-allowlist-20260922/`). BLOCKER/HIGH/MEDIUM
+none. PASSED: post `managed_live=0`; LNO unmanaged both slugs; plain-upsert
+200 both (not 409); walls HOLD (no RPC re-run / no ship / no convert).
+LOWs: (1) SPA bare-route free-edit deferred (API-only OK); (2) first
+plain-upsert operator miss 400 missing `charCount`, retry 200.
+
+Walls HOLD: no Worker / Edge / origin / Realtime / `writes_enabled` / SQL
+re-apply / fleet NULL from this docs PR.
 
 This is not SQL 240, not Realtime, not soak-complete.
 

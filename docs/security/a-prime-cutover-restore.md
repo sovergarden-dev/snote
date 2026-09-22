@@ -108,7 +108,9 @@ origin at that attest was still `0cdcdc0f`. Go C pin heal subsequently
 post-verify `managed_live=0` + Sentinel spot) is **historical**. 3-arg
 `p_slugs` allowlist **applied live** (Go SQL Pulse PASS; git tip `46ddaf01`
 / #148). Residual `managed_live=1` (`aggadagdade`) still managed — **no bulk
-OFF**. Live origin remains `9a80930a`. Historical Pixel cold-browser PASS WITH KNOWN
+OFF** — is **historical**. **Go Ops allowlist bulk OFF** 2→0 Pulse PASS
+(residual **cleared**; origin still `9a80930a`; **not fleet**). Live origin
+remains `9a80930a`. Historical Pixel cold-browser PASS WITH KNOWN
 RISKS at first bulk OFF (`hage`, `design` bare editable + Synced; evidence
 `pixel-qa/bulk-off-verify/` / `/workspace/pixel-qa/bulk-off-verify/`).
 

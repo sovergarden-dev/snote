@@ -5,19 +5,25 @@ heal **shipped** live (#145 LNO-wins on origin `9a80930a`). **Re-bulk OFF ALL 6*
 plaintext **PASS** (Syringa named go 2026-09-22; Pulse **PASS**; existing live
 RPC, **no re-migrate**). Allowlist `p_slugs` (3-arg) SQL is **applied live**
 (Syringa named **Go SQL** 2026-09-22; Pulse **PASS**; git tip `46ddaf01` /
-#148). Live production is the 3-arg RPC; the 2-arg overload is **DROP**ped.
+#148). **Go Ops allowlist bulk OFF** 2→0 **PASS** (Syringa named go 2026-09-22;
+Pulse **PASS**; existing 3-arg live RPC, **no re-migrate**, **not fleet**).
+Live production is the 3-arg RPC; the 2-arg overload is **DROP**ped.
 This document is a **docs attestation**. It does **not** re-apply SQL, does
-**not** run bulk convert / fleet NULL, and does **not** deploy origin / Pages /
-Worker / Edge. Worker / Realtime / `writes_enabled` still HOLD. Live SPA origin
-remains `9a80930a` / Pages `8e64829c` (SQL apply does not move Pages). Residual
-`managed_live=1` slug `aggadagdade` still managed — **no bulk OFF**.
+**not** re-run bulk convert / fleet NULL, and does **not** deploy origin /
+Pages / Worker / Edge. Worker / Realtime / `writes_enabled` still HOLD. Live
+SPA origin remains `9a80930a` / Pages `8e64829c` (SQL/ops apply does not move
+Pages). Git docs tip after #149 is `836753fe` (current main at this attest).
+Residual **cleared**: Pulse pre `managed_live=2` (`aggadagdade`, `pbhcusvb`) →
+allowlist `converted=2` → post `managed_live=0`; encrypted=0. Do **not** claim
+a fleet NULL convert. Do **not** claim a SPA ship.
 
 Live RPC (applied): `public.capability_note_bulk_disable_secure(p_limit int, p_include_encrypted bool default false, p_slugs text[] default null)`  
 Live migration: `supabase/migrations/20260922000000_capability_note_bulk_disable_secure_p_slugs.sql`  
 SHA-256: `f16a20a661dc96523bf9a717a830dbe51df2d2427206a72a7c9c373b4a782132`  
 Git tip when applied: `46ddaf01` (#148 squash
 `46ddaf012bea1d01a6235e2be7e9132555d6cd84`). Live SPA origin remains
-`9a80930a` / Pages `8e64829c` (SQL apply does not ship origin).
+`9a80930a` / Pages `8e64829c` (SQL/ops apply does not ship origin). Git docs
+tip after #149 (`836753fe`) may advance; live SPA stays `9a80930a`.
 
 Historical 2-arg (Go A, superseded live): `public.capability_note_bulk_disable_secure(p_limit int, p_include_encrypted bool default false)`  
 Historical migration: `supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql`  
@@ -30,7 +36,7 @@ SPA stays `9a80930a`.
 
 Hard `DROP FUNCTION public.capability_note_bulk_disable_secure(integer, boolean);` then CREATE 3-arg. No 2-arg wrapper. Omitting `p_slugs` keeps `(500)` / `(500, false)` as fleet-wide.
 
-## Live go (2026-09-16 apply; 2026-09-17 Go C origin; 2026-09-22 re-bulk; 2026-09-22 Go SQL)
+## Live go (2026-09-16 apply; 2026-09-17 Go C origin; 2026-09-22 re-bulk; 2026-09-22 Go SQL; 2026-09-22 Go Ops allowlist)
 
 - Go A: `CREATE OR REPLACE` `capability_note_bulk_disable_secure` **applied** live;
   anon/authenticated EXECUTE false; `service_role` EXECUTE true.
@@ -52,7 +58,8 @@ Hard `DROP FUNCTION public.capability_note_bulk_disable_secure(integer, boolean)
   `managed_live=0` only as Pulse post-verify + Sentinel spot evidence; anon
   fleet RO count was unavailable (401). That post-count is **historical**.
   Later Go SQL preflight found residual `managed_live=1` (`aggadagdade`);
-  do **not** treat re-bulk 0 as the current fleet.
+  do **not** treat re-bulk 0 as the current fleet. Later Go Ops allowlist
+  bulk OFF 2→0 (not fleet) is the current Pulse/Sentinel post-verify.
 - Go C: **shipped** live (#145 LNO-wins). Stale `snote:legacy-secure:*` +
   unmanaged LNO → silent free-edit; still-managed → A3 RO; LNO error
   fail-closed; no auto-ON.
@@ -83,17 +90,36 @@ Hard `DROP FUNCTION public.capability_note_bulk_disable_secure(integer, boolean)
   residual untouched; walls HOLD. LOWs: (1) `schema_migrations` path missing
   (named-go body apply, not CLI-tracked); (2) SPA tip still `9a80930a`
   expected (SQL apply does not move Pages).
+- Go Ops allowlist bulk OFF (2026-09-22): Pulse **PASS**. Existing live 3-arg
+  RPC `capability_note_bulk_disable_secure(500,false,ARRAY[aggadagdade,pbhcusvb])`
+  — **no re-migrate**, **not fleet NULL**. Pre: `managed_live=2` plaintext
+  (`aggadagdade`, `pbhcusvb`); encrypted=0 (count > Go SQL known residual 1;
+  allowlist both). Pulse `converted=2`, `scope=allowlist`,
+  `allowlist_requested=2`, `allowlist_matched_managed=2`,
+  `skipped_encrypted=0`, `errors=[]`; post-verify `managed_live=0`,
+  encrypted=0. `note_id` rotation accepted (same as Go B). Artifact
+  `/workspace/pulse-bulk-off-allowlist-20260922/`. Claim `managed_live=0`
+  only as Pulse post-verify + Sentinel spot; anon fleet RO count unavailable
+  (401). Residual **cleared**. Live SPA still `9a80930a` (this ops go does
+  not ship origin). Git docs tip after #149 is `836753fe`.
+- Sentinel (Go Ops allowlist 2026-09-22): **READY** (bulk OFF live gate) —
+  `/workspace/sentinel-qa-bulk-off-allowlist-20260922/`. LNO unmanaged both
+  slugs; plain-upsert `aggadagdade` 200 (not 409); post `managed_live=0`;
+  walls HOLD. BLOCKER/HIGH/MEDIUM none. LOWs: (1) SPA bare-route free-edit
+  deferred (API-only OK); (2) first plain-upsert operator miss 400 missing
+  `charCount`, retry 200. Tip still `9a80930a` expected.
 
 Do not re-run this RPC from this attest PR. Do not re-apply the 3-arg
-allowlist migration from this docs PR. Do not bulk OFF residual
-`aggadagdade`.
+allowlist migration from this docs PR. Do not call NULL/omit fleet. Residual
+already converted via allowlist; do not re-OFF those slugs.
 
-## Allowlist Q1 (applied live — schema only; Go Ops not run)
+## Allowlist Q1 (applied live — schema + Go Ops allowlist 2 slugs PASS)
 
 Atlas ACCEPT / Aegis design A. Pulse/Sentinel Q1 locked:
 
-- **NULL/omit = fleet-wide** (unchanged Go A/B). **Not invoked** on this go
-  (`managed_live=1` residual would convert).
+- **NULL/omit = fleet-wide** (unchanged Go A/B). Go SQL and Go Ops **did not**
+  invoke NULL (`managed_live=1` residual at Go SQL would have converted as
+  fleet; Go Ops used a 2-slug allowlist instead).
 - `{}` / cardinality 0 = **no-op** (converted=0, `scope=allowlist`, NOT fleet).
   Live smoke: `ARRAY[]` → `converted=0` `scope=allowlist`.
 - Non-empty = exact `n.slug = ANY (p_slugs)` among managed+eligible (no lower/trim).
@@ -122,21 +148,23 @@ Additive jsonb (keep existing `status` / `converted` / `skipped_encrypted` /
 - [x] Verify: 3-arg only (2-arg GONE); anon/authenticated EXECUTE false;
       `service_role` true; empty ARRAY no-op; miss `skipped_allowlist_miss=1`
 
-### Go Ops (run) — separate named go; **not** this attest
+### Go Ops (run) — allowlist 2 slugs **applied live** 2026-09-22
 
-- [ ] RO inventory: managed plaintext count + slug list
-- [ ] Write allowlist = exact slug set in go text (or omit/NULL for fleet; `{}` is **no-op**)
-- [ ] If inventory ⊈ allowlist and go ≠ fleet → STOP or expand
-- [ ] Syringa **named Go Ops** citing allowlist (or fleet)
-- [ ] Pulse: `capability_note_bulk_disable_secure(p_limit, false, p_slugs)`
-- [ ] Drain until `converted=0` (or allowlist exhausted) **and** `errors` empty.
+- [x] RO inventory: managed plaintext count + slug list (`managed_live=2`;
+      `aggadagdade`, `pbhcusvb`; encrypted=0)
+- [x] Write allowlist = exact slug set in go text (or omit/NULL for fleet; `{}` is **no-op**)
+- [x] If inventory ⊈ allowlist and go ≠ fleet → STOP or expand (inventory = both;
+      known residual had been 1 — expanded allowlist, **not** fleet)
+- [x] Syringa **named Go Ops** citing allowlist (or fleet)
+- [x] Pulse: `capability_note_bulk_disable_secure(p_limit, false, p_slugs)`
+- [x] Drain until `converted=0` (or allowlist exhausted) **and** `errors` empty.
       Named-go ops may STOP if `skipped_allowlist_miss ≠ 0` when the go required
-      exact hits.
-- [ ] Post: `managed_live` for scoped slugs = 0; spot LNO unmanaged + plain-upsert 200
-- [ ] Docs attest (no origin ship)
+      exact hits. (`converted=2`, `errors=[]`, `skipped_allowlist_miss` unused)
+- [x] Post: `managed_live` for scoped slugs = 0; spot LNO unmanaged + plain-upsert 200
+- [x] Docs attest (no origin ship)
 
-Residual `aggadagdade` remains managed (`managed_live=1`). Do **not** OFF it
-from this attest. Do **not** call NULL/omit fleet while that residual is live.
+Residual **cleared** (`managed_live=0`). Do **not** re-run the RPC from this
+attest. Do **not** call NULL/omit fleet. Do **not** ship origin.
 
 Walls HOLD unless a later named go says otherwise: no Pages / Worker / Edge /
 Realtime / `writes_enabled` flip from this workstream.
@@ -167,15 +195,15 @@ Realtime / `writes_enabled` flip from this workstream.
 - `SECURITY DEFINER`, `service_role` EXECUTE only; PUBLIC / anon / authenticated
   revoked.
 - This attestation does not re-apply SQL (Pulse already applied the 3-arg
-  migration on named Go SQL). It does not run bulk convert. Residual
-  `aggadagdade` stays managed.
+  migration on named Go SQL). It does not re-run bulk convert or fleet NULL.
+  Residual already cleared by Go Ops allowlist (`managed_live=0`).
 
 ## Pre-apply inventory (read-only; named go)
 
 Count live managed vs encrypted. Confirm the identity trigger still forbids
 `UPDATE` managed→false. Backup managed `notes` + `note_checkpoints` before any
-apply go. Go A+B, the 2026-09-22 re-bulk, and Go SQL already ran; do not treat
-this attest as another apply or as Go Ops.
+apply go. Go A+B, the 2026-09-22 re-bulk, Go SQL, and Go Ops allowlist already
+ran; do not treat this attest as another apply or another convert.
 
 ## Execute (historical Go A/B / re-bulk; already ran — do not re-apply)
 
@@ -187,16 +215,15 @@ SELECT public.capability_note_bulk_disable_secure(500);
 -- jsonb: status, converted, skipped_encrypted, skipped_not_managed, errors[]
 ```
 
-Live 3-arg (applied; do **not** run from this attest — **named Go Ops** still
-required before any convert). NULL/omit is fleet-wide and would convert residual
-`aggadagdade`:
+Live 3-arg (applied; do **not** run from this attest — Pulse already ran
+**named Go Ops** allowlist). NULL/omit is fleet-wide; do **not** call it:
 
 ```sql
--- fleet-wide plaintext (same as omit) — DO NOT CALL while residual managed
+-- fleet-wide plaintext (same as omit) — DO NOT CALL from this attest
 SELECT public.capability_note_bulk_disable_secure(500, false, NULL);
 -- no-op (live smoke: converted=0, scope=allowlist)
 SELECT public.capability_note_bulk_disable_secure(500, false, '{}');
--- allowlist
+-- allowlist (historical Go Ops: ARRAY['aggadagdade','pbhcusvb'] — do not re-run)
 SELECT public.capability_note_bulk_disable_secure(
   500, false, ARRAY['hage','xqmqh53z']
 );

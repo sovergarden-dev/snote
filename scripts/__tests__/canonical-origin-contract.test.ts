@@ -1945,4 +1945,91 @@ describe("canonical production origin", () => {
     expect(aPrime).toContain("46ddaf01");
     expect(aPrime).toContain("aggadagdade");
   });
+
+  it("records Go Ops allowlist bulk OFF 2→0 live PASS without fleet NULL or origin ship", () => {
+    const readme = readFileSync("README.md", "utf8");
+    const findings = readFileSync("docs/security-findings.md", "utf8");
+    const runbook = readFileSync("docs/security/bulk-disable-secure-ops.md", "utf8");
+    const backend = readFileSync("docs/capability-backend.md", "utf8");
+    const client = readFileSync("docs/capability-client.md", "utf8");
+    const adr = readFileSync(
+      "docs/adr/001-home-capability-mint-before-sql-240.md",
+      "utf8",
+    );
+    const worker = readFileSync("cloudflare-worker/README.md", "utf8");
+    const contract = readFileSync(
+      "docs/security/sql-240-readiness-contract.md",
+      "utf8",
+    );
+    const preflight = readFileSync(
+      "docs/security/sql-240-ops-preflight.md",
+      "utf8",
+    );
+    const rollout = readFileSync(
+      "docs/security/immediate-containment-rollout.md",
+      "utf8",
+    );
+    const cutover = readFileSync(
+      "docs/security/atomic-capability-cutover.md",
+      "utf8",
+    );
+    const aPrime = readFileSync("docs/security/a-prime-cutover-restore.md", "utf8");
+
+    expect(readme).toContain("Go Ops allowlist bulk OFF");
+    expect(readme).toContain("ARRAY[aggadagdade,pbhcusvb]");
+    expect(readme).toContain("pbhcusvb");
+    expect(readme).toContain("converted=2");
+    expect(readme).toContain("managed_live=2");
+    expect(readme).toContain("not fleet");
+    expect(readme).toContain("residual **cleared**");
+    expect(readme).toContain("pulse-bulk-off-allowlist-20260922");
+    expect(readme).toContain("sentinel-qa-bulk-off-allowlist-20260922");
+    expect(readme).toContain("836753fe");
+    expect(readme).toContain("9a80930a");
+    expect(readme).toMatch(/does not\s+move Pages/);
+    expect(readme).toContain("does not deploy origin");
+    expect(readme).toContain("does not re-apply SQL");
+    expect(readme).toContain("does not re-run bulk RPC");
+    expect(readme).not.toContain("GitHub 3-arg `p_slugs` allowlist **not applied**");
+
+    expect(findings).toContain(
+      "## 3j. Production Go Ops allowlist bulk OFF 2→0 — verified; origin unchanged",
+    );
+    expect(findings).toContain("ARRAY[aggadagdade,pbhcusvb]");
+    expect(findings).toContain("converted=2");
+    expect(findings).toContain("pbhcusvb");
+    expect(findings).toContain("not fleet");
+    expect(findings).toContain("Residual **cleared**");
+    expect(findings).toContain("/workspace/pulse-bulk-off-allowlist-20260922/");
+    expect(findings).toContain("/workspace/sentinel-qa-bulk-off-allowlist-20260922/");
+    expect(findings).toContain("**READY**");
+    expect(findings).toContain("Origin is `9a80930a`");
+    expect(findings).toContain("836753fe");
+    expect(findings).not.toContain("Go C pin heal **HOLD**");
+
+    expect(runbook).toContain("Go Ops allowlist bulk OFF");
+    expect(runbook).toContain("ARRAY[aggadagdade,pbhcusvb]");
+    expect(runbook).toContain("converted=2");
+    expect(runbook).toContain("836753fe");
+    expect(runbook).toContain("Residual **cleared**");
+    expect(backend).toContain("Go Ops allowlist bulk OFF");
+    expect(backend).toContain("pbhcusvb");
+    expect(backend).toContain("not fleet");
+    expect(client).toContain("Go Ops allowlist bulk OFF");
+    expect(client).toContain("pbhcusvb");
+    expect(adr).toContain("Go Ops allowlist bulk OFF");
+    expect(adr).toContain("pbhcusvb");
+    expect(worker).toContain("Go Ops allowlist bulk OFF 2→0");
+    expect(worker).toContain("không đổi origin");
+    expect(contract).toContain("Go Ops allowlist bulk OFF");
+    expect(contract).toContain("residual **cleared**");
+    expect(preflight).toContain("Go Ops allowlist bulk OFF");
+    expect(preflight).toContain("residual **cleared**");
+    expect(rollout).toContain("Go Ops allowlist bulk OFF");
+    expect(rollout).toContain("residual **cleared**");
+    expect(cutover).toContain("Go Ops allowlist bulk OFF");
+    expect(cutover).toContain("pbhcusvb");
+    expect(aPrime).toContain("Go Ops allowlist bulk OFF");
+    expect(aPrime).toContain("residual **cleared**");
+  });
 });
