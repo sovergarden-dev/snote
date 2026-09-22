@@ -413,6 +413,65 @@
   --sa-right: env(safe-area-inset-right, 0px);
   --sa-bottom: env(safe-area-inset-bottom, 0px);
   --sa-left: env(safe-area-inset-left, 0px);
+
+  /* Ko-fi FAB + PageIndicator share equal 1rem inset; indicator shifts left
+     of the primary disk (idle 2.75rem / update 3.5rem) plus 0.5rem gap. */
+  --snote-fab-inset: 1rem;
+  --snote-fab-idle-disk: 2.75rem;
+  --snote-fab-update-disk: 3.5rem;
+  --snote-fab-gap: 0.5rem;
+  --snote-fab-primary-disk: var(--snote-fab-idle-disk);
+}
+
+html[data-snote-fab-update] {
+  --snote-fab-primary-disk: var(--snote-fab-update-disk);
+}
+
+html.zen-mode {
+  --snote-fab-primary-disk: 0rem;
+  --snote-fab-gap: 0rem;
+}
+
+.snote-fab-anchor {
+  position: fixed;
+  z-index: 40;
+  right: calc(var(--snote-fab-inset) + var(--sa-right));
+  bottom: calc(var(--snote-fab-inset) + var(--sa-bottom));
+}
+
+.snote-page-indicator {
+  position: fixed;
+  z-index: 40;
+  bottom: calc(var(--snote-fab-inset) + var(--sa-bottom));
+  right: calc(
+    var(--snote-fab-inset) + var(--sa-right) + var(--snote-fab-primary-disk) +
+      var(--snote-fab-gap)
+  );
+}
+
+.fab-snooze-strike {
+  position: relative;
+}
+
+.fab-snooze-strike::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom right,
+    transparent calc(50% - 1px),
+    currentColor calc(50% - 1px),
+    currentColor calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fab-snooze-hit:hover .fab-snooze-strike::after,
+.fab-snooze-hit:focus-visible .fab-snooze-strike::after,
+.fab-snooze-hit:active .fab-snooze-strike::after {
+  opacity: 0.75;
 }
 
 /* Sticky topbar in Zen mode keeps clear of the notch / status bar. */

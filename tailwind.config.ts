@@ -103,8 +103,8 @@ export default {
           "10%": { transform: "scale(1.06)" },
         },
         "heartbeat-update": {
-          "0%, 20%, 100%": { transform: "scale(1.2)" },
-          "10%": { transform: "scale(1.45)" },
+          "0%, 20%, 100%": { transform: "scale(1)" },
+          "10%": { transform: "scale(1.2)" },
         },
         "fade-in": {
           "0%": { transform: "translateY(4px)" },
