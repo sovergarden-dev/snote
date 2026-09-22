@@ -212,12 +212,18 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    Same-canary origin SHA bump 2026-09-22:
    `deployedSha` `44b02cb3429999050aa850489b18b98a58ef2499`, still
    `capabilityRoutesEnabled` true. #151 create-bare + encrypt≠owner +
-   Legacy/Encrypt mutex UI is live: Home create always `seedAndOpen`; Encrypt
+   Legacy/Encrypt mutex UI shipped on that pin: Home create always `seedAndOpen`; Encrypt
    allowed on unmanaged without `#owner=`; Legacy↔Encrypt hard XOR in the SPA
    UI; Pixel LTR muted/primary. #151 Edge XOR (`convert-legacy` /
    `set-encryption` → `invalid_state` 409) is **in-repo only / not deployed
    live**. Do **not** claim Edge XOR live PASS.
-   Current live `deployedSha` `44b02cb3429999050aa850489b18b98a58ef2499`.
+   Same-canary origin SHA bump 2026-09-22 (#153):
+   `deployedSha` `1b1725446120ce9dd28bc7fe884c3768e37e435d`, still
+   `capabilityRoutesEnabled` true. #153 Ko-fi FAB equal `bottom-4`/`right-4`
+   inset + update snooze (status-only chip, no MỚI, small heart snooze,
+   larger update heart) is live. SW waiting can still serve pre-#153 update
+   cluster UI until tip activates.
+   Current live `deployedSha` `1b1725446120ce9dd28bc7fe884c3768e37e435d`.
    This docs PR does not re-apply SQL, does not run bulk convert, and does not
    deploy origin / Worker / Edge.
    This is not soak-complete.

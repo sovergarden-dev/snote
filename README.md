@@ -7,11 +7,14 @@ Production: [note.syrin.online](https://note.syrin.online/)
 **Current status:** Production currently runs W2 free-edit + Legacy opt-in
 (#135 W2 + #137 Legacy ON handoff + #138 A3 bare-after-ON RO + #139 lint/types;
 #151 create-bare + encrypt≠owner + Legacy/Encrypt mutex UI;
+#153 Ko-fi FAB equal `bottom-4`/`right-4` inset + update snooze heart;
 prior #130/#131 W1 convert-on-write as product default is **superseded**)
 canary-on `CutoverNotePage` → editable `NotePage` for plain `/<slug>` and
 SplitView panes (no forced convert, no `#owner=` required to edit; Phase C
 still live; Pixel HIGH UX H1–H6 still on this line; H2 opaque Mode/Export
-still on this line; Ko-fi + New Version FAB still on this line; FAB-primary
+still on this line; Ko-fi + New Version FAB still on this line (#153 equal
+inset + status-only update chip, no MỚI, small heart snooze, larger update
+heart); FAB-primary
 + Sonner suppress (#113/#116) still on this line; Choice A (#118)
 editable-plain default remains **superseded** on this line; PWA latch (#119)
 one hard-reload per Update apply still on this line; Pixel Legacy opt-in
@@ -22,8 +25,9 @@ allowed on unmanaged free-edit without forcing `#owner=` (persist via
 Encrypt stays active on the owner path (#123); A′ (#126) RO default is
 **superseded**; Duplicate securely (#128) remains enabled on Legacy RO only
 (Edge `note-session` `import-legacy`); W2 + A3 + Go C (#145 LNO-wins) remain
-on this line; #151 live on origin `44b02cb3`;
-Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e / §3k): `capabilityRoutesEnabled` true. Plain slug URLs persist via Edge
+on this line; #151 create-bare remains on this line; #153 live on origin
+`1b172544`;
+Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e / §3k / §3l): `capabilityRoutesEnabled` true. Plain slug URLs persist via Edge
 `plain-upsert` (free-edit for anyone with the link). Home create always uses
 bare `seedAndOpen` (no default mint / no `#owner=`). Prior Home mint
 (fail-closed on idle; create → `/<slug>#owner=`) is **superseded** as default.
@@ -82,14 +86,28 @@ residual **cleared**; post `managed_live=0`; LNO unmanaged; plain-upsert
 after #149 is `836753fe`. Sentinel **READY** (SQL contract; evidence
 `/workspace/sentinel-qa-allowlist-sql-46ddaf01/`) then **READY** (bulk OFF
 live gate; evidence `/workspace/sentinel-qa-bulk-off-allowlist-20260922/`).
-Current live origin `44b02cb3` / Pages `b44849c4`: Syringa named #151 Origin
-SPA ship to Cloudflare Pages `snote-g4-origin` / note.syrin.online (canary
-ON). Independent Sentinel `version.json`: `deployedSha`
-`44b02cb3429999050aa850489b18b98a58ef2499`, `capabilityRoutesEnabled` true,
-`buildId` `1790066192935-qg7oaft7`, `builtAt` `2026-09-22T08:36:49.543Z`.
-Sentinel **READY WITH KNOWN RISKS** (tip latch PASS; D1 create bare PASS; D2
-encrypt unmanaged PASS; D3 mutex UI PASS; Pixel LTR toggles PASS; Edge XOR
-409 **NOT VERIFIED**). Pixel READY WITH KNOWN RISKS khớp. Walls HOLD:
+Prior live origin `44b02cb3` / Pages `b44849c4` (#152 attest): Syringa named
+#151 Origin SPA ship to Cloudflare Pages `snote-g4-origin` /
+note.syrin.online (canary ON). Independent Sentinel `version.json` at that
+attest: `deployedSha` `44b02cb3429999050aa850489b18b98a58ef2499`,
+`capabilityRoutesEnabled` true, `buildId` `1790066192935-qg7oaft7`,
+`builtAt` `2026-09-22T08:36:49.543Z`. Sentinel **READY WITH KNOWN RISKS** at
+that attest (tip latch PASS; D1 create bare PASS; D2 encrypt unmanaged PASS;
+D3 mutex UI PASS; Pixel LTR toggles PASS; Edge XOR 409 **NOT VERIFIED**).
+Pixel READY WITH KNOWN RISKS khớp. Current live origin `1b172544` / Pages
+`5527f154`: Syringa named #153 Origin SPA ship to Cloudflare Pages
+`snote-g4-origin` / note.syrin.online (canary ON). Independent Sentinel
+`version.json`: `deployedSha` `1b1725446120ce9dd28bc7fe884c3768e37e435d`,
+`capabilityRoutesEnabled` true, `buildId` `1790083696998-uk4r5sxu`,
+`builtAt` `2026-09-22T13:28:32.689Z` (Pulse clean-rebuild redeploy; Pages
+preview `5527f154`). Earlier same-SHA first deploy was Pages `66a0df1a` /
+buildId `1790082984868-xjuz78gh` — this attest pins the **current** live
+buildId. Sentinel + Pixel **READY WITH KNOWN RISKS** (idle FAB equal
+`bottom-4`/`right-4` inset PASS; update cluster PASS: status-only
+«Có update mới», no MỚI badge, small heart snooze + strike, larger update
+heart; after hard-activate tip). Known risk: SW waiting can still serve pre-#153 update
+cluster UI until tip activates (Pulse digests matched tip; not a miss-ship).
+Edge XOR 409 **NOT VERIFIED** (still PARKED / not deployed). Walls HOLD:
 Worker / Realtime / SQL / `writes_enabled`. This docs attest does not deploy
 origin / Pages / Worker / Edge and does not apply SQL. Not soak-complete.
 
@@ -171,11 +189,12 @@ does not deploy origin / Pages / Worker / Edge, does not re-apply SQL, and
 does not re-run bulk RPC / fleet NULL. Worker / Realtime / `writes_enabled`
 still HOLD.
 
-**W2 live (named Pages go of #135/#137/#138/#139 + Go C #145 + #151):** canary-on
+**W2 live (named Pages go of #135/#137/#138/#139 + Go C #145 + #151 + #153):** canary-on
 plain `/<slug>` is free-edit (no convert-on-write default). Go C LNO-wins pin
 heal remains on this line (shipped on prior origin `9a80930a`). #151 create-bare
-+ encrypt≠owner + Legacy/Encrypt mutex UI is live on origin `44b02cb3` / Pages
-`b44849c4`. W1 convert-on-write as product
++ encrypt≠owner + Legacy/Encrypt mutex UI remains on this line (prior origin
+`44b02cb3` / Pages `b44849c4`). #153 Ko-fi FAB equal inset + update snooze
+is live on origin `1b172544` / Pages `5527f154`. W1 convert-on-write as product
 default is **superseded**. A′ (#126) Cutover/LNO RO default is
 **superseded**. `#owner=`/`#edit=` still render `NotePage`. `?legacyRo=1`
 still RO + banner. Canary stays on. SQL 240 already applied; W2 SQL
