@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -6,6 +7,8 @@ const source = (path: string) => readFileSync(resolve(process.cwd(), path), "utf
 
 const BULK_MIGRATION =
   "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql";
+const ALLOWLIST_MIGRATION =
+  "supabase/migrations/20260922000000_capability_note_bulk_disable_secure_p_slugs.sql";
 const DISABLE_MIGRATION =
   "supabase/migrations/20260915000001_capability_note_disable_secure.sql";
 const RUNBOOK = "docs/security/bulk-disable-secure-ops.md";
@@ -106,5 +109,111 @@ describe("B1 bulk disable-secure contract", () => {
     expect(runbook).toContain("Pulse post-verify");
     expect(runbook).not.toContain("supabase db push");
     expect(runbook).not.toContain("convert-legacy");
+  });
+
+  it("hard-drops the 2-arg RPC and creates a 3-arg allowlist function (GitHub-only)", () => {
+    const sql = source(ALLOWLIST_MIGRATION);
+    const fn = sqlFunction(sql, "capability_note_bulk_disable_secure");
+    const types = source("src/integrations/supabase/types.ts");
+
+    expect(sql.trimStart()).toMatch(/^BEGIN;/);
+    expect(sql.trimEnd()).toMatch(/COMMIT;$/);
+    expect(createHash("sha256").update(sql, "utf8").digest("hex")).toBe(
+      "f16a20a661dc96523bf9a717a830dbe51df2d2427206a72a7c9c373b4a782132",
+    );
+    expect(source(RUNBOOK)).toContain(
+      "f16a20a661dc96523bf9a717a830dbe51df2d2427206a72a7c9c373b4a782132",
+    );
+    expect(sql).toMatch(/Do not apply this migration from the GitHub PR/);
+    expect(sql).toContain("pg_advisory_xact_lock(20260916000000)");
+    expect(sql).not.toMatch(/GRANT (SELECT|INSERT|UPDATE|DELETE|ALL)[\s\S]+ON TABLE public\.notes/);
+    expect(sql).not.toMatch(/GRANT .+ ON TABLE public\.notes/);
+
+    expect(sql).toMatch(
+      /DROP FUNCTION public\.capability_note_bulk_disable_secure\(\s*integer,\s*boolean\s*\);/,
+    );
+    expect(sql).not.toMatch(
+      /DROP FUNCTION IF EXISTS public\.capability_note_bulk_disable_secure\(\s*integer,\s*boolean/,
+    );
+    expect(sql).not.toMatch(
+      /CREATE(?: OR REPLACE)? FUNCTION public\.capability_note_bulk_disable_secure\(\s*p_limit integer,\s*p_include_encrypted boolean DEFAULT false\s*\)/,
+    );
+
+    expect(sql).toMatch(
+      /REVOKE ALL ON FUNCTION public\.capability_note_bulk_disable_secure[\s\S]+integer,\s*boolean,\s*text\[][\s\S]+FROM PUBLIC, anon, authenticated/,
+    );
+    expect(sql).toMatch(
+      /GRANT EXECUTE ON FUNCTION public\.capability_note_bulk_disable_secure[\s\S]+integer,\s*boolean,\s*text\[][\s\S]+TO service_role/,
+    );
+    expect(sql).not.toMatch(
+      /GRANT EXECUTE ON FUNCTION public\.capability_note_bulk_disable_secure\(\s*integer,\s*boolean\s*\)/,
+    );
+
+    expect(fn).toContain("p_limit integer");
+    expect(fn).toContain("p_include_encrypted boolean DEFAULT false");
+    expect(fn).toContain("p_slugs text[] DEFAULT NULL");
+    expect(fn.indexOf("p_include_encrypted boolean DEFAULT false"))
+      .toBeGreaterThan(fn.indexOf("p_limit integer"));
+    expect(fn.indexOf("p_slugs text[] DEFAULT NULL"))
+      .toBeGreaterThan(fn.indexOf("p_include_encrypted boolean DEFAULT false"));
+    expect(fn).toContain("SECURITY DEFINER");
+    expect(fn).toContain("SET search_path = pg_catalog, pg_temp");
+    expect(fn).toContain("public.capability_writes_acquire()");
+    expect(fn).toContain("pg_advisory_xact_lock(20260916000000)");
+    expect(fn).toContain("FOR UPDATE");
+    expect(fn).toContain("DELETE FROM public.notes");
+    expect(fn).toContain("INSERT INTO public.notes");
+    expect(fn).toContain("'legacy'");
+    expect(fn).toContain("p_slugs IS NULL");
+    expect(fn).toContain("cardinality(p_slugs) > 0");
+    expect(fn).toContain("cardinality(p_slugs) > 10000");
+    expect(fn).toMatch(/n\.slug = ANY\s*\(\s*p_slugs\s*\)/);
+    expect(fn).toContain("'scope'");
+    expect(fn).toContain("'fleet'");
+    expect(fn).toContain("'allowlist'");
+    expect(fn).toContain("'allowlist_requested'");
+    expect(fn).toContain("'allowlist_matched_managed'");
+    expect(fn).toContain("'skipped_allowlist_miss'");
+    expect(fn).toContain("'skipped_limit'");
+    expect(fn).toContain("'status'");
+    expect(fn).toContain("'converted'");
+    expect(fn).toContain("'skipped_encrypted'");
+    expect(fn).toContain("'skipped_not_managed'");
+    expect(fn).toContain("'errors'");
+    expect(fn).toContain("p_include_encrypted OR NOT n.is_encrypted");
+    expect(fn).not.toContain("p_strict");
+    expect(fn).not.toMatch(/lower\s*\(\s*n\.slug/);
+    expect(fn).not.toMatch(/btrim\s*\(\s*n\.slug/);
+    expect(fn).not.toMatch(/lower\s*\(\s*p_slugs/);
+    expect(fn).not.toContain("capability_note_convert_legacy");
+    expect(fn).not.toContain("capability_note_plain_upsert");
+
+    expect(types).toContain("capability_note_bulk_disable_secure:");
+    expect(types).toContain("p_slugs?: string[]");
+    expect(source("supabase/functions/note-session/index.ts"))
+      .not.toContain("capability_note_bulk_disable_secure");
+    expect(source("supabase/functions/_shared/capability-edge.ts"))
+      .not.toContain("capability_note_bulk_disable_secure");
+  });
+
+  it("documents GitHub-only allowlist Q1 semantics and the named-go checklist", () => {
+    const runbook = source(RUNBOOK);
+    expect(runbook).toContain("**not applied**");
+    expect(runbook).toContain("GitHub-only");
+    expect(runbook).toContain("p_slugs");
+    expect(runbook).toContain("20260922000000_capability_note_bulk_disable_secure_p_slugs.sql");
+    expect(runbook).toMatch(/NULL\/omit = fleet-wide/);
+    expect(runbook).toMatch(/`\{\}` \/ cardinality 0 = \*\*no-op\*\*/);
+    expect(runbook).toContain("skipped_allowlist_miss");
+    expect(runbook).toContain("skipped_limit");
+    expect(runbook).toContain("allowlist_requested");
+    expect(runbook).toContain("allowlist_matched_managed");
+    expect(runbook).toContain("named Go SQL");
+    expect(runbook).toContain("named Go Ops");
+    expect(runbook).toContain("soft-miss");
+    expect(runbook).toContain("skipped_encrypted");
+    expect(runbook).toContain("DROP FUNCTION");
+    expect(runbook).toContain("No `p_strict` in v1");
+    expect(runbook).not.toContain("supabase db push");
   });
 });

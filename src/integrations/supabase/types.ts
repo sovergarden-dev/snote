@@ -497,7 +497,7 @@ export type Database = {
         Returns: Json
       }
       capability_note_bulk_disable_secure: {
-        Args: { p_include_encrypted?: boolean; p_limit: number }
+        Args: { p_include_encrypted?: boolean; p_limit: number; p_slugs?: string[] }
         Returns: Json
       }
       capability_note_convert_legacy: {
