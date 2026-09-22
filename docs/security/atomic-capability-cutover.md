@@ -208,7 +208,16 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    (`aggadagdade`) still managed — **no bulk OFF** — is **historical**.
    **Go Ops allowlist bulk OFF** 2→0 Pulse PASS (`aggadagdade`, `pbhcusvb`;
    converted=2; **not fleet**; residual **cleared**).
-   Current live `deployedSha` `9a80930aec5d7c018879bd2a406a35c055477f06`.
+   Historical `deployedSha` `9a80930aec5d7c018879bd2a406a35c055477f06`.
+   Same-canary origin SHA bump 2026-09-22:
+   `deployedSha` `44b02cb3429999050aa850489b18b98a58ef2499`, still
+   `capabilityRoutesEnabled` true. #151 create-bare + encrypt≠owner +
+   Legacy/Encrypt mutex UI is live: Home create always `seedAndOpen`; Encrypt
+   allowed on unmanaged without `#owner=`; Legacy↔Encrypt hard XOR in the SPA
+   UI; Pixel LTR muted/primary. #151 Edge XOR (`convert-legacy` /
+   `set-encryption` → `invalid_state` 409) is **in-repo only / not deployed
+   live**. Do **not** claim Edge XOR live PASS.
+   Current live `deployedSha` `44b02cb3429999050aa850489b18b98a58ef2499`.
    This docs PR does not re-apply SQL, does not run bulk convert, and does not
    deploy origin / Worker / Edge.
    This is not soak-complete.

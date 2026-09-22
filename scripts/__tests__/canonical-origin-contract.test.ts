@@ -38,6 +38,9 @@ describe("canonical production origin", () => {
     expect(readme).toContain("1b9ed3d1");
     expect(readme).toContain("9a80930a");
     expect(readme).toContain("8e64829c");
+    expect(readme).toContain("44b02cb3");
+    expect(readme).toContain("b44849c4");
+    expect(readme).toContain("#151");
     expect(readme).toContain("Choice A");
     expect(readme).toContain("#118");
     expect(readme).toContain("#119");
@@ -119,8 +122,10 @@ describe("canonical production origin", () => {
     expect(readme).toContain("RawView");
     expect(readme).toMatch(/LNO `open`/);
     expect(readme).toMatch(/LNO `exists`/);
-    expect(readme).toContain("Home mints capabilities when canary is on");
+    expect(readme).toContain("Home create always uses");
+    expect(readme).toContain("seedAndOpen");
     expect(readme).toContain("fail-closed on idle");
+    expect(readme).not.toContain("Home mints capabilities when canary is on");
     expect(readme).toContain("LegacyNotePage");
     expect(readme).toContain("A′");
     expect(readme).toContain("superseded");
@@ -233,7 +238,8 @@ describe("canonical production origin", () => {
     expect(findings).not.toContain("Origin is `f84183ba`");
     expect(findings).not.toContain("Origin is `2ae9a230`");
     expect(findings).not.toContain("Origin is `0cdcdc0f`");
-    expect(findings).toContain("Origin is `9a80930a`");
+    expect(findings).not.toContain("Origin is `9a80930a`");
+    expect(findings).toContain("Origin is `44b02cb3`");
     expect(findings).toContain("capabilityRoutesEnabled` is true");
     expect(findings).toContain("Phase C");
     expect(findings).toContain("Pixel HIGH UX");
@@ -259,6 +265,7 @@ describe("canonical production origin", () => {
     expect(findings).toContain("#139");
     expect(findings).toContain("#142");
     expect(findings).toContain("#145");
+    expect(findings).toContain("#151");
     expect(findings).toContain("## 3f.");
     expect(findings).toContain("## 3g.");
     expect(findings).toContain("capability_note_bulk_disable_secure");
@@ -811,14 +818,17 @@ describe("canonical production origin", () => {
     expect(findings).toContain("8e64829c-c182-45d1-ba27-5f43af7d20fd");
     expect(findings).toContain("ec3b8468a53852a90787dc61d6f80720");
     expect(findings).toContain("#145");
+    expect(findings).toContain("#151");
     expect(findings).toContain("pixel-qa/go-c-live-9a80930a/");
     expect(findings).toContain("sentinel-qa-go-c-live/");
     expect(findings).toContain("managed_live=3");
     expect(findings).toContain("## 3h.");
+    expect(findings).toContain("## 3k.");
     expect(findings).toContain("pulse-rebulk-all6-20260922");
     expect(findings).toContain("managed_live=0");
     expect(findings).not.toContain("Origin is `0cdcdc0f`");
-    expect(findings).toContain("Origin is `9a80930a`");
+    expect(findings).not.toContain("Origin is `9a80930a`");
+    expect(findings).toContain("Origin is `44b02cb3`");
     expect(findings).toContain("new-version reminder");
     expect(findings).not.toContain("may still be in flight");
     expect(findings).not.toContain("Sentinel still completing");
@@ -872,7 +882,7 @@ describe("canonical production origin", () => {
     expect(findings).not.toContain("PITR checkpoint is available");
   });
 
-  it("pins leftover client/Worker present-tense surfaces to live origin canary 9a80930a", () => {
+  it("pins leftover client/Worker present-tense surfaces to live origin canary 44b02cb3", () => {
     const client = readFileSync("docs/capability-client.md", "utf8");
     const backend = readFileSync("docs/capability-backend.md", "utf8");
     const worker = readFileSync("cloudflare-worker/README.md", "utf8");
@@ -881,7 +891,10 @@ describe("canonical production origin", () => {
     expect(client).toContain("findings §3e");
     expect(client).toContain("0cdcdc0f");
     expect(client).toContain("9a80930a");
-    expect(client).toContain("This Home mint path is live on origin `9a80930a`");
+    expect(client).toContain("44b02cb3");
+    expect(client).toContain("This Home create path is live on origin `44b02cb3`");
+    expect(client).toContain("seedAndOpen");
+    expect(client).not.toContain("This Home mint path is live on origin `9a80930a`");
     expect(client).not.toContain("This Home mint path is live on origin `0cdcdc0f`");
     expect(client).not.toContain("live origin `0cdcdc0f`");
     expect(client).toContain("Choice A");
@@ -914,6 +927,7 @@ describe("canonical production origin", () => {
     expect(client).toContain("#138");
     expect(client).toContain("#139");
     expect(client).toContain("#145");
+    expect(client).toContain("#151");
     expect(client).toContain("legacyRo");
     expect(client).toContain("Duplicate securely is enabled");
     expect(client).toContain("import-legacy");
@@ -939,7 +953,8 @@ describe("canonical production origin", () => {
     expect(client).not.toContain(
       "Home create waits until the `notes.select` availability",
     );
-    expect(client).toContain("fail-open to legacy `seedAndOpen`");
+    expect(client).toContain("seedAndOpen");
+    expect(client).not.toContain("fail-open to legacy `seedAndOpen`");
     expect(client).not.toContain("GitHub-first wiring, not a production attestation");
     expect(client).not.toContain("live origin `386421e8`");
     expect(client).not.toContain("live origin `4baa8966`");
@@ -984,6 +999,7 @@ describe("canonical production origin", () => {
     expect(client).not.toContain("live origin `f84183ba`");
     expect(client).not.toContain("This Home mint path is live on origin `f84183ba`");
     expect(client).not.toContain("live origin `2ae9a230`");
+    expect(client).not.toContain("live origin `9a80930a`");
     expect(client).not.toContain("This Home mint path is live on origin `2ae9a230`");
     expect(client).not.toContain(
       "Production builds attest `capabilityRoutesEnabled: false`.",
@@ -1023,6 +1039,7 @@ describe("canonical production origin", () => {
     expect(backend).toContain("#138");
     expect(backend).toContain("#139");
     expect(backend).toContain("#145");
+    expect(backend).toContain("#151");
     expect(backend).toContain("W1");
     expect(backend).toContain("W2");
     expect(backend).toContain("convert-on-write");
@@ -1057,7 +1074,9 @@ describe("canonical production origin", () => {
 
     expect(worker).toContain("`0cdcdc0f`");
     expect(worker).toContain("`9a80930a`");
-    expect(worker).toContain("Origin SPA hiện là `9a80930a`");
+    expect(worker).toContain("`44b02cb3`");
+    expect(worker).toContain("Origin SPA hiện là `44b02cb3`");
+    expect(worker).not.toContain("Origin SPA hiện là `9a80930a`");
     expect(worker).not.toContain("Origin SPA hiện là `0cdcdc0f`");
     expect(worker).not.toContain("Origin SPA hiện là `addeeb29`");
     expect(worker).not.toContain("Origin SPA hiện là `7d00fd52`");
@@ -1105,6 +1124,9 @@ describe("canonical production origin", () => {
     expect(aPrime).toContain("1b9ed3d1");
     expect(aPrime).toContain("9a80930a");
     expect(aPrime).toContain("8e64829c");
+    expect(aPrime).toContain("44b02cb3");
+    expect(aPrime).toContain("b44849c4");
+    expect(aPrime).toContain("#151");
     expect(aPrime).toContain("2ae9a230");
     expect(aPrime).toContain("fb35474a");
     expect(aPrime).toContain("f84183ba");
@@ -1142,7 +1164,7 @@ describe("canonical production origin", () => {
     expect(aPrime).not.toContain("remains Choice A until");
   });
 
-  it("records live Worker 931430c0 / 5f94ab6c with logs live, origin now 9a80930a", () => {
+  it("records live Worker 931430c0 / 5f94ab6c with logs live, origin now 44b02cb3", () => {
     const findings = readFileSync("docs/security-findings.md", "utf8");
     const worker = readFileSync("cloudflare-worker/README.md", "utf8");
     const rollout = readFileSync(
@@ -1192,7 +1214,8 @@ describe("canonical production origin", () => {
     expect(findings).toContain("syrin-prerender-staging");
     expect(findings).toContain("G3C staging");
     expect(findings).toContain("2026-08-24");
-    expect(findings).toContain("Origin is `9a80930a`");
+    expect(findings).toContain("Origin is `44b02cb3`");
+    expect(findings).not.toContain("Origin is `9a80930a`");
     expect(findings).not.toContain("Origin is `0cdcdc0f`");
     expect(findings).not.toContain("Origin is `7d00fd52`");
     expect(findings).not.toContain("Origin is `77d791af`");
@@ -1225,7 +1248,8 @@ describe("canonical production origin", () => {
     expect(rollout).toContain("`931430c0`");
     expect(rollout).toContain("Observability and invocation logs are live");
     expect(rollout).toContain("traces remain disabled");
-    expect(rollout).toContain("Origin remains `9a80930a`");
+    expect(rollout).toContain("Origin remains `44b02cb3`");
+    expect(rollout).not.toContain("Origin remains `9a80930a`");
     expect(rollout).not.toContain("Origin remains `0cdcdc0f`");
     expect(rollout).not.toContain("Origin remains `7d00fd52`");
     expect(rollout).not.toContain("Origin remains `77d791af`");
@@ -1265,6 +1289,7 @@ describe("canonical production origin", () => {
     expect(rollout).toContain("#138");
     expect(rollout).toContain("#139");
     expect(rollout).toContain("#145");
+    expect(rollout).toContain("#151");
     expect(rollout).toContain("umsg_01m21zhm");
     expect(rollout).toContain("applied live");
     expect(rollout).toContain("published");
@@ -1288,8 +1313,10 @@ describe("canonical production origin", () => {
     expect(adr).toContain("Worker `931430c0` / `5f94ab6c`");
     expect(adr).toContain("5f94ab6c-fde5-4416-a3aa-74daaa2e6094");
     expect(adr).toContain("`invocation_logs` are **live**");
-    expect(adr).toContain("Live origin `9a80930a`");
-    expect(adr).toContain("Home mint fail-closed idle live on origin `9a80930a`");
+    expect(adr).toContain("Live origin `44b02cb3`");
+    expect(adr).toContain("always bare `seedAndOpen`");
+    expect(adr).not.toContain("Live origin `9a80930a`");
+    expect(adr).not.toContain("Home mint fail-closed idle live on origin `9a80930a`");
     expect(adr).toContain("#110");
     expect(adr).toContain("#113");
     expect(adr).toContain("#116");
@@ -1306,6 +1333,7 @@ describe("canonical production origin", () => {
     expect(adr).toContain("#138");
     expect(adr).toContain("#139");
     expect(adr).toContain("#145");
+    expect(adr).toContain("#151");
     expect(adr).toContain("Choice A");
     expect(adr).toContain("A′");
     expect(adr).toContain("superseded");
@@ -1588,8 +1616,11 @@ describe("canonical production origin", () => {
     expect(cutover).not.toMatch(
       /live `deployedSha` `0cdcdc0f31eed7db7b9301c4e6fbe7c079cf69dd`/,
     );
-    expect(cutover).toMatch(
+    expect(cutover).not.toMatch(
       /live `deployedSha` `9a80930aec5d7c018879bd2a406a35c055477f06`/,
+    );
+    expect(cutover).toMatch(
+      /live `deployedSha` `44b02cb3429999050aa850489b18b98a58ef2499`/,
     );
     expect(cutover).toContain("Phase C");
     expect(cutover).toContain("Pixel HIGH UX");
@@ -1614,6 +1645,7 @@ describe("canonical production origin", () => {
     expect(cutover).toContain("#138");
     expect(cutover).toContain("#139");
     expect(cutover).toContain("#145");
+    expect(cutover).toContain("#151");
     expect(cutover).toContain("umsg_01m21zhm");
     expect(cutover).toContain("**applied**");
     expect(cutover).toContain("**published**");
@@ -1686,6 +1718,7 @@ describe("canonical production origin", () => {
     ]) {
       expect(source).toContain("0cdcdc0f");
       expect(source).toContain("9a80930a");
+      expect(source).toContain("44b02cb3");
       expect(source).toContain("capability_note_bulk_disable_secure");
       expect(source).toMatch(/Go C/i);
       expect(source).toContain("HOLD");
@@ -1727,7 +1760,8 @@ describe("canonical production origin", () => {
     expect(findings).toContain("26→0");
     expect(findings).toContain("snote:legacy-secure:");
     expect(findings).toContain("/workspace/pulse-bulk-off-ab2c4de9/");
-    expect(findings).toContain("Origin is `9a80930a`");
+    expect(findings).toContain("Origin is `44b02cb3`");
+    expect(findings).not.toContain("Origin is `9a80930a`");
     expect(findings).not.toContain("Origin is `0cdcdc0f`");
     expect(findings).toContain("This is not SQL 240, not Realtime, not soak-complete.");
     expect(findings).toContain("converted=6");
@@ -1777,8 +1811,8 @@ describe("canonical production origin", () => {
     expect(findings).toContain("8e64829c-c182-45d1-ba27-5f43af7d20fd");
     expect(findings).toContain("1789612258815-8yx2tdut");
     expect(findings).toContain("ec3b8468a53852a90787dc61d6f80720");
-    expect(findings).toContain("Origin is `9a80930a`");
-    expect(findings).toContain("LNO-wins");
+    expect(findings).toContain("At that attest, live SPA origin was `9a80930a`");
+    expect(findings).toContain("Origin is `44b02cb3`");
     expect(findings).toContain("shipped");
     expect(findings).toContain("managed_live=3");
     expect(findings).toContain("35136042556");
@@ -1829,7 +1863,8 @@ describe("canonical production origin", () => {
     expect(findings).toContain("content_len drift");
     expect(findings).toContain("1 CSP console error");
     expect(findings).toContain("BLOCKER/HIGH/MEDIUM");
-    expect(findings).toContain("Origin is `9a80930a`");
+    expect(findings).toContain("Origin is `44b02cb3`");
+    expect(findings).not.toContain("Origin is `9a80930a`");
     expect(findings).not.toContain("Origin is `0cdcdc0f`");
     expect(findings).not.toContain("Go C pin heal **HOLD**");
 
@@ -1912,7 +1947,7 @@ describe("canonical production origin", () => {
     expect(findings).toContain("/workspace/pulse-allowlist-sql-46ddaf01/");
     expect(findings).toContain("/workspace/sentinel-qa-allowlist-sql-46ddaf01/");
     expect(findings).toContain("**READY**");
-    expect(findings).toContain("Origin is `9a80930a`");
+    expect(findings).toContain("Origin is `44b02cb3`");
     expect(findings).not.toContain("GitHub 3-arg `p_slugs` allowlist **not applied**");
     expect(findings).not.toContain("Go C pin heal **HOLD**");
 
@@ -2003,7 +2038,7 @@ describe("canonical production origin", () => {
     expect(findings).toContain("/workspace/pulse-bulk-off-allowlist-20260922/");
     expect(findings).toContain("/workspace/sentinel-qa-bulk-off-allowlist-20260922/");
     expect(findings).toContain("**READY**");
-    expect(findings).toContain("Origin is `9a80930a`");
+    expect(findings).toContain("Origin is `44b02cb3`");
     expect(findings).toContain("836753fe");
     expect(findings).not.toContain("Go C pin heal **HOLD**");
 
@@ -2031,5 +2066,91 @@ describe("canonical production origin", () => {
     expect(cutover).toContain("pbhcusvb");
     expect(aPrime).toContain("Go Ops allowlist bulk OFF");
     expect(aPrime).toContain("residual **cleared**");
+  });
+
+  it("records live #151 Origin SPA 44b02cb3 without claiming Edge XOR shipped", () => {
+    const readme = readFileSync("README.md", "utf8");
+    const findings = readFileSync("docs/security-findings.md", "utf8");
+    const client = readFileSync("docs/capability-client.md", "utf8");
+    const backend = readFileSync("docs/capability-backend.md", "utf8");
+    const worker = readFileSync("cloudflare-worker/README.md", "utf8");
+    const adr = readFileSync(
+      "docs/adr/001-home-capability-mint-before-sql-240.md",
+      "utf8",
+    );
+    const aPrime = readFileSync(
+      "docs/security/a-prime-cutover-restore.md",
+      "utf8",
+    );
+    const cutover = readFileSync(
+      "docs/security/atomic-capability-cutover.md",
+      "utf8",
+    );
+    const runbook = readFileSync(
+      "docs/security/bulk-disable-secure-ops.md",
+      "utf8",
+    );
+    const contract = readFileSync(
+      "docs/security/sql-240-readiness-contract.md",
+      "utf8",
+    );
+    const preflight = readFileSync(
+      "docs/security/sql-240-ops-preflight.md",
+      "utf8",
+    );
+    const rollout = readFileSync(
+      "docs/security/immediate-containment-rollout.md",
+      "utf8",
+    );
+
+    expect(readme).toContain("44b02cb3");
+    expect(readme).toContain("b44849c4");
+    expect(readme).toContain("44b02cb3429999050aa850489b18b98a58ef2499");
+    expect(readme).toContain("1790066192935-qg7oaft7");
+    expect(readme).toContain("2026-09-22T08:36:49.543Z");
+    expect(readme).toContain("#151");
+    expect(readme).toContain("seedAndOpen");
+    expect(readme).toContain("no default mint");
+    expect(readme).toContain("hard XOR");
+    expect(readme).toContain("invalid_state");
+    expect(readme).toContain("NOT VERIFIED");
+    expect(readme).toContain("in-repo only");
+    expect(readme).toContain("note-manage");
+    expect(readme).toContain("Pixel READY WITH KNOWN RISKS");
+    expect(readme).toContain("does not deploy origin");
+    expect(readme).not.toContain("Home mints capabilities when canary is on");
+
+    expect(findings).toContain(
+      "## 3k. Production #151 Origin SPA — verified; origin 44b02cb3; Edge XOR not shipped",
+    );
+    expect(findings).toContain("44b02cb3429999050aa850489b18b98a58ef2499");
+    expect(findings).toContain("1790066192935-qg7oaft7");
+    expect(findings).toContain("b44849c4");
+    expect(findings).toContain("Origin is `44b02cb3`");
+    expect(findings).not.toContain("Origin is `9a80930a`");
+    expect(findings).toContain("seedAndOpen");
+    expect(findings).toContain("invalid_state");
+    expect(findings).toContain("NOT VERIFIED");
+    expect(findings).toContain("in-repo only");
+    expect(findings).toContain("note-session");
+    expect(findings).toContain("note-manage");
+    expect(findings).toContain("SUPABASE_ACCESS_TOKEN");
+    expect(findings).toContain("Pixel READY WITH KNOWN RISKS khớp");
+    expect(findings).toContain("Do **not** claim Edge XOR live PASS");
+    expect(findings).toContain("This is not SQL 240, not Realtime, not soak-complete.");
+
+    expect(client).toContain("This Home create path is live on origin `44b02cb3`");
+    expect(client).toContain("seedAndOpen");
+    expect(backend).toContain("Live origin is `44b02cb3`");
+    expect(worker).toContain("Origin SPA hiện là `44b02cb3`");
+    expect(adr).toContain("Live origin `44b02cb3`");
+    expect(aPrime).toContain("Current live origin `44b02cb3` / Pages `b44849c4`");
+    expect(cutover).toContain("44b02cb3429999050aa850489b18b98a58ef2499");
+    expect(runbook).toContain("44b02cb3");
+    expect(runbook).toContain("b44849c4");
+    expect(contract).toContain("origin `44b02cb3` / Pages `b44849c4`");
+    expect(preflight).toContain("1790066192935-qg7oaft7");
+    expect(preflight).toContain("b44849c4");
+    expect(rollout).toContain("Origin remains `44b02cb3`");
   });
 });
