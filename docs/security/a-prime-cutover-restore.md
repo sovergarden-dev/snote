@@ -97,14 +97,17 @@ legacy-on, bare-after-on, bare-tab2, legacy-off; evidence
 `sentinel-qa-a3-0cdcdc0f/`). LOW: normal new-version reminder; one owner-link
 load needing hard reload; optional cold localStorage-clear not run.
 Current live origin `9a80930a` / Pages `8e64829c`: Go C (#145) **shipped**.
-Pixel READY WITH KNOWN RISKS (heal `/design` PASS; `/hage` A3 = still-managed
-after Secure ON probe, not heal FAIL; evidence `pixel-qa/go-c-live-9a80930a/`).
-Sentinel READY WITH KNOWN RISKS (evidence `sentinel-qa-go-c-live/`).
+Historical Pixel READY WITH KNOWN RISKS at Go C (heal `/design` PASS; `/hage`
+A3 = still-managed after Secure ON probe, not heal FAIL; evidence
+`pixel-qa/go-c-live-9a80930a/`). Historical Sentinel READY WITH KNOWN RISKS
+at Go C (evidence `sentinel-qa-go-c-live/`).
 Bulk Legacy/Secure OFF (docs attest): RPC `capability_note_bulk_disable_secure`
 **applied** live (Go A+B Pulse PASS; git tip `bd11deed` / #142). Historical
 origin at that attest was still `0cdcdc0f`. Go C pin heal subsequently
-**shipped**. Pixel cold-browser PASS WITH KNOWN RISKS (`hage`, `design` bare
-editable + Synced; evidence
+**shipped**. Re-bulk OFF ALL 6 (2026-09-22) Pulse PASS (`converted=6`;
+post-verify `managed_live=0` + Sentinel spot; anon fleet count unavailable).
+Live origin remains `9a80930a`. Historical Pixel cold-browser PASS WITH KNOWN
+RISKS at first bulk OFF (`hage`, `design` bare editable + Synced; evidence
 `pixel-qa/bulk-off-verify/` / `/workspace/pixel-qa/bulk-off-verify/`).
 
 ## Walls

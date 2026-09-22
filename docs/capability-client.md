@@ -75,8 +75,11 @@ U1 SQL `capability_note_convert_legacy` applied live; Edge `plain-upsert` /
 SQL `capability_note_bulk_disable_secure` is **applied** live (Go A+B Pulse
 PASS; git tip `bd11deed` / #142). Live origin is `9a80930a`. Go C pin
 heal **shipped** live (#145 LNO-wins): stale `snote:legacy-secure:*` no longer
-latches unmanaged bare RO. Historical bulk OFF `managed_live` 26→0 is not the
-current fleet (`managed_live=3`). This docs attest does not re-apply SQL and does not deploy origin /
+latches unmanaged bare RO. Historical bulk OFF `managed_live` 26→0 is not a
+claim the fleet stayed 0 (`managed_live=3` at Go C live; later preflight 6).
+Re-bulk OFF ALL 6 (2026-09-22) Pulse post-verify `managed_live=0` + Sentinel
+spot; anon fleet count unavailable (401). This docs attest does not re-apply
+SQL, does not re-run bulk RPC, and does not deploy origin /
 Pages / Worker / Edge.
 
 When that canary is on, Home create waits until LNO `exists` is false
