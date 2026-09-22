@@ -31,11 +31,14 @@ CTA (AC A3; localStorage pin and/or LNO `managed:true`). Legacy OFF (owner
 Edge `legacy-note-open` is republished with `managed:true` for managed slugs.
 SQL `capability_note_bulk_disable_secure` is **applied** live (Syringa Go A
 then B; Pulse **PASS**; git tip `bd11deed` / #142; #143 is git-only PWA smoke
-harden). Live SPA origin is `9a80930a`. Go C pin heal **shipped** live
-(#145 LNO-wins). See §3g. Historical bulk OFF Go B `managed_live` 26→0 is not
-a claim the fleet stayed 0 (`managed_live=3` at Go C live; later preflight 6).
-Re-bulk OFF ALL 6 (2026-09-22) Pulse post-verify `managed_live=0` + Sentinel
-spot; anon fleet count unavailable (401). See §3f / §3h.
+harden). 3-arg `p_slugs` allowlist is **applied live** (Go SQL Pulse **PASS**;
+git tip `46ddaf01` / #148; 2-arg DROP). Live SPA origin is `9a80930a`. Go C
+pin heal **shipped** live (#145 LNO-wins). See §3g. Historical bulk OFF Go B
+`managed_live` 26→0 is not a claim the fleet stayed 0 (`managed_live=3` at
+Go C live; later preflight 6). Re-bulk OFF ALL 6 (2026-09-22) Pulse
+post-verify `managed_live=0` + Sentinel spot is **historical**. Go SQL
+residual `managed_live=1` (`aggadagdade`) still managed — **no bulk OFF**.
+Anon fleet count unavailable (401). See §3f / §3h / §3i.
 W1 convert-on-write as product default is **superseded**.
 Optional `?legacyRo=1` still RO + banner. Phase C is live: RawView `/:slug.md` loads via LNO `open`;
 Home availability uses LNO `exists` (empty legacy rows are taken). Duplicate securely is enabled on Legacy RO only (PR #128; Edge `note-session` `import-legacy`). Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress (#113/#116) is live. Choice A (#118) editable-plain default is **superseded**. PWA latch (#119) one hard-reload per Update apply is live. Pixel Legacy opt-in (#122) is live as Legacy Advanced. Encrypt is disabled on free-edit (Legacy OFF) and becomes available after Legacy ON on the owner path; `#owner=` Encrypt stays active. A′ (#126) RO default is **superseded**. Duplicate securely (#128) remains on Legacy RO. Home mints capabilities when canary is on
@@ -1639,7 +1642,9 @@ Pulse **PASS**. Artifact `/workspace/pulse-rebulk-all6-20260922/`
 history wipe accepted (same as Go B; spot old→new in REPORT). Claim
 `managed_live=0` only as Pulse post-verify + Sentinel spot; anon fleet RO count was unavailable (401).
 Do **not** treat historical Go B 26→0 or Go C
-live `managed_live=3` as the current fleet.
+live `managed_live=3` as the current fleet. That re-bulk post-verify is
+**historical**. Later Go SQL preflight found residual `managed_live=1`
+(`aggadagdade`); see §3i.
 
 Sentinel independent smoke: **READY WITH KNOWN RISKS** (evidence
 `/workspace/sentinel-qa-rebulk-all6-live/` / FINDINGS-API). BLOCKER/HIGH/MEDIUM
@@ -1653,6 +1658,41 @@ editable+synced, no A3/need-owner. Independent `version.json` still
 
 Walls HOLD: no Worker / Edge / origin / SQL schema / Realtime /
 `writes_enabled` from this docs PR.
+
+This is not SQL 240, not Realtime, not soak-complete.
+
+## 3i. Production Go SQL allowlist `p_slugs` — verified; origin unchanged
+
+Docs attestation only (2026-09-22). This section does not deploy origin /
+Pages / Worker / Edge, does not re-apply SQL, and does not bulk OFF.
+Live SPA origin remains `9a80930a` / Pages `8e64829c` / buildId
+`1789612258815-8yx2tdut` / `capabilityRoutesEnabled` true. SQL apply does
+not move Pages. Git docs tip `46ddaf01`; live stays `9a80930a`.
+
+Syringa named **Go SQL**. Pulse **PASS**. Git tip
+`46ddaf012bea1d01a6235e2be7e9132555d6cd84` (#148). Migration
+`20260922000000_capability_note_bulk_disable_secure_p_slugs.sql` SHA-256
+`f16a20a661dc96523bf9a717a830dbe51df2d2427206a72a7c9c373b4a782132`.
+
+Live: DROP 2-arg → CREATE 3-arg. `service_role` EXECUTE; anon/authenticated
+revoked. Smoke `ARRAY[]` → `converted=0` `scope=allowlist`; miss →
+`skipped_allowlist_miss=1`. NULL fleet **not** executed (preflight
+`managed_live=1` residual slug `aggadagdade`; body RO confirms NULL→fleet).
+Post-smoke residual unchanged. **No bulk OFF.** Do not claim
+`managed_live=0` as the current fleet.
+
+Sentinel independent verify: **READY** (SQL contract; evidence
+`/workspace/sentinel-qa-allowlist-sql-46ddaf01/`). BLOCKER/HIGH/MEDIUM none.
+Same hash/grants/smokes; residual untouched; walls HOLD. LOWs: (1)
+`schema_migrations` relation missing via Lovable SQL path (named-go body
+apply, not CLI-tracked); (2) SPA tip still `9a80930a` expected.
+
+Pulse artifact `/workspace/pulse-allowlist-sql-46ddaf01/` (`SUMMARY.md` +
+`REPORT.json` verdict PASS). Independent `version.json` still `deployedSha`
+`9a80930aec5d7c018879bd2a406a35c055477f06`.
+
+Walls HOLD: no Worker / Edge / origin / Realtime / `writes_enabled` / bulk
+OFF from this docs PR.
 
 This is not SQL 240, not Realtime, not soak-complete.
 

@@ -1841,4 +1841,108 @@ describe("canonical production origin", () => {
     expect(client).toContain("Re-bulk OFF ALL 6");
     expect(adr).toContain("re-bulk OFF ALL 6");
   });
+
+  it("records Go SQL allowlist p_slugs live applied without origin ship or fleet OFF", () => {
+    const readme = readFileSync("README.md", "utf8");
+    const findings = readFileSync("docs/security-findings.md", "utf8");
+    const runbook = readFileSync("docs/security/bulk-disable-secure-ops.md", "utf8");
+    const backend = readFileSync("docs/capability-backend.md", "utf8");
+    const client = readFileSync("docs/capability-client.md", "utf8");
+    const adr = readFileSync(
+      "docs/adr/001-home-capability-mint-before-sql-240.md",
+      "utf8",
+    );
+    const worker = readFileSync("cloudflare-worker/README.md", "utf8");
+    const contract = readFileSync(
+      "docs/security/sql-240-readiness-contract.md",
+      "utf8",
+    );
+    const preflight = readFileSync(
+      "docs/security/sql-240-ops-preflight.md",
+      "utf8",
+    );
+    const rollout = readFileSync(
+      "docs/security/immediate-containment-rollout.md",
+      "utf8",
+    );
+    const cutover = readFileSync(
+      "docs/security/atomic-capability-cutover.md",
+      "utf8",
+    );
+    const aPrime = readFileSync("docs/security/a-prime-cutover-restore.md", "utf8");
+
+    expect(readme).toContain("Go SQL allowlist");
+    expect(readme).toContain("p_slugs");
+    expect(readme).toContain("46ddaf01");
+    expect(readme).toContain("#148");
+    expect(readme).toContain(
+      "f16a20a661dc96523bf9a717a830dbe51df2d2427206a72a7c9c373b4a782132",
+    );
+    expect(readme).toContain("20260922000000_capability_note_bulk_disable_secure_p_slugs.sql");
+    expect(readme).toContain("DROP");
+    expect(readme).toContain("3-arg");
+    expect(readme).toContain("converted=0");
+    expect(readme).toContain("scope=allowlist");
+    expect(readme).toContain("skipped_allowlist_miss=1");
+    expect(readme).toContain("aggadagdade");
+    expect(readme).toContain("managed_live=1");
+    expect(readme).toContain("**No bulk OFF.**");
+    expect(readme).toContain("pulse-allowlist-sql-46ddaf01");
+    expect(readme).toContain("sentinel-qa-allowlist-sql-46ddaf01");
+    expect(readme).toContain("schema_migrations");
+    expect(readme).toContain("9a80930a");
+    expect(readme).toContain("does not move Pages");
+    expect(readme).toContain("does not deploy origin");
+    expect(readme).toContain("does not re-apply SQL");
+    expect(readme).not.toContain("GitHub 3-arg `p_slugs` allowlist **not applied**");
+    expect(readme).not.toContain("Live production still has the 2-arg");
+
+    expect(findings).toContain(
+      "## 3i. Production Go SQL allowlist `p_slugs` — verified; origin unchanged",
+    );
+    expect(findings).toContain("46ddaf012bea1d01a6235e2be7e9132555d6cd84");
+    expect(findings).toContain(
+      "f16a20a661dc96523bf9a717a830dbe51df2d2427206a72a7c9c373b4a782132",
+    );
+    expect(findings).toContain("aggadagdade");
+    expect(findings).toContain("managed_live=1");
+    expect(findings).toContain("**No bulk OFF.**");
+    expect(findings).toContain("skipped_allowlist_miss=1");
+    expect(findings).toContain("schema_migrations");
+    expect(findings).toContain("/workspace/pulse-allowlist-sql-46ddaf01/");
+    expect(findings).toContain("/workspace/sentinel-qa-allowlist-sql-46ddaf01/");
+    expect(findings).toContain("**READY**");
+    expect(findings).toContain("Origin is `9a80930a`");
+    expect(findings).not.toContain("GitHub 3-arg `p_slugs` allowlist **not applied**");
+    expect(findings).not.toContain("Go C pin heal **HOLD**");
+
+    expect(runbook).toContain("**applied live**");
+    expect(runbook).not.toContain("**not applied**");
+    expect(runbook).not.toContain("GitHub-only");
+    expect(runbook).toContain("46ddaf01");
+    expect(runbook).toContain("aggadagdade");
+    expect(runbook).toContain("managed_live=1");
+    expect(backend).toContain("**applied live**");
+    expect(backend).toContain("46ddaf01");
+    expect(backend).toContain("aggadagdade");
+    expect(backend).not.toContain("GitHub 3-arg `p_slugs` allowlist is **not applied**");
+    expect(client).toContain("**applied live**");
+    expect(client).toContain("aggadagdade");
+    expect(adr).toContain("46ddaf01");
+    expect(adr).toContain("aggadagdade");
+    expect(adr).toContain("**applied live**");
+    expect(adr).not.toContain("GitHub 3-arg `p_slugs` allowlist **not applied**");
+    expect(worker).toContain("46ddaf01");
+    expect(worker).toContain("không đổi origin");
+    expect(contract).toContain("46ddaf01");
+    expect(contract).toContain("aggadagdade");
+    expect(preflight).toContain("46ddaf01");
+    expect(preflight).toContain("aggadagdade");
+    expect(rollout).toContain("46ddaf01");
+    expect(rollout).toContain("aggadagdade");
+    expect(cutover).toContain("46ddaf01");
+    expect(cutover).toContain("aggadagdade");
+    expect(aPrime).toContain("46ddaf01");
+    expect(aPrime).toContain("aggadagdade");
+  });
 });
