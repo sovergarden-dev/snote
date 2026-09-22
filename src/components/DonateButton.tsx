@@ -37,19 +37,23 @@ function readPwaFabState(): { updateAvailable: boolean; occurrenceId: string } {
 }
 
 const FAB_DISK =
-  "flex h-11 w-11 items-center justify-center rounded-full bg-background/80 text-primary shadow-sm backdrop-blur-md";
+  "flex items-center justify-center rounded-full bg-background/80 text-primary shadow-sm backdrop-blur-md";
 
 /**
  * Fixed floating support-the-project button. Idle: single-click opens Ko-fi
- * in a new tab. When a PWA update is available, the primary click reloads;
- * Ko-fi stays on a secondary heart. Anchored above `PageIndicator`. Hidden
- * in Zen mode via the shared `zen-hide` class.
+ * in a new tab. When a PWA update is available, the primary click applies the
+ * update; the small heart snoozes. Shares the bottom-end corner with
+ * `PageIndicator` (indicator shifts left via `--snote-fab-primary-disk`).
+ * Hidden in Zen mode via the shared `zen-hide` class.
  */
 export function DonateButton() {
   const { pathname } = useLocation();
   const { t } = useI18n();
   const [pwa, setPwa] = useState(readPwaFabState);
   const [snoozedBuildId, setSnoozedBuildId] = useState<string | null>(readSnooze);
+
+  const hideFab = shouldHideDonateFab(pathname);
+  const showUpdate = !hideFab && pwa.updateAvailable && pwa.occurrenceId !== snoozedBuildId;
 
   useEffect(() => {
     const sync = () => setPwa(readPwaFabState());
@@ -62,9 +66,15 @@ export function DonateButton() {
     window.__SNOTE_PWA_SYNC_UPDATE_UI__?.();
   }, [pathname]);
 
-  if (shouldHideDonateFab(pathname)) return null;
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    if (showUpdate) root.setAttribute("data-snote-fab-update", "");
+    else root.removeAttribute("data-snote-fab-update");
+    return () => root.removeAttribute("data-snote-fab-update");
+  }, [showUpdate]);
 
-  const showUpdate = pwa.updateAvailable && pwa.occurrenceId !== snoozedBuildId;
+  if (hideFab) return null;
+
   const donateAria = t("fab.donate.aria");
 
   if (!showUpdate) {
@@ -76,7 +86,7 @@ export function DonateButton() {
         aria-label={donateAria}
         data-donate-fab=""
         className={cn(
-          "zen-hide fixed bottom-20 right-4 z-40",
+          "zen-hide snote-fab-anchor h-11 w-11",
           FAB_DISK,
           "border border-border transition duration-300 animate-heartbeat motion-reduce:animate-none hover:scale-110 hover:animate-none hover:shadow-lg hover:shadow-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         )}
@@ -89,7 +99,7 @@ export function DonateButton() {
   return (
     <div
       data-donate-fab=""
-      className="zen-hide pointer-events-none fixed bottom-20 right-4 z-40 h-11 w-11"
+      className="zen-hide pointer-events-none snote-fab-anchor h-14 w-14"
     >
       <div role="status" aria-live="polite" className="sr-only">
         {t("fab.update.aria")}
@@ -99,19 +109,19 @@ export function DonateButton() {
         aria-label={t("fab.update.aria")}
         onClick={() => window.__SNOTE_PWA_APPLY_UPDATE__?.()}
         className={cn(
-          "pointer-events-auto absolute inset-0",
+          "pointer-events-auto absolute inset-0 h-14 w-14",
           FAB_DISK,
           "animate-heartbeat-update motion-reduce:animate-none hover:shadow-lg hover:shadow-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         )}
       >
-        <Heart className="h-5 w-5 fill-current" />
-        <span
-          aria-hidden="true"
-          className="absolute -right-1 -top-1 rounded-full bg-primary px-1 text-[9px] font-bold leading-4 text-primary-foreground"
-        >
-          {t("fab.update.badge")}
-        </span>
+        <Heart className="h-7 w-7 fill-current" />
       </button>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-full right-0 mb-2 max-w-[10rem] rounded-full border border-border bg-background/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-md"
+      >
+        {t("fab.update.status")}
+      </div>
       <button
         type="button"
         aria-label={t("fab.update.snooze_aria")}
@@ -119,21 +129,12 @@ export function DonateButton() {
           writeSnooze(pwa.occurrenceId);
           setSnoozedBuildId(pwa.occurrenceId);
         }}
-        className="pointer-events-auto absolute bottom-full right-0 mb-2 min-h-11 rounded-full border border-border bg-background/90 px-3 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-md hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="fab-snooze-hit pointer-events-auto absolute right-full top-1/2 mr-2 flex h-11 w-11 -translate-y-1/2 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {t("fab.update.snooze")}
-      </button>
-      <a
-        href={KOFI_HREF}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={donateAria}
-        className="pointer-events-auto absolute right-full top-1/2 mr-1 flex h-11 w-11 -translate-y-1/2 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background/80 text-primary shadow-sm backdrop-blur-md">
+        <span className="fab-snooze-strike flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background/80 text-primary shadow-sm backdrop-blur-md">
           <Heart className="h-3.5 w-3.5 fill-current" />
         </span>
-      </a>
+      </button>
     </div>
   );
 }

@@ -15,17 +15,29 @@ function extractFabKeys(): string[] {
 }
 
 describe("DonateButton i18n key coverage", () => {
-  it("references badge, aria, donate, and snooze keys", () => {
+  it("references donate, status, aria, and snooze aria — not badge or Later chip copy", () => {
     const keys = extractFabKeys();
     expect(keys).toEqual(
       expect.arrayContaining([
         "fab.donate.aria",
-        "fab.update.badge",
+        "fab.update.status",
         "fab.update.aria",
-        "fab.update.snooze",
         "fab.update.snooze_aria",
       ]),
     );
+    expect(keys).not.toContain("fab.update.badge");
+    expect(keys).not.toContain("fab.update.snooze");
+  });
+
+  it("defines VI/EN status copy from Pixel LOCK and never uses NEW/Later as the chip", () => {
+    expect(dict.vi["fab.update.status"]).toBe("Có update mới");
+    expect(dict.en["fab.update.status"]).toBe("Update available");
+    for (const lang of SUPPORTED_LANGS) {
+      const status = dict[lang]["fab.update.status"];
+      expect(status.length, lang).toBeGreaterThan(0);
+      expect(status.toLowerCase(), lang).not.toBe("new");
+      expect(status.toLowerCase(), lang).not.toBe("later");
+    }
   });
 
   for (const lang of SUPPORTED_LANGS) {

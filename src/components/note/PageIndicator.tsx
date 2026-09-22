@@ -12,7 +12,7 @@ export function PageIndicator({ page, totalPages, onPrev, onNext }: PageIndicato
   const { t } = useI18n();
   return (
     <div
-      className="pointer-events-auto fixed bottom-4 right-4 z-40 flex items-center gap-1 rounded-full border border-border bg-background/90 px-2 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur tabular-nums"
+      className="snote-page-indicator pointer-events-auto z-40 flex items-center gap-1 rounded-full border border-border bg-background/90 px-2 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur tabular-nums"
       role="status"
       aria-live="polite"
       aria-label={t("page.aria", { page, total: totalPages })}
