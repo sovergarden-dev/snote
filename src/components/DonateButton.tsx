@@ -1,8 +1,13 @@
 import { Heart } from "lucide-react";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState, type MouseEvent } from "react";
 import { useLocation } from "react-router";
 import { useI18n } from "@/i18n";
 import { shouldHideDonateFab } from "@/lib/donate-fab-visibility";
+import {
+  dismissIdleFab,
+  isIdleDismissed,
+  readIdleDismissUntil,
+} from "@/lib/kofi-fab-idle-dismiss";
 import { PWA_UPDATE_STATE_EVENT } from "@/lib/pwa-update-readiness";
 import { cn } from "@/lib/utils";
 
@@ -41,19 +46,22 @@ const FAB_DISK =
 
 /**
  * Fixed floating support-the-project button. Idle: single-click opens Ko-fi
- * in a new tab. When a PWA update is available, the primary click applies the
- * update; the small heart snoozes. Shares the bottom-end corner with
- * `PageIndicator` (indicator shifts left via `--snote-fab-primary-disk`).
- * Hidden in Zen mode via the shared `zen-hide` class.
+ * in a new tab and dismisses the idle FAB for 24h (localStorage until-key).
+ * When a PWA update is available, the #153 cluster wins over idle dismiss.
+ * Shares the bottom-end corner with `PageIndicator` (indicator shifts left
+ * via `--snote-fab-primary-disk` only while a FAB is mounted). Hidden in
+ * Zen mode via the shared `zen-hide` class.
  */
 export function DonateButton() {
   const { pathname } = useLocation();
   const { t } = useI18n();
   const [pwa, setPwa] = useState(readPwaFabState);
   const [snoozedBuildId, setSnoozedBuildId] = useState<string | null>(readSnooze);
+  const [dismissUntil, setDismissUntil] = useState<number | null>(readIdleDismissUntil);
 
   const hideFab = shouldHideDonateFab(pathname);
   const showUpdate = !hideFab && pwa.updateAvailable && pwa.occurrenceId !== snoozedBuildId;
+  const showIdle = !hideFab && !showUpdate && !isIdleDismissed(dismissUntil);
 
   useEffect(() => {
     const sync = () => setPwa(readPwaFabState());
@@ -62,22 +70,56 @@ export function DonateButton() {
     return () => window.removeEventListener(PWA_UPDATE_STATE_EVENT, sync);
   }, []);
 
+  useEffect(() => {
+    if (dismissUntil == null) return;
+    const remaining = dismissUntil - Date.now();
+    if (remaining <= 0) {
+      setDismissUntil(null);
+      return;
+    }
+    const id = window.setTimeout(() => setDismissUntil(null), remaining);
+    return () => window.clearTimeout(id);
+  }, [dismissUntil]);
+
   useLayoutEffect(() => {
     window.__SNOTE_PWA_SYNC_UPDATE_UI__?.();
   }, [pathname]);
 
   useLayoutEffect(() => {
     const root = document.documentElement;
-    if (showUpdate) root.setAttribute("data-snote-fab-update", "");
-    else root.removeAttribute("data-snote-fab-update");
-    return () => root.removeAttribute("data-snote-fab-update");
-  }, [showUpdate]);
+    if (showUpdate) {
+      root.setAttribute("data-snote-fab-update", "");
+      root.removeAttribute("data-snote-fab-idle");
+    } else if (showIdle) {
+      root.setAttribute("data-snote-fab-idle", "");
+      root.removeAttribute("data-snote-fab-update");
+    } else {
+      root.removeAttribute("data-snote-fab-update");
+      root.removeAttribute("data-snote-fab-idle");
+    }
+    return () => {
+      root.removeAttribute("data-snote-fab-update");
+      root.removeAttribute("data-snote-fab-idle");
+    };
+  }, [showUpdate, showIdle]);
+
+  const handleIdleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    const { until } = dismissIdleFab();
+    setDismissUntil(until);
+    try {
+      window.open(KOFI_HREF, "_blank", "noopener,noreferrer");
+    } catch {
+      /* popup blocked — dismiss still applied */
+    }
+  };
 
   if (hideFab) return null;
 
   const donateAria = t("fab.donate.aria");
 
   if (!showUpdate) {
+    if (!showIdle) return null;
     return (
       <a
         href={KOFI_HREF}
@@ -85,6 +127,7 @@ export function DonateButton() {
         rel="noopener noreferrer"
         aria-label={donateAria}
         data-donate-fab=""
+        onClick={handleIdleClick}
         className={cn(
           "zen-hide snote-fab-anchor h-11 w-11",
           FAB_DISK,
