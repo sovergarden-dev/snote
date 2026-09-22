@@ -46,6 +46,7 @@ import {
   type SnapshotProtection,
 } from "@/lib/snapshots";
 import { SecuritySwitch } from "./SecuritySwitch";
+import { extractTags } from "@/lib/tags";
 
 const loadCapabilityApi = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
   ? async () => (await import("@/lib/capability/client")).createCapabilityApi()
@@ -62,6 +63,7 @@ interface LockButtonProps {
   encryption?: SnapshotProtection | null;
   layout?: "icon" | "switch";
   switchLabelledBy?: string;
+  switchDescribedBy?: string;
   disabled?: boolean;
 }
 
@@ -128,6 +130,7 @@ export function LockButton({
   encryption = null,
   layout = "icon",
   switchLabelledBy = "security-encrypt-label",
+  switchDescribedBy,
   disabled = false,
 }: LockButtonProps) {
   const { t } = useI18n();
@@ -202,22 +205,36 @@ export function LockButton({
         return;
       }
 
-      const { error } = await supabase
-        .from("notes")
-        .upsert(
-          {
-            slug,
-            is_encrypted: true,
-            enc_salt: salt,
-            enc_check: check,
-            enc_iterations: PBKDF2_ITERATIONS,
-            ydoc_state: bytesToBase64(encrypted),
-            content: "",
-            char_count: 0,
-          },
-          { onConflict: "slug" },
-        );
-      if (error) throw error;
+      if (import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true") {
+        await (await loadCapabilityApi()).upsertPlainNote({
+          slug,
+          ydocState: bytesToBase64(encrypted),
+          content: "",
+          charCount: 0,
+          tags: [],
+          isEncrypted: true,
+          salt,
+          check,
+          iterations: PBKDF2_ITERATIONS,
+        });
+      } else {
+        const { error } = await supabase
+          .from("notes")
+          .upsert(
+            {
+              slug,
+              is_encrypted: true,
+              enc_salt: salt,
+              enc_check: check,
+              enc_iterations: PBKDF2_ITERATIONS,
+              ydoc_state: bytesToBase64(encrypted),
+              content: "",
+              char_count: 0,
+            },
+            { onConflict: "slug" },
+          );
+        if (error) throw error;
+      }
 
       // The durable local pin closes the legacy-table downgrade window. It is
       // written only after the encrypted upsert succeeds and before reload.
@@ -270,21 +287,35 @@ export function LockButton({
         window.location.reload();
         return;
       }
-      const { error } = await supabase
-        .from("notes")
-        .upsert(
-          {
-            slug,
-            is_encrypted: false,
-            enc_salt: null,
-            enc_check: null,
-            ydoc_state: bytesToBase64(state),
-            content: text,
-            char_count: text.length,
-          },
-          { onConflict: "slug" },
-        );
-      if (error) throw error;
+      if (import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true") {
+        await (await loadCapabilityApi()).upsertPlainNote({
+          slug,
+          ydocState: bytesToBase64(state),
+          content: text,
+          charCount: text.length,
+          tags: extractTags(text),
+          isEncrypted: false,
+          salt: null,
+          check: null,
+          iterations: null,
+        });
+      } else {
+        const { error } = await supabase
+          .from("notes")
+          .upsert(
+            {
+              slug,
+              is_encrypted: false,
+              enc_salt: null,
+              enc_check: null,
+              ydoc_state: bytesToBase64(state),
+              content: text,
+              char_count: text.length,
+            },
+            { onConflict: "slug" },
+          );
+        if (error) throw error;
+      }
 
       // A failed decrypt must retain the pin. Clear it only after the server
       // acknowledges the explicit transition back to plaintext.
@@ -372,6 +403,7 @@ export function LockButton({
             checked
             disabled={busy || disabled}
             labelledBy={switchLabelledBy}
+            describedBy={switchDescribedBy}
             onCheckedChange={(next) => {
               if (!next) void unlockNote();
             }}
@@ -417,6 +449,7 @@ export function LockButton({
           checked={false}
           disabled={busy || disabled}
           labelledBy={switchLabelledBy}
+          describedBy={switchDescribedBy}
           onCheckedChange={(next) => {
             if (next) setOpen(true);
           }}

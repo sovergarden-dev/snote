@@ -1174,7 +1174,9 @@ export default function NotePage({
   // The ready phase schedules resource acquisition in a layout effect. Keep
   // the workspace closed for that single commit until its owned pair exists.
   if (!doc || !provider) return null;
+  const isManaged = !!capabilityAccess;
   const legacyContainment = legacyOnly || !capabilityAccess;
+  const allowEncryptionTransitions = !legacyOnly && !isManaged;
   const getContent = () => doc.getText("content").toString();
   const legacyEncryptionSecret = legacyContainment ? readEncryptionSecret(location.hash) : "";
   const currentShareUrl = legacyContainment && typeof window !== "undefined"
@@ -1225,7 +1227,7 @@ export default function NotePage({
           isEncrypted={encMeta.isEncrypted}
           encryption={encryption}
           capabilityAccess={capabilityAccess}
-          allowEncryptionTransitions={!legacyContainment}
+          allowEncryptionTransitions={allowEncryptionTransitions}
           legacyOn={!!capabilityAccess}
           onLegacyEnable={!capabilityAccess && !legacyOnly ? () => { void runConvert(); } : undefined}
           onLegacyDisable={capabilityAccess?.scope === "owner" ? () => { void runDisable(); } : undefined}
@@ -1312,7 +1314,7 @@ export default function NotePage({
         isEncrypted={encMeta.isEncrypted}
         encryption={encryption}
         capabilityAccess={capabilityAccess}
-        allowEncryptionTransitions={!legacyContainment}
+        allowEncryptionTransitions={allowEncryptionTransitions}
         legacyOn={!!capabilityAccess}
         onLegacyEnable={!capabilityAccess && !legacyOnly ? () => { void runConvert(); } : undefined}
         onLegacyDisable={capabilityAccess?.scope === "owner" ? () => { void runDisable(); } : undefined}

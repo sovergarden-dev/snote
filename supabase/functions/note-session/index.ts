@@ -351,8 +351,16 @@ Deno.serve(async (req) => {
         || payload.length > MAX_ENCODED_PAYLOAD_CHARS
         || !encryptionMetadataValid
       ) return capabilityFailure("invalid");
+      if (isEncrypted === true) return capabilityFailure("invalid_state");
       const auth = await verifyRealtimeAuth(req, environment);
       if (auth.mode === "unavailable") return capabilityFailure("unavailable");
+      const { data: existing, error: existingError } = await environment.client
+        .from("notes")
+        .select("is_encrypted")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (existingError) return capabilityFailure("unavailable");
+      if (existing?.is_encrypted === true) return capabilityFailure("invalid_state");
       let decodedPayload: Uint8Array;
       try {
         decodedPayload = decodeCapabilityPayload(payload, 4_194_304);

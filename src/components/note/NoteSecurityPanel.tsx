@@ -105,6 +105,20 @@ export function NoteSecurityPanel({
   const busy = loading;
   const isSplit = location.pathname.includes("+");
   const secureMode = Boolean(onLegacyEnable || onLegacyDisable);
+  const encryptLockedByLegacy = !isEncrypted && (legacyOn || !allowEncryptionTransitions);
+  const legacyLockedByEncrypt = isEncrypted && !legacyOn;
+  const encryptHelperKey = encryptLockedByLegacy
+    ? (legacyOn ? "security.encrypt_helper_mutex" : "security.encrypt_helper_unavailable")
+    : "security.encrypt_helper";
+  const legacyHelperKey = isSplit && !legacyOn
+    ? "security.legacy_helper_split"
+    : isSplit
+      ? "security.legacy_helper_on_plain"
+      : legacyLockedByEncrypt
+        ? "security.legacy_helper_mutex"
+        : legacyOn
+          ? (secureMode ? "security.legacy_secure_helper_on" : "security.legacy_helper_on")
+          : (secureMode ? "security.legacy_secure_helper_off" : "security.legacy_helper_off");
 
   const applyLegacy = (enabled: boolean) => {
     navigate(
@@ -115,6 +129,7 @@ export function NoteSecurityPanel({
 
   const requestLegacy = (next: boolean) => {
     if (busy || ownerOnly || !showLegacy) return;
+    if (next && legacyLockedByEncrypt) return;
     if (!next) {
       if (isSplit) return;
       if (secureMode) {
@@ -198,8 +213,8 @@ export function NoteSecurityPanel({
             <p id="security-encrypt-label" className="text-sm font-medium">
               {t("security.encrypt_label")}
             </p>
-            <p className="text-[11px] text-muted-foreground">
-              {t(allowEncryptionTransitions ? "security.encrypt_helper" : "security.encrypt_helper_unavailable")}
+            <p id="security-encrypt-helper" className="text-[11px] text-muted-foreground">
+              {t(encryptHelperKey)}
             </p>
           </div>
           <LockButton
@@ -211,7 +226,8 @@ export function NoteSecurityPanel({
             encryption={encryption}
             layout="switch"
             switchLabelledBy="security-encrypt-label"
-            disabled={busy || !allowEncryptionTransitions}
+            switchDescribedBy="security-encrypt-helper"
+            disabled={busy || encryptLockedByLegacy}
           />
         </div>
       )}
@@ -228,20 +244,15 @@ export function NoteSecurityPanel({
               <p id="security-legacy-label" className="text-sm font-medium text-muted-foreground">
                 {t(secureMode ? "security.legacy_secure_label" : "security.legacy_label")}
               </p>
-              <p className="text-[11px] text-muted-foreground">
-                {isSplit && !legacyOn
-                  ? t("security.legacy_helper_split")
-                  : isSplit
-                    ? t("security.legacy_helper_on_plain")
-                    : legacyOn
-                      ? t(secureMode ? "security.legacy_secure_helper_on" : "security.legacy_helper_on")
-                      : t(secureMode ? "security.legacy_secure_helper_off" : "security.legacy_helper_off")}
+              <p id="security-legacy-helper" className="text-[11px] text-muted-foreground">
+                {t(legacyHelperKey)}
               </p>
             </div>
             <SecuritySwitch
               checked={legacyOn}
-              disabled={busy || isSplit || (secureMode && legacyOn && !onLegacyDisable)}
+              disabled={busy || isSplit || legacyLockedByEncrypt || (secureMode && legacyOn && !onLegacyDisable)}
               labelledBy="security-legacy-label"
+              describedBy="security-legacy-helper"
               onCheckedChange={requestLegacy}
             />
           </div>

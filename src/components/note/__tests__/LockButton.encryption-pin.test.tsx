@@ -7,6 +7,7 @@ import { readEncryptionSecret } from "@/lib/capability/url";
 
 const harness = vi.hoisted(() => ({
   upsert: vi.fn(),
+  upsertPlainNote: vi.fn(),
   markEncrypted: vi.fn(),
   clearPin: vi.fn(),
   toast: vi.fn(),
@@ -28,7 +29,10 @@ vi.mock("@/lib/encryption-pin", () => ({
 }));
 vi.mock("@/hooks/use-toast", () => ({ toast: (...args: unknown[]) => harness.toast(...args) }));
 vi.mock("@/lib/capability/client", () => ({
-  createCapabilityApi: () => ({ manage: (...args: unknown[]) => harness.manage(...args) }),
+  createCapabilityApi: () => ({
+    manage: (...args: unknown[]) => harness.manage(...args),
+    upsertPlainNote: (...args: unknown[]) => harness.upsertPlainNote(...args),
+  }),
 }));
 vi.mock("@/lib/snapshots", () => ({
   clearSnapshots: (...args: unknown[]) => harness.clearSnapshots(...args),
@@ -107,6 +111,7 @@ function deferred<T>() {
 describe("LockButton encryption downgrade pin", () => {
   beforeEach(() => {
     harness.upsert.mockReset();
+    harness.upsertPlainNote.mockReset();
     harness.markEncrypted.mockReset();
     harness.clearPin.mockReset();
     harness.toast.mockReset();
@@ -118,6 +123,7 @@ describe("LockButton encryption downgrade pin", () => {
     harness.markEncrypted.mockReturnValue(true);
     harness.clearPin.mockReturnValue(true);
     harness.manage.mockResolvedValue({ ok: true });
+    harness.upsertPlainNote.mockResolvedValue({ noteId: "n", created: true });
     harness.clearSnapshots.mockResolvedValue(undefined);
     harness.protectExistingSnapshots.mockResolvedValue(undefined);
     harness.unprotectExistingSnapshots.mockResolvedValue(undefined);
@@ -131,8 +137,8 @@ describe("LockButton encryption downgrade pin", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("pins only after the encrypted server upsert succeeds", async () => {
-    const pending = deferred<{ error: null }>();
-    harness.upsert.mockReturnValue(pending.promise);
+    const pending = deferred<{ noteId: string; created: boolean }>();
+    harness.upsertPlainNote.mockReturnValue(pending.promise);
     const view = render(<LockButton slug="secret" doc={new Y.Doc()} isEncrypted={false} />);
 
     fireEvent.change(view.getByPlaceholderText("lock.placeholder"), {
@@ -141,30 +147,40 @@ describe("LockButton encryption downgrade pin", () => {
     fireEvent.click(view.getByText("lock.encrypt_btn"));
     expect(harness.markEncrypted).not.toHaveBeenCalled();
 
-    pending.resolve({ error: null });
+    pending.resolve({ noteId: "n", created: true });
     await waitFor(() => expect(harness.markEncrypted).toHaveBeenCalledWith("secret"));
+    expect(harness.upsert).not.toHaveBeenCalled();
+    expect(harness.upsertPlainNote).toHaveBeenCalledWith(expect.objectContaining({
+      slug: "secret",
+      isEncrypted: true,
+      content: "",
+      charCount: 0,
+      tags: [],
+    }));
   });
 
   it("clears only after the explicit plaintext upsert succeeds", async () => {
-    const pending = deferred<{ error: null }>();
-    harness.upsert.mockReturnValue(pending.promise);
+    const pending = deferred<{ noteId: string; created: boolean }>();
+    harness.upsertPlainNote.mockReturnValue(pending.promise);
     const view = render(<LockButton slug="secret" doc={new Y.Doc()} isEncrypted />);
 
     fireEvent.click(view.getByText("lock.unlock"));
     expect(harness.clearPin).not.toHaveBeenCalled();
 
-    pending.resolve({ error: null });
+    pending.resolve({ noteId: "n", created: false });
     await waitFor(() => expect(harness.clearPin).toHaveBeenCalledWith("secret"));
+    expect(harness.upsert).not.toHaveBeenCalled();
   });
 
   it("retains the pin when explicit decryption fails", async () => {
-    harness.upsert.mockResolvedValue({ error: new Error("write failed") });
+    harness.upsertPlainNote.mockRejectedValue(new Error("write failed"));
     const view = render(<LockButton slug="secret" doc={new Y.Doc()} isEncrypted />);
 
     fireEvent.click(view.getByText("lock.unlock"));
 
-    await waitFor(() => expect(harness.upsert).toHaveBeenCalled());
+    await waitFor(() => expect(harness.upsertPlainNote).toHaveBeenCalled());
     expect(harness.clearPin).not.toHaveBeenCalled();
+    expect(harness.upsert).not.toHaveBeenCalled();
   });
 
   it("uses owner-only checkpoint CAS instead of the public notes table", async () => {

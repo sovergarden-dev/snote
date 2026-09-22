@@ -76,6 +76,7 @@ Deno.serve(async (req) => {
       if (await sha256CapabilityPayload(decoded) !== checkpointId) {
         return capabilityFailure("invalid");
       }
+      if (isEncrypted === true) return capabilityFailure("invalid_state");
       params = {
         isEncrypted,
         expectedEncryptionVersion,

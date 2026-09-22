@@ -7,12 +7,14 @@ const SECURITY_KEYS = [
   "security.encrypt_label",
   "security.encrypt_helper",
   "security.encrypt_helper_unavailable",
+  "security.encrypt_helper_mutex",
   "security.advanced",
   "security.legacy_label",
   "security.legacy_helper_off",
   "security.legacy_helper_on",
   "security.legacy_helper_on_plain",
   "security.legacy_helper_split",
+  "security.legacy_helper_mutex",
   "security.duplicate_label",
   "security.duplicate_helper",
   "security.duplicate_helper_locked",
@@ -66,6 +68,18 @@ describe("Note security panel i18n", () => {
     );
     expect(dict.vi["security.encrypt_helper_unavailable"]).toBe(
       "Mã hóa chưa dùng được trên note dạng này. Dùng link owner để mã hóa.",
+    );
+    expect(dict.en["security.encrypt_helper_mutex"]).toBe(
+      "Turn Legacy off before enabling encryption.",
+    );
+    expect(dict.vi["security.encrypt_helper_mutex"]).toBe(
+      "Tắt Legacy trước khi bật mã hóa.",
+    );
+    expect(dict.en["security.legacy_helper_mutex"]).toBe(
+      "Turn encryption off before enabling Legacy.",
+    );
+    expect(dict.vi["security.legacy_helper_mutex"]).toBe(
+      "Tắt mã hóa trước khi bật Legacy.",
     );
     expect(dict.en["security.advanced"]).toBe("Advanced");
     expect(dict.vi["security.advanced"]).toBe("Nâng cao");

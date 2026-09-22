@@ -426,6 +426,9 @@ export function capabilityFailure(status: string): Response {
   if (status === "capability_managed") {
     return capabilityJson(body("capability managed"), 409);
   }
+  if (status === "invalid_state") {
+    return capabilityJson(body("invalid state"), 409);
+  }
   if (status === "not_found") return capabilityJson(body("not found"), 404);
   if (status === "quota_exceeded") {
     // Storage/update quota transitions the note to read-only quarantine. It is
