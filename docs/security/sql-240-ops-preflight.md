@@ -9,17 +9,18 @@ Owner (ops): Pulse
 Architecture: Aegis ([sql-240-readiness-contract.md](./sql-240-readiness-contract.md))  
 Named go required: Syringa (apply) / Atlas (coordinate)
 
-## 0. Live baseline (as of 2026-09-17 ~09:48 ICT)
+## 0. Live baseline (as of 2026-09-22)
 
 | Surface | Value |
 |---|---|
-| Origin `version.json` | `deployedSha` `9a80930a…`, `capabilityRoutesEnabled` true, buildId `1789612258815-8yx2tdut` |
-| Pages | `snote-g4-origin` deploy `8e64829c` (`8e64829c-c182-45d1-ba27-5f43af7d20fd`) |
-| Git tip (apply) | `46ddaf01` (#148 3-arg `p_slugs` allowlist Go SQL **applied live**; historical `bd11deed` #142 2-arg bulk RPC + #143 PWA smoke harden) — live origin still `9a80930a` (#145); re-bulk OFF ALL 6 Pulse PASS 2026-09-22 is **historical**; Go SQL residual `aggadagdade` still managed is **historical**; **Go Ops allowlist bulk OFF** 2→0 Pulse PASS (residual **cleared**, **not fleet**); this docs attest does not change origin |
-| Walls | SQL **240 already applied**; W2 SQL `capability_note_plain_upsert` / `capability_note_disable_secure` **applied** live; U1 SQL `capability_note_convert_legacy` **applied** live; bulk RPC `capability_note_bulk_disable_secure` **applied** live (Go A+B Pulse PASS; Go C **shipped** live; re-bulk OFF ALL 6 Pulse PASS 2026-09-22 **historical**; 3-arg `p_slugs` allowlist **applied live** Go SQL Pulse PASS, git tip `46ddaf01` / #148; Go SQL residual `aggadagdade` still managed, **no bulk OFF** — **historical**; **Go Ops allowlist bulk OFF** 2→0 Pulse PASS, residual **cleared**, **not fleet**); Edge `plain-upsert` / `disable-secure` / `convert-legacy` **published** (Pulse `umsg_01m21zhm…` for `convert-legacy`); Worker HOLD (no redeploy), `writes_enabled` HOLD, Realtime HOLD. This docs PR does not re-apply SQL U1 or run bulk OFF or re-publish Edge |
+| Origin `version.json` | `deployedSha` `44b02cb3…`, `capabilityRoutesEnabled` true, buildId `1790066192935-qg7oaft7` |
+| Pages | `snote-g4-origin` deploy `b44849c4` |
+| Git tip (apply) | `46ddaf01` (#148 3-arg `p_slugs` allowlist Go SQL **applied live**; historical `bd11deed` #142 2-arg bulk RPC + #143 PWA smoke harden) — live origin now `44b02cb3` (#151); Go C pin `9a80930a` is **historical**; re-bulk OFF ALL 6 Pulse PASS 2026-09-22 is **historical**; Go SQL residual `aggadagdade` still managed is **historical**; **Go Ops allowlist bulk OFF** 2→0 Pulse PASS (residual **cleared**, **not fleet**); this docs attest does not change origin |
+| Walls | SQL **240 already applied**; W2 SQL `capability_note_plain_upsert` / `capability_note_disable_secure` **applied** live; U1 SQL `capability_note_convert_legacy` **applied** live; bulk RPC `capability_note_bulk_disable_secure` **applied** live (Go A+B Pulse PASS; Go C **shipped** live; re-bulk OFF ALL 6 Pulse PASS 2026-09-22 **historical**; 3-arg `p_slugs` allowlist **applied live** Go SQL Pulse PASS, git tip `46ddaf01` / #148; Go SQL residual `aggadagdade` still managed, **no bulk OFF** — **historical**; **Go Ops allowlist bulk OFF** 2→0 Pulse PASS, residual **cleared**, **not fleet**); previously published Edge `plain-upsert` / `disable-secure` / `convert-legacy` remain **published** (Pulse `umsg_01m21zhm…` for `convert-legacy`); #151 Edge XOR is **in-repo only / not deployed live**; Worker HOLD (no redeploy), `writes_enabled` HOLD, Realtime HOLD. This docs PR does not re-apply SQL U1 or run bulk OFF or re-publish Edge |
 | Live default / apply blocker | W2 live: plain `/slug` → `CutoverNotePage` → editable `NotePage` (free-edit). W1 convert-on-write default superseded. A′ RO default superseded. Duplicate securely enabled on Legacy RO only. Choice A editable table path is **not** the live default. **Do not re-apply** 240 from this docs pin. See [sql-240-readiness-contract.md](./sql-240-readiness-contract.md) §0 and [a-prime-cutover-restore.md](./a-prime-cutover-restore.md). |
-| Product still live (not a go) | W2 free-edit + Legacy opt-in / A3 bare RO + Go C LNO-wins; A′ live as Legacy RO (`?legacyRo=1`); Duplicate securely enabled on Legacy RO; Encrypt disabled on free-edit and available after Legacy ON; LNO Phase B/C; Home mint fail-closed; canary on; W2 SQL applied live; U1 SQL applied live; Edge plain-upsert / disable-secure / convert-legacy published (Pulse `umsg_01m21zhm…` for convert-legacy); Worker / `writes_enabled` / Realtime still HOLD |
-| Prior live pin (historical) | `0cdcdc0f` / Pages `1b9ed3d1` / buildId `1789484737351-s31qn3nf` |
+| Product still live (not a go) | W2 free-edit + Legacy opt-in / A3 bare RO + Go C LNO-wins + #151 create-bare; A′ live as Legacy RO (`?legacyRo=1`); Duplicate securely enabled on Legacy RO; Encrypt allowed on unmanaged without `#owner=`; Legacy↔Encrypt XOR in UI; LNO Phase B/C; Home create always bare `seedAndOpen`; canary on; W2 SQL applied live; U1 SQL applied live; previously published Edge plain-upsert / disable-secure / convert-legacy remain published (Pulse `umsg_01m21zhm…` for convert-legacy); #151 Edge XOR not deployed live; Worker / `writes_enabled` / Realtime still HOLD |
+| Prior live pin (Go C) | `9a80930a` / Pages `8e64829c` (`8e64829c-c182-45d1-ba27-5f43af7d20fd`) / buildId `1789612258815-8yx2tdut` |
+| Prior live pin (historical A3) | `0cdcdc0f` / Pages `1b9ed3d1` / buildId `1789484737351-s31qn3nf` |
 
 Re-verify live before any named apply:
 
@@ -127,7 +128,7 @@ original named-go template only.
 When Syringa named apply (historical; separate go from this doc):
 
 1. Re-run §0–§2 same day.
-2. **STOP** unless A′ is live (plain `/slug` → `CutoverNotePage` → LNO RO) **or** Syringa has written accept-break B **or** W2 free-edit is the live default (plain `/slug` is not the Choice A table path). W2 is live on `9a80930a` (prior pin `0cdcdc0f`); A′ remains the `?legacyRo=1` path. SQL 240 already applied; do not re-apply from this docs pin.
+2. **STOP** unless A′ is live (plain `/slug` → `CutoverNotePage` → LNO RO) **or** Syringa has written accept-break B **or** W2 free-edit is the live default (plain `/slug` is not the Choice A table path). W2 is live on `44b02cb3` (prior pins `9a80930a`, `0cdcdc0f`); A′ remains the `?legacyRo=1` path. SQL 240 already applied; do not re-apply from this docs pin.
 3. Do **not** apply. SQL 240 is already applied. Historical step was: apply migration via approved production SQL path (Lovable Cloud / service_role editor) — **one transaction** as written (`pg_advisory_xact_lock(20260724000000)`).
 4. Do **not** couple: Worker redeploy, Pages redeploy, `writes_enabled` flip, `private_realtime_enabled`, Edge unrelated deploys.
 5. Immediately run §5 post-verify.

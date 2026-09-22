@@ -15,8 +15,8 @@ throw `capability API unavailable` without fetching, and default Auth
 minting stays off. Ordinary Vite builds follow `.env.example`
 (`VITE_CAPABILITY_ROUTES_ENABLED=false`) and attest
 `capabilityRoutesEnabled: false`. Live production `build:release` attests
-`capabilityRoutesEnabled: true` (findings §3e; live origin `9a80930a`).
-Prior origin `0cdcdc0f` shipped W2 free-edit + Legacy opt-in (#135/#137/#138/#139; prior
+`capabilityRoutesEnabled: true` (findings §3e / §3k; live origin `44b02cb3`).
+Prior origin `9a80930a` shipped Go C LNO-wins (#145). Prior origin `0cdcdc0f` shipped W2 free-edit + Legacy opt-in (#135/#137/#138/#139; prior
 #130/#131 W1 convert-on-write as product default is **superseded**): canary-on
 plain `/slug` mounts `CutoverNotePage` → editable `NotePage` (free-edit; no
 forced convert; no `#owner=` required to edit). Plain persist uses Edge
@@ -32,9 +32,10 @@ SQL `capability_note_plain_upsert` and `capability_note_disable_secure` are
 **applied** live. Edge `note-session` `plain-upsert`, `disable-secure`, and
 `convert-legacy` are **published** (`convert-legacy` Pulse `umsg_01m21zhm…`).
 Edge `legacy-note-open` is republished with `managed:true` for managed slugs.
-W1 convert-on-write as product default is **superseded**. Encrypt is disabled
-on free-edit (Legacy OFF) and becomes available after Legacy ON; `#owner=`
-Encrypt stays active. Pixel Legacy opt-in (#122) and PWA latch (#119) one
+W1 convert-on-write as product default is **superseded**. Encrypt is allowed
+on unmanaged free-edit without forcing `#owner=` (#151; persist via
+`plain-upsert` enc fields). Legacy↔Encrypt is a hard XOR in the SPA UI.
+`#owner=` Encrypt stays active. Pixel Legacy opt-in (#122) and PWA latch (#119) one
 hard-reload per Update apply remain. Choice A (#118) editable-plain default
 and A′ (#126) RO default are **superseded**. Phase C is
 also live: RawView `/:slug.md` loads via LNO `open`, and Home availability uses
@@ -68,13 +69,14 @@ is **superseded**. A′ (#126) Cutover/LNO RO default is
 RO. Canary stays on. See [A′ Cutover restore](security/a-prime-cutover-restore.md)
 for the remaining Legacy RO path. SQL 240 already applied; W2 SQL
 `capability_note_plain_upsert` / `capability_note_disable_secure` applied live;
-U1 SQL `capability_note_convert_legacy` applied live; Edge `plain-upsert` /
-`disable-secure` / `convert-legacy` published
-(Pulse `umsg_01m21zhm…` for `convert-legacy`). Worker /
+U1 SQL `capability_note_convert_legacy` applied live; previously published Edge
+`plain-upsert` / `disable-secure` / `convert-legacy` remain **published**
+(Pulse `umsg_01m21zhm…` for `convert-legacy`). #151 Edge XOR
+(`invalid_state` 409) is **in-repo only / not deployed live**. Worker /
 `writes_enabled` / Realtime still HOLD.
 SQL `capability_note_bulk_disable_secure` is **applied** live (Go A+B Pulse
-PASS; git tip `bd11deed` / #142). Live origin is `9a80930a`. Go C pin
-heal **shipped** live (#145 LNO-wins): stale `snote:legacy-secure:*` no longer
+PASS; git tip `bd11deed` / #142). Live origin is `44b02cb3` (#151). Go C pin
+heal **shipped** live (#145 LNO-wins on prior origin `9a80930a`): stale `snote:legacy-secure:*` no longer
 latches unmanaged bare RO. Historical bulk OFF `managed_live` 26→0 is not a
 claim the fleet stayed 0 (`managed_live=3` at Go C live; later preflight 6).
 Re-bulk OFF ALL 6 (2026-09-22) Pulse post-verify `managed_live=0` + Sentinel
@@ -87,16 +89,15 @@ Pulse PASS; git tip `46ddaf01` / #148; 2-arg DROP). Residual
 not re-apply SQL, does not re-run bulk convert / fleet NULL, and does not
 deploy origin / Pages / Worker / Edge.
 
-When that canary is on, Home create waits until LNO `exists` is false
-(`available`; it does not mint while `idle` or `checking`, and
-legacy-`taken` still opens `/<slug>` with no `#owner`). Idle submit re-checks
-via LNO `exists`; it does not fail-open to legacy `seedAndOpen`. Then it persists an
-owner candidate in `sessionStorage`, calls `createCapabilityApi().createNote`
-(`POST note-session` `{action:"create"}`), queues any template seed only after
-that create succeeds, and navigates to `/<slug>#owner=<token>`. Random-note
-still mints a fresh slug without that wait. See
-[ADR-001](adr/001-home-capability-mint-before-sql-240.md).
-This Home mint path is live on origin `9a80930a` (canary on; fail-closed idle; findings §3e).
+When that canary is on, Home create always uses bare `seedAndOpen` /
+`/${slug}` (no default mint / no `#owner=`). Availability still uses LNO
+`exists` (`available` / `taken`); idle submit re-checks. It does not mint via
+`POST note-session` `{action:"create"}` on create or Random. See
+[ADR-001](adr/001-home-capability-mint-before-sql-240.md) for the historical
+mint-before-240 decision. That Home mint path is **superseded** as default.
+This Home create path is live on origin `44b02cb3` (canary on; always bare
+`seedAndOpen`; findings §3e / §3k). Prior Home mint (fail-closed idle;
+create → `#owner=`) is **superseded** as default.
 It is not SQL 240. Recents and
 pins store only the slug, never the owner token. Losing the fragment
 without another copy of the owner capability locks the note out. An

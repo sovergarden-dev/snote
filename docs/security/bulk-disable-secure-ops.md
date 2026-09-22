@@ -11,8 +11,9 @@ Live production is the 3-arg RPC; the 2-arg overload is **DROP**ped.
 This document is a **docs attestation**. It does **not** re-apply SQL, does
 **not** re-run bulk convert / fleet NULL, and does **not** deploy origin /
 Pages / Worker / Edge. Worker / Realtime / `writes_enabled` still HOLD. Live
-SPA origin remains `9a80930a` / Pages `8e64829c` (SQL/ops apply does not move
-Pages). Git docs tip after #149 is `836753fe` (current main at this attest).
+SPA origin is `44b02cb3` / Pages `b44849c4` (#151). Historical pin at Go C /
+Go SQL / Go Ops attests was `9a80930a` / Pages `8e64829c` (SQL/ops apply does not move
+Pages). Git docs tip after #149 is `836753fe` (docs tip at the Go Ops attest).
 Residual **cleared**: Pulse pre `managed_live=2` (`aggadagdade`, `pbhcusvb`) →
 allowlist `converted=2` → post `managed_live=0`; encrypted=0. Do **not** claim
 a fleet NULL convert. Do **not** claim a SPA ship.
@@ -21,9 +22,9 @@ Live RPC (applied): `public.capability_note_bulk_disable_secure(p_limit int, p_i
 Live migration: `supabase/migrations/20260922000000_capability_note_bulk_disable_secure_p_slugs.sql`  
 SHA-256: `f16a20a661dc96523bf9a717a830dbe51df2d2427206a72a7c9c373b4a782132`  
 Git tip when applied: `46ddaf01` (#148 squash
-`46ddaf012bea1d01a6235e2be7e9132555d6cd84`). Live SPA origin remains
+`46ddaf012bea1d01a6235e2be7e9132555d6cd84`). At that attest, live SPA origin remained
 `9a80930a` / Pages `8e64829c` (SQL/ops apply does not ship origin). Git docs
-tip after #149 (`836753fe`) may advance; live SPA stays `9a80930a`.
+tip after #149 (`836753fe`) may advance; live SPA later moved to `44b02cb3`.
 
 Historical 2-arg (Go A, superseded live): `public.capability_note_bulk_disable_secure(p_limit int, p_include_encrypted bool default false)`  
 Historical migration: `supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql`  
@@ -31,8 +32,8 @@ SHA-256: `a5d6623fda2ca811388396f7945ab19a305a95c84d423dc206d168f4425ab850`
 Git tip when applied: `bd11deed` (#142 lineage; tip also includes #143
 `pwa-update-smoke` harden). At that attest, live SPA origin was still
 `0cdcdc0f` / Pages `1b9ed3d1` (bulk OFF is SQL/ops, not a SPA ship). Current
-live origin is `9a80930a` / Pages `8e64829c`. Git docs tip may advance; live
-SPA stays `9a80930a`.
+live origin is `44b02cb3` / Pages `b44849c4`. Historical Go C pin was
+`9a80930a` / Pages `8e64829c`. Git docs tip may advance.
 
 Hard `DROP FUNCTION public.capability_note_bulk_disable_secure(integer, boolean);` then CREATE 3-arg. No 2-arg wrapper. Omitting `p_slugs` keeps `(500)` / `(500, false)` as fleet-wide.
 
@@ -100,7 +101,7 @@ Hard `DROP FUNCTION public.capability_note_bulk_disable_secure(integer, boolean)
   encrypted=0. `note_id` rotation accepted (same as Go B). Artifact
   `/workspace/pulse-bulk-off-allowlist-20260922/`. Claim `managed_live=0`
   only as Pulse post-verify + Sentinel spot; anon fleet RO count unavailable
-  (401). Residual **cleared**. Live SPA still `9a80930a` (this ops go does
+  (401). Residual **cleared**. At that attest, live SPA still `9a80930a` (this ops go does
   not ship origin). Git docs tip after #149 is `836753fe`.
 - Sentinel (Go Ops allowlist 2026-09-22): **READY** (bulk OFF live gate) —
   `/workspace/sentinel-qa-bulk-off-allowlist-20260922/`. LNO unmanaged both
