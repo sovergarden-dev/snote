@@ -1516,12 +1516,13 @@ Pages production deployment id `8e64829c-c182-45d1-ba27-5f43af7d20fd` (short
 preview `https://8e64829c.snote-g4-origin.pages.dev`) replaces previous live
 origin `0cdcdc0f` / Pages `1b9ed3d1` (last merged origin attest remains #140;
 bulk OFF #144 did not move origin).
-Pixel READY WITH KNOWN RISKS live Go C @ `9a80930a` / Pages `8e64829c` (heal
-`/design` PASS; `/hage` A3 = still-managed after Secure ON probe, not heal
-FAIL; evidence `pixel-qa/go-c-live-9a80930a/`). Sentinel READY WITH KNOWN
-RISKS live Go C @ `9a80930a` / Pages `8e64829c` (BLOCKER/HIGH none; MEDIUM =
-`hage` flipped unmanaged→managed mid-session, not vacant auto-ON; evidence
-`/workspace/sentinel-qa-go-c-live/` / `sentinel-qa-go-c-live/`).
+Historical Pixel READY WITH KNOWN RISKS at Go C @ `9a80930a` / Pages `8e64829c`
+(heal `/design` PASS; `/hage` A3 = still-managed after Secure ON probe, not
+heal FAIL; evidence `pixel-qa/go-c-live-9a80930a/`). Historical Sentinel READY
+WITH KNOWN RISKS at Go C @ `9a80930a` / Pages `8e64829c` (BLOCKER/HIGH none;
+MEDIUM = `hage` flipped unmanaged→managed mid-session, not vacant auto-ON;
+evidence `/workspace/sentinel-qa-go-c-live/` / `sentinel-qa-go-c-live/`).
+Current re-bulk Sentinel is §3h (those slugs unmanaged; no A3).
 Pulse RO inventory at Go C live: `managed_live=3` (`hage`, `xqmqh53z`,
 `svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged. That inventory
 is **historical**. Historical Go B `managed_live` 26→0 is not a claim the
@@ -1604,12 +1605,13 @@ Independent `version.json`: `deployedSha`
 `buildId` `1789612258815-8yx2tdut`; `builtAt` `2026-09-17T02:31:11.770Z`;
 etag `"ec3b8468a53852a90787dc61d6f80720"`.
 
-Sentinel: **READY WITH KNOWN RISKS** (evidence
+At that 2026-09-17 attest, Sentinel: **READY WITH KNOWN RISKS** (evidence
 `/workspace/sentinel-qa-go-c-live/` / `sentinel-qa-go-c-live/`;
 `TRUSTED-RESULTS.json`). BLOCKER/HIGH none. MEDIUM: `hage` flipped
 unmanaged→managed mid-session (not vacant auto-ON). Pixel: **READY WITH
 KNOWN RISKS** (heal `/design` PASS; `/hage` A3 = still-managed after Secure
 ON probe, not heal FAIL; evidence `pixel-qa/go-c-live-9a80930a/`).
+Later re-bulk is §3h.
 
 Pulse RO inventory at Go C live: `managed_live=3` (`hage`, `xqmqh53z`,
 `svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged. Historical
