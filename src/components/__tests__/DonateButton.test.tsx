@@ -8,6 +8,10 @@ import { DonateButton } from "@/components/DonateButton";
 import { I18nProvider } from "@/i18n/provider";
 import { STORAGE_KEY } from "@/i18n";
 import { dict } from "@/i18n/catalog";
+import {
+  KOFI_FAB_IDLE_DISMISS_KEY,
+  KOFI_FAB_IDLE_DISMISS_MS,
+} from "@/lib/kofi-fab-idle-dismiss";
 import { PWA_UPDATE_STATE_EVENT } from "@/lib/pwa-update-readiness";
 import tailwindConfig from "../../../tailwind.config";
 
@@ -47,6 +51,10 @@ function keyframeScales(name: "heartbeat" | "heartbeat-update"): number[] {
   return scales.map((token) => Number(token.slice("scale(".length, -1)));
 }
 
+function futureIdleDismissUntil(): string {
+  return String(Date.now() + KOFI_FAB_IDLE_DISMISS_MS);
+}
+
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
@@ -54,13 +62,16 @@ beforeEach(() => {
   window.__SNOTE_PWA_UPDATE_STATE__ = undefined;
   window.__SNOTE_PWA_APPLY_UPDATE__ = undefined;
   document.documentElement.removeAttribute("data-snote-fab-update");
+  document.documentElement.removeAttribute("data-snote-fab-idle");
 });
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   window.__SNOTE_PWA_UPDATE_STATE__ = undefined;
   window.__SNOTE_PWA_APPLY_UPDATE__ = undefined;
   document.documentElement.removeAttribute("data-snote-fab-update");
+  document.documentElement.removeAttribute("data-snote-fab-idle");
 });
 
 describe("DonateButton — idle Ko-fi FAB", () => {
@@ -78,6 +89,7 @@ describe("DonateButton — idle Ko-fi FAB", () => {
     expect(link.className).toMatch(/snote-fab-anchor/);
     expect(link.className).not.toMatch(/bottom-20/);
     expect(document.documentElement).not.toHaveAttribute("data-snote-fab-update");
+    expect(document.documentElement).toHaveAttribute("data-snote-fab-idle");
   });
 
   it("hides on /note and raw .md routes", () => {
@@ -167,6 +179,7 @@ describe("DonateButton — update available", () => {
     expect(host?.className).toMatch(/snote-fab-anchor/);
     expect(host?.className).not.toMatch(/bottom-20/);
     expect(document.documentElement).toHaveAttribute("data-snote-fab-update");
+    expect(document.documentElement).not.toHaveAttribute("data-snote-fab-idle");
   });
 
   it("does not keep a Ko-fi satellite while update is showing", () => {
@@ -218,6 +231,7 @@ describe("DonateButton — update available", () => {
     expect(screen.getByRole("link", { name: dict.en["fab.donate.aria"] })).toHaveAttribute("href", KOFI);
     expect(screen.queryByRole("status")).toBeNull();
     expect(document.documentElement).not.toHaveAttribute("data-snote-fab-update");
+    expect(document.documentElement).toHaveAttribute("data-snote-fab-idle");
 
     act(() => {
       setPwaState({ updateAvailable: true, pendingBuildId: "build-b" });
@@ -240,6 +254,105 @@ describe("DonateButton — update available", () => {
       await screen.findByRole("button", { name: dict.zh["fab.update.aria"] }),
     ).toBeInTheDocument();
     expect(screen.getByText(dict.zh["fab.update.status"])).toBeInTheDocument();
+  });
+});
+
+describe("DonateButton — idle dismiss 24h", () => {
+  it("on idle click opens Ko-fi and writes dismissUntil = now+24h then hides immediately", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    renderFab();
+    const user = userEvent.setup();
+    const link = screen.getByRole("link", { name: dict.en["fab.donate.aria"] });
+    const before = Date.now();
+    await user.click(link);
+
+    expect(open).toHaveBeenCalledWith(KOFI, "_blank", "noopener,noreferrer");
+    const until = Number(localStorage.getItem(KOFI_FAB_IDLE_DISMISS_KEY));
+    expect(until).toBeGreaterThanOrEqual(before + KOFI_FAB_IDLE_DISMISS_MS);
+    expect(until).toBeLessThanOrEqual(Date.now() + KOFI_FAB_IDLE_DISMISS_MS);
+    expect(sessionStorage.getItem("pwa-fab-snooze")).toBeNull();
+    expect(screen.queryByRole("link", { name: dict.en["fab.donate.aria"] })).toBeNull();
+    expect(document.querySelector("[data-donate-fab]")).toBeNull();
+    expect(document.documentElement).not.toHaveAttribute("data-snote-fab-idle");
+    expect(document.documentElement).not.toHaveAttribute("data-snote-fab-update");
+  });
+
+  it("hides idle FAB when a future until-key is already stored", () => {
+    localStorage.setItem(KOFI_FAB_IDLE_DISMISS_KEY, futureIdleDismissUntil());
+    renderFab();
+    expect(screen.queryByRole("link", { name: dict.en["fab.donate.aria"] })).toBeNull();
+    expect(document.documentElement).not.toHaveAttribute("data-snote-fab-idle");
+  });
+
+  it("shows idle FAB when the until-key is missing or corrupt", () => {
+    localStorage.setItem(KOFI_FAB_IDLE_DISMISS_KEY, "nope");
+    const { unmount } = renderFab();
+    expect(screen.getByRole("link", { name: dict.en["fab.donate.aria"] })).toBeInTheDocument();
+    unmount();
+
+    localStorage.removeItem(KOFI_FAB_IDLE_DISMISS_KEY);
+    renderFab();
+    expect(screen.getByRole("link", { name: dict.en["fab.donate.aria"] })).toBeInTheDocument();
+  });
+
+  it("still shows the #153 update cluster while idle dismiss is active", () => {
+    localStorage.setItem(KOFI_FAB_IDLE_DISMISS_KEY, futureIdleDismissUntil());
+    renderFab();
+    act(() => {
+      setPwaState({ updateAvailable: true, pendingBuildId: "build-b" });
+    });
+
+    expect(screen.getByRole("button", { name: dict.en["fab.update.aria"] })).toBeInTheDocument();
+    expect(screen.getByText(dict.en["fab.update.status"])).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: dict.en["fab.update.snooze_aria"] })).toBeInTheDocument();
+    expect(screen.queryByText(/^MỚI$/)).toBeNull();
+    expect(screen.queryByRole("link", { name: dict.en["fab.donate.aria"] })).toBeNull();
+    expect(document.documentElement).toHaveAttribute("data-snote-fab-update");
+    expect(document.documentElement).not.toHaveAttribute("data-snote-fab-idle");
+    expect(sessionStorage.getItem("pwa-fab-snooze")).toBeNull();
+  });
+
+  it("stays dismissed after update snooze when still inside the idle window", async () => {
+    const until = futureIdleDismissUntil();
+    localStorage.setItem(KOFI_FAB_IDLE_DISMISS_KEY, until);
+    renderFab();
+    act(() => {
+      setPwaState({ updateAvailable: true, pendingBuildId: "build-b" });
+    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: dict.en["fab.update.snooze_aria"] }));
+
+    expect(sessionStorage.getItem("pwa-fab-snooze")).toBe("build-b");
+    expect(localStorage.getItem(KOFI_FAB_IDLE_DISMISS_KEY)).toBe(until);
+    expect(screen.queryByRole("button", { name: dict.en["fab.update.aria"] })).toBeNull();
+    expect(screen.queryByRole("link", { name: dict.en["fab.donate.aria"] })).toBeNull();
+    expect(document.documentElement).not.toHaveAttribute("data-snote-fab-idle");
+    expect(document.documentElement).not.toHaveAttribute("data-snote-fab-update");
+  });
+
+  it("opens Ko-fi and hides in-memory when localStorage write fails", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation((key) => {
+      if (key === KOFI_FAB_IDLE_DISMISS_KEY) throw new Error("quota");
+      return undefined;
+    });
+    renderFab();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("link", { name: dict.en["fab.donate.aria"] }));
+
+    expect(open).toHaveBeenCalledWith(KOFI, "_blank", "noopener,noreferrer");
+    expect(screen.queryByRole("link", { name: dict.en["fab.donate.aria"] })).toBeNull();
+    expect(document.documentElement).not.toHaveAttribute("data-snote-fab-idle");
+  });
+
+  it("does not change dismiss storage when zen-hide routes suppress the FAB", () => {
+    const until = futureIdleDismissUntil();
+    localStorage.setItem(KOFI_FAB_IDLE_DISMISS_KEY, until);
+    renderFab("/note");
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.queryByRole("button", { name: dict.en["fab.update.aria"] })).toBeNull();
+    expect(localStorage.getItem(KOFI_FAB_IDLE_DISMISS_KEY)).toBe(until);
+    expect(document.documentElement).not.toHaveAttribute("data-snote-fab-idle");
   });
 });
 
@@ -271,10 +384,17 @@ describe("DonateButton — Pixel contracts", () => {
     expect(INDEX_CSS).toMatch(/--snote-fab-update-disk:\s*3\.5rem/);
     expect(INDEX_CSS).toMatch(/--snote-fab-gap:\s*0\.5rem/);
     expect(INDEX_CSS).toMatch(/html\[data-snote-fab-update\]/);
+    expect(INDEX_CSS).toMatch(/html\[data-snote-fab-idle\]/);
     expect(INDEX_CSS).toMatch(/\.snote-fab-anchor/);
     expect(INDEX_CSS).toMatch(/\.snote-page-indicator/);
     expect(INDEX_CSS).toMatch(/--snote-fab-primary-disk/);
     expect(INDEX_CSS).toMatch(/html\.zen-mode[\s\S]*--snote-fab-primary-disk:\s*0rem/);
+    expect(INDEX_CSS).toMatch(
+      /html:not\(\[data-snote-fab-idle\]\):not\(\[data-snote-fab-update\]\)[\s\S]*--snote-fab-primary-disk:\s*0rem/,
+    );
+    expect(INDEX_CSS).toMatch(
+      /html:not\(\[data-snote-fab-idle\]\):not\(\[data-snote-fab-update\]\)[\s\S]*--snote-fab-gap:\s*0rem/,
+    );
   });
 
   it("draws a diagonal snooze strike on hover/focus without a new icon asset", () => {

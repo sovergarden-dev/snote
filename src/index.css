@@ -415,7 +415,8 @@
   --sa-left: env(safe-area-inset-left, 0px);
 
   /* Ko-fi FAB + PageIndicator share equal 1rem inset; indicator shifts left
-     of the primary disk (idle 2.75rem / update 3.5rem) plus 0.5rem gap. */
+     of the primary disk (idle 2.75rem / update 3.5rem) plus 0.5rem gap
+     while a FAB is mounted. */
   --snote-fab-inset: 1rem;
   --snote-fab-idle-disk: 2.75rem;
   --snote-fab-update-disk: 3.5rem;
@@ -423,8 +424,17 @@
   --snote-fab-primary-disk: var(--snote-fab-idle-disk);
 }
 
+html[data-snote-fab-idle] {
+  --snote-fab-primary-disk: var(--snote-fab-idle-disk);
+}
+
 html[data-snote-fab-update] {
   --snote-fab-primary-disk: var(--snote-fab-update-disk);
+}
+
+html:not([data-snote-fab-idle]):not([data-snote-fab-update]) {
+  --snote-fab-primary-disk: 0rem;
+  --snote-fab-gap: 0rem;
 }
 
 html.zen-mode {
