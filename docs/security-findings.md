@@ -31,11 +31,13 @@ CTA (AC A3; localStorage pin and/or LNO `managed:true`). Legacy OFF (owner
 Edge `legacy-note-open` is republished with `managed:true` for managed slugs.
 SQL `capability_note_bulk_disable_secure` is **applied** live (Syringa Go A
 then B; Pulse **PASS**; git tip `bd11deed` / #142; #143 is git-only PWA smoke
-harden). Live SPA origin remains `0cdcdc0f`. Go C pin heal **HOLD**. See §3f.
+harden). Live SPA origin is `9a80930a`. Go C pin heal **shipped** live
+(#145 LNO-wins). See §3g. Historical bulk OFF Go B `managed_live` 26→0 is not
+the current fleet (`managed_live=3`). See §3f.
 W1 convert-on-write as product default is **superseded**.
 Optional `?legacyRo=1` still RO + banner. Phase C is live: RawView `/:slug.md` loads via LNO `open`;
 Home availability uses LNO `exists` (empty legacy rows are taken). Duplicate securely is enabled on Legacy RO only (PR #128; Edge `note-session` `import-legacy`). Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is live. FAB-primary + Sonner suppress (#113/#116) is live. Choice A (#118) editable-plain default is **superseded**. PWA latch (#119) one hard-reload per Update apply is live. Pixel Legacy opt-in (#122) is live as Legacy Advanced. Encrypt is disabled on free-edit (Legacy OFF) and becomes available after Legacy ON on the owner path; `#owner=` Encrypt stays active. A′ (#126) RO default is **superseded**. Duplicate securely (#128) remains on Legacy RO. Home mints capabilities when canary is on
-(create → `/<slug>#owner=`; fail-closed idle; live origin `0cdcdc0f`).
+(create → `/<slug>#owner=`; fail-closed idle; live origin `9a80930a`).
 Home mint before SQL 240 is accepted as
 [ADR-001](adr/001-home-capability-mint-before-sql-240.md); live mint is
 not authorization to flip `private_realtime_enabled`.
@@ -168,9 +170,9 @@ Production Worker `syrin-prerender` was redeployed 2026-09-03 ~20:42 UTC /
 - Staging `syrin-prerender-staging` was not deployed (still G3C staging
   versions from 2026-08-24)
 
-This is not the live SPA origin. Origin is `0cdcdc0f` (see §3e).
+This is not the live SPA origin. Origin is `9a80930a` (see §3e).
 At this Worker deploy, origin was not redeployed (then `27da93eb`);
-origin later bumped to `e05c73ea`, then `addeeb29`, then `7d00fd52`, then `77d791af`, then `9df65d53`, then `9bf5e92b`, then `b6824541`, then `a8f7eeb8`, then `5c33ac24`, then `9dc0240e`, then `15ec8285`, then `0073d53b`, then `1e76e2b7`, then `b4eba5d2`, then `f84183ba`, then `2ae9a230`, then `0cdcdc0f`. Do not claim origin is `931430c0`. Git `main`
+origin later bumped to `e05c73ea`, then `addeeb29`, then `7d00fd52`, then `77d791af`, then `9df65d53`, then `9bf5e92b`, then `b6824541`, then `a8f7eeb8`, then `5c33ac24`, then `9dc0240e`, then `15ec8285`, then `0073d53b`, then `1e76e2b7`, then `b4eba5d2`, then `f84183ba`, then `2ae9a230`, then `0cdcdc0f`, then `9a80930a`. Do not claim origin is `931430c0`. Git `main`
 includes this Worker SHA and may be ahead of live origin for later docs-only PRs; that
 does not change Worker identity or treat later main commits as live origin.
 
@@ -1475,9 +1477,9 @@ update UX; Sonner is suppressed while Ko-fi FAB is mounted; Update apply
 consumes one hard-reload per target. Encrypt is disabled on free-edit
 (Legacy OFF) and becomes available after Legacy ON; `#owner=` Encrypt stays
 active.
-Pixel PASS live A3 @ `0cdcdc0f` / Pages `1b9ed3d1` (panel, free-edit,
+Historical Pixel PASS live A3 @ `0cdcdc0f` / Pages `1b9ed3d1` (panel, free-edit,
 legacy-on, bare-after-on, bare-tab2, legacy-off; evidence
-`pixel-qa/a3-0cdcdc0f/`). Sentinel pin: READY WITH KNOWN RISKS live A3 @
+`pixel-qa/a3-0cdcdc0f/`). Historical Sentinel pin: READY WITH KNOWN RISKS live A3 @
 `0cdcdc0f` / Pages `1b9ed3d1` (BLOCKER/HIGH/MEDIUM none; evidence
 `sentinel-qa-a3-0cdcdc0f/`). LOW: normal new-version reminder; one
 owner-link load needing hard reload; optional cold localStorage-clear not
@@ -1487,43 +1489,126 @@ Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
 not soak-complete. Origin attest only.
 
+Same-canary origin SHA bump 2026-09-17 ~09:31 ICT: Pages `snote-g4-origin`
+redeployed Go C LNO-wins pin heal (#145), git `9a80930a`. Canary stays on
+(`capabilityRoutesEnabled` true; Home mint stays on). W2 free-edit + Legacy
+A3 remain; stale `snote:legacy-secure:*` no longer short-circuits LNO: always
+call LNO `open` on bare `/slug`. LNO unmanaged → clear pin + silent free-edit;
+still-managed / `CapabilityManagedError` → keep pin + A3 RO; LNO error →
+fail-closed (do not clear pin); vacant unmanaged → clear pin + vacant
+free-edit; no auto-ON.
+Live `version.json` (browser UA; `no-store`; independently fetched
+2026-09-17 ~02:48 UTC / ~09:48 ICT; cache-buster `cb=<epoch-ns>`) on canonical
+`https://note.syrin.online/version.json`, Pages
+`https://snote-g4-origin.pages.dev/version.json`, and short Pages preview
+`https://8e64829c.snote-g4-origin.pages.dev/version.json`:
+`deployedSha` `9a80930aec5d7c018879bd2a406a35c055477f06`,
+`capabilityRoutesEnabled` true, `builtAt` `2026-09-17T02:31:11.770Z`,
+`buildId` `1789612258815-8yx2tdut`.
+Canonical also returned `Cache-Control: no-cache, no-store, must-revalidate`
+and `CDN-Cache-Control: no-store`. Pages `.dev` hosts returned
+`Cache-Control: no-cache, no-store, must-revalidate` (no `CDN-Cache-Control`
+on those responses). All three hosts returned the same body and etag
+`"ec3b8468a53852a90787dc61d6f80720"`.
+Pages production deployment id `8e64829c-c182-45d1-ba27-5f43af7d20fd` (short
+preview `https://8e64829c.snote-g4-origin.pages.dev`) replaces previous live
+origin `0cdcdc0f` / Pages `1b9ed3d1` (last merged origin attest remains #140;
+bulk OFF #144 did not move origin).
+Pixel READY WITH KNOWN RISKS live Go C @ `9a80930a` / Pages `8e64829c` (heal
+`/design` PASS; `/hage` A3 = still-managed after Secure ON probe, not heal
+FAIL; evidence `pixel-qa/go-c-live-9a80930a/`). Sentinel READY WITH KNOWN
+RISKS live Go C @ `9a80930a` / Pages `8e64829c` (BLOCKER/HIGH none; MEDIUM =
+`hage` flipped unmanaged→managed mid-session, not vacant auto-ON; evidence
+`/workspace/sentinel-qa-go-c-live/` / `sentinel-qa-go-c-live/`).
+Pulse RO inventory: `managed_live=3` (`hage`, `xqmqh53z`,
+`svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged. Historical
+Go B `managed_live` 26→0 is not the current fleet.
+PWA auto-smoke on the #145 merge (`35136042556`) failed identity wait because
+origin was not yet live at merge time; this attest does not claim a later PWA smoke PASS and does not dispatch one. Historical PWA `34986611791` remains
+the `0cdcdc0f` pin.
+#145 is live on this line. Worker remains `931430c0` / `5f94ab6c`. Walls HOLD:
+Worker / Realtime / `writes_enabled`. SQL 240 already applied. No Edge / no
+SQL / no re-bulk OFF from this docs PR.
+This is not SQL 240, not Realtime, not soak-complete.
+Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
+this bump does not restart soak. This is a same-canary origin SHA bump,
+not soak-complete. Origin attest only. Origin is `9a80930a`.
+
 ## 3f. Production bulk Legacy/Secure OFF — verified; origin unchanged
 
 Docs attestation only (2026-09-16). This section does not deploy origin /
-Pages / Worker / Edge and does not re-apply SQL.
+Pages / Worker / Edge and does not re-apply SQL. Origin later moved to
+`9a80930a`; see §3g.
 
 Syringa named Go A then B; Pulse **PASS**. Git tip when applied: `bd11deed`
 (`bd11deedf95bec1f2e207a59fecdad974d861ff7`; migration
 `20260916000000_capability_note_bulk_disable_secure.sql` SHA-256
 `a5d6623fda2ca811388396f7945ab19a305a95c84d423dc206d168f4425ab850` from #142;
-tip also includes #143 `pwa-update-smoke` harden). Live SPA origin remains
-`0cdcdc0f` / Pages `1b9ed3d1` from the prior A3 attest (#140). Bulk OFF is
-SQL/ops, not a SPA ship. Do not claim origin moved. Origin is `0cdcdc0f`.
+tip also includes #143 `pwa-update-smoke` harden). At that attest, live SPA
+origin was still `0cdcdc0f` / Pages `1b9ed3d1` from the prior A3 attest (#140).
+Bulk OFF is SQL/ops, not a SPA ship. That attest did not move origin.
 
 Go A: RPC `capability_note_bulk_disable_secure` **applied** live;
 `service_role` EXECUTE only; anon/authenticated EXECUTE false.
 
-Go B: `managed_live` 26→0; skipped_encrypted=0; errors=[]; plaintext
-converted; `note_id` rotated. Pulse evidence `/workspace/pulse-bulk-off-ab2c4de9/`
-(`SUMMARY.md` + `REPORT.json` verdict PASS).
+Go B: `managed_live` 26→0 (2026-09-16); skipped_encrypted=0; errors=[];
+plaintext converted; `note_id` rotated. Pulse evidence
+`/workspace/pulse-bulk-off-ab2c4de9/` (`SUMMARY.md` + `REPORT.json` verdict
+PASS). That post-count is **historical**. The fleet is not still 0 managed.
 
-Go C pin heal **HOLD**. Known residual: stale SPA `snote:legacy-secure:*`
-may keep bare RO until heal / local pin clear. Server LNO for converted
-slugs is unmanaged.
+At the #144 attest, Go C pin heal was **HOLD**. Known residual then: stale SPA
+`snote:legacy-secure:*` could keep bare RO until heal / local pin clear.
+Server LNO for converted slugs was unmanaged. Go C subsequently **shipped**
+live (#145) — see §3g.
 
-Sentinel live verify: **READY WITH KNOWN RISKS** (API + cold SPA free-edit
-PASS; BLOCKER/HIGH none; MEDIUM = Go C residual in `FINDINGS-API.md`).
-Evidence `/workspace/sentinel-qa-bulk-off-live/` (`FINDINGS.md` +
-`FINDINGS-API.md`). Live `version.json` still `deployedSha`
-`0cdcdc0f31eed7db7b9301c4e6fbe7c079cf69dd`.
+Sentinel live verify at bulk OFF: **READY WITH KNOWN RISKS** (API + cold SPA
+free-edit PASS; BLOCKER/HIGH none; MEDIUM = Go C residual in
+`FINDINGS-API.md`). Evidence `/workspace/sentinel-qa-bulk-off-live/`
+(`FINDINGS.md` + `FINDINGS-API.md`). Live `version.json` at that attest was
+still `deployedSha` `0cdcdc0f31eed7db7b9301c4e6fbe7c079cf69dd`.
 
-Pixel cold-browser: **PASS WITH KNOWN RISKS** (`hage`, `design` bare
-editable + Synced; evidence `/workspace/pixel-qa/bulk-off-verify/`).
+Pixel cold-browser at bulk OFF: **PASS WITH KNOWN RISKS** (`hage`, `design`
+bare editable + Synced; evidence `/workspace/pixel-qa/bulk-off-verify/`).
 Aegis: khớp design.
 
-Walls: no Worker / Realtime / origin / Pages / Edge from this attest.
+Pulse RO inventory at Go C live (2026-09-17): `managed_live=3` (`hage`,
+`xqmqh53z`, `svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged.
+Do not reuse 26→0 or post-count 0 as the current fleet.
 
-This is not SQL 240, not Realtime, not soak-complete. Origin attest unchanged.
+Walls: no Worker / Realtime / origin / Pages / Edge from this attest. No
+re-bulk OFF.
+
+This is not SQL 240, not Realtime, not soak-complete.
+
+## 3g. Production Go C pin heal — verified; origin 9a80930a
+
+Docs attestation only (2026-09-17). This section does not deploy origin /
+Pages / Worker / Edge, does not re-apply SQL, and does not re-bulk OFF.
+Origin is `9a80930a`.
+
+#145 LNO-wins **shipped** live: always call LNO `open` on bare `/slug` (do not
+return early solely because `snote:legacy-secure:*` is set). Stale pin +
+unmanaged LNO → silent free-edit (clear pin). Still-managed → A3 RO (keep
+pin). LNO error → fail-closed (do not clear pin). Vacant unmanaged → clear
+pin + vacant free-edit. No auto-ON.
+
+Independent `version.json`: `deployedSha`
+`9a80930aec5d7c018879bd2a406a35c055477f06`; Pages
+`8e64829c-c182-45d1-ba27-5f43af7d20fd`; `capabilityRoutesEnabled` true;
+`buildId` `1789612258815-8yx2tdut`; `builtAt` `2026-09-17T02:31:11.770Z`;
+etag `"ec3b8468a53852a90787dc61d6f80720"`.
+
+Sentinel: **READY WITH KNOWN RISKS** (evidence
+`/workspace/sentinel-qa-go-c-live/` / `sentinel-qa-go-c-live/`;
+`TRUSTED-RESULTS.json`). BLOCKER/HIGH none. MEDIUM: `hage` flipped
+unmanaged→managed mid-session (not vacant auto-ON). Pixel: **READY WITH
+KNOWN RISKS** (heal `/design` PASS; `/hage` A3 = still-managed after Secure
+ON probe, not heal FAIL; evidence `pixel-qa/go-c-live-9a80930a/`).
+
+Pulse RO inventory: `managed_live=3` (`hage`, `xqmqh53z`,
+`svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged.
+
+This is not SQL 240, not Realtime, not soak-complete.
 
 ## 4. Public `notes` access — cutover migration applied; soak still required
 

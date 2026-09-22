@@ -1,27 +1,37 @@
 # Bulk disable Secure (ops runbook)
 
-Status: **Go A+B applied live** (Syringa named go; Pulse **PASS**). This
+Status: **Go A+B applied live** (Syringa named go; Pulse **PASS**). Go C pin
+heal **shipped** live (#145 LNO-wins on origin `9a80930a`). This
 document is a **docs attestation**. It does **not** re-apply SQL and does
-**not** deploy origin / Pages / Worker / Edge. Go C pin heal remains **HOLD**.
+**not** deploy origin / Pages / Worker / Edge. Worker / Realtime /
+`writes_enabled` still HOLD.
 
 RPC: `public.capability_note_bulk_disable_secure(p_limit int, p_include_encrypted bool default false)`  
 Migration: `supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql`  
 SHA-256: `a5d6623fda2ca811388396f7945ab19a305a95c84d423dc206d168f4425ab850`  
 Git tip when applied: `bd11deed` (#142 lineage; tip also includes #143
-`pwa-update-smoke` harden). Live SPA origin remains `0cdcdc0f` / Pages
-`1b9ed3d1` (bulk OFF is SQL/ops, not a SPA ship).
+`pwa-update-smoke` harden). At that attest, live SPA origin was still
+`0cdcdc0f` / Pages `1b9ed3d1` (bulk OFF is SQL/ops, not a SPA ship). Current
+live origin is `9a80930a` / Pages `8e64829c`.
 
-## Live go (2026-09-16)
+## Live go (2026-09-16 apply; 2026-09-17 Go C origin)
 
 - Go A: `CREATE OR REPLACE` `capability_note_bulk_disable_secure` **applied** live;
   anon/authenticated EXECUTE false; `service_role` EXECUTE true.
-- Go B: `managed_live` 26→0; skipped_encrypted=0; errors=[]; plaintext
+- Go B: `managed_live` 26→0 (2026-09-16); skipped_encrypted=0; errors=[]; plaintext
   converted; `note_id` rotated. Pulse `/workspace/pulse-bulk-off-ab2c4de9/`.
-- Go C: **HOLD**. Residual stale `snote:legacy-secure:*` may keep bare RO until
-  heal / local pin clear. Server LNO for converted slugs is unmanaged.
-- Sentinel: READY WITH KNOWN RISKS (API+cold SPA free-edit PASS) —
+  That post-count is **historical**; the fleet is not still 0 managed.
+- Pulse RO inventory at Go C live: `managed_live=3` (`hage`, `xqmqh53z`,
+  `svgoccbe2542573b`); `unmanaged_live=106`; `design` unmanaged.
+- Go C: **shipped** live (#145 LNO-wins). Stale `snote:legacy-secure:*` +
+  unmanaged LNO → silent free-edit; still-managed → A3 RO; LNO error
+  fail-closed; no auto-ON.
+- Sentinel: READY WITH KNOWN RISKS (Go C live) —
+  `/workspace/sentinel-qa-go-c-live/`. Historical bulk-OFF Sentinel:
   `/workspace/sentinel-qa-bulk-off-live/`.
-- Pixel: PASS WITH KNOWN RISKS (`hage`, `design` bare editable + Synced) —
+- Pixel: READY WITH KNOWN RISKS (heal `/design` PASS; `/hage` A3 =
+  still-managed after Secure ON probe, not heal FAIL) —
+  `pixel-qa/go-c-live-9a80930a/`. Historical bulk-OFF Pixel:
   `/workspace/pixel-qa/bulk-off-verify/`. Aegis: khớp design.
 
 Do not re-apply this RPC from this attest PR.
@@ -38,10 +48,10 @@ Do not re-apply this RPC from this attest PR.
   markdown `content` / tags / `char_count` use empty plaintext defaults.
   Notes with no checkpoint (for example Home mint never synced) become empty
   unmanaged slugs.
-- Go C (stale SPA pin `snote:legacy-secure:${slug}` heal) remains **HOLD**.
-  After bulk OFF, browsers that still hold a pin can show residual bare RO until
-  a later pin-heal change or a local storage clear. Server LNO for converted
-  slugs is unmanaged.
+- Go C (stale SPA pin `snote:legacy-secure:${slug}` heal) **shipped** live
+  (#145 LNO-wins on origin `9a80930a`). After bulk OFF, browsers that still
+  held a pin now follow LNO: unmanaged → silent free-edit; still-managed →
+  A3 RO; LNO error fail-closed.
 
 ## Walls (this attest)
 

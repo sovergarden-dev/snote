@@ -34,7 +34,7 @@ const capabilityEdge = readFileSync(resolve(
 ), "utf8");
 
 describe("atomic cutover migration", () => {
-  it("pins documented SQL 240 migration identity at live product SHA 0cdcdc0f", () => {
+  it("pins documented SQL 240 migration identity at live product SHA 9a80930a", () => {
     const sha256 = createHash("sha256").update(migration, "utf8").digest("hex");
     const lineCount = migration.endsWith("\n")
       ? migration.slice(0, -1).split("\n").length
@@ -70,6 +70,8 @@ describe("atomic cutover migration", () => {
     expect(preflight).toContain("apply blocker");
     expect(contract).toContain("0cdcdc0f");
     expect(contract).toContain("1b9ed3d1");
+    expect(contract).toContain("9a80930a");
+    expect(contract).toContain("8e64829c");
     expect(contract).toContain("34986611791");
     expect(contract).toContain("W2 is live");
     expect(contract).toContain("HOLD");
@@ -86,6 +88,9 @@ describe("atomic cutover migration", () => {
     expect(preflight).toContain("0cdcdc0f");
     expect(preflight).toContain("1b9ed3d1");
     expect(preflight).toContain("1789484737351-s31qn3nf");
+    expect(preflight).toContain("9a80930a");
+    expect(preflight).toContain("8e64829c");
+    expect(preflight).toContain("1789612258815-8yx2tdut");
     expect(preflight).toContain("A′ live");
     expect(contract).toContain(
       "This is not SQL 240, not Realtime, not soak-complete.",
@@ -95,7 +100,7 @@ describe("atomic cutover migration", () => {
     );
   });
 
-  it("pins bulk disable-secure migration identity as applied live without moving origin", () => {
+  it("pins bulk disable-secure migration identity as applied live; origin now 9a80930a", () => {
     const bulk = readFileSync(resolve(
       process.cwd(),
       "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql",
@@ -123,9 +128,12 @@ describe("atomic cutover migration", () => {
     expect(findings).toContain("capability_note_bulk_disable_secure");
     expect(contract).toContain("capability_note_bulk_disable_secure");
     expect(contract).toContain("0cdcdc0f");
+    expect(contract).toContain("9a80930a");
     expect(contract).toContain("bd11deed");
     expect(runbook).toContain("0cdcdc0f");
-    expect(findings).toContain("Origin is `0cdcdc0f`");
+    expect(runbook).toContain("9a80930a");
+    expect(findings).toContain("Origin is `9a80930a`");
+    expect(findings).not.toContain("Origin is `0cdcdc0f`");
   });
 
   it("removes every direct notes policy and privilege in one transaction", () => {
