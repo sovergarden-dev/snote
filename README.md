@@ -65,10 +65,15 @@ plain-upsert 200 (not 409); vacant create unmanaged (no auto-ON); bare SPA
 `/hage` + `/xqmqh53z` editable+synced, no A3/need-owner (evidence
 `/workspace/sentinel-qa-rebulk-all6-live/`). Go SQL allowlist `p_slugs`
 **applied** live (2026-09-22; Pulse **PASS**; git tip `46ddaf01` / #148);
-live RPC is 3-arg (2-arg DROP); residual `managed_live=1` (`aggadagdade`)
-still managed — **no bulk OFF**; SPA still `9a80930a` (SQL apply does not
-move Pages). Sentinel **READY** (SQL contract; evidence
-`/workspace/sentinel-qa-allowlist-sql-46ddaf01/`). Not soak-complete.
+live RPC is 3-arg (2-arg DROP). Go SQL residual `managed_live=1`
+(`aggadagdade`) still managed — **no bulk OFF**. Later **Go Ops allowlist
+bulk OFF** 2→0 **PASS** (`aggadagdade`, `pbhcusvb`; converted=2; not fleet;
+residual **cleared**; post `managed_live=0`; LNO unmanaged; plain-upsert
+200). SPA still `9a80930a` (SQL/ops apply does not move Pages). Git docs tip
+after #149 is `836753fe`. Sentinel **READY** (SQL contract; evidence
+`/workspace/sentinel-qa-allowlist-sql-46ddaf01/`) then **READY** (bulk OFF
+live gate; evidence `/workspace/sentinel-qa-bulk-off-allowlist-20260922/`).
+Not soak-complete.
 
 **Bulk Legacy/Secure OFF (historical docs attest — not a SPA ship):** Syringa named
 Go A then B, executed by Pulse, **PASS**. Git tip when applied: `bd11deed`
@@ -105,7 +110,8 @@ evidence `/workspace/sentinel-qa-rebulk-all6-live/`). This docs attest
 does not deploy origin / Pages / Worker / Edge, does not re-apply SQL, and
 does not re-run bulk RPC. Worker / Realtime / `writes_enabled` still HOLD.
 That post-verify `managed_live=0` is **historical**. Later Go SQL preflight
-found residual `managed_live=1` (`aggadagdade`); see Go SQL paragraph.
+found residual `managed_live=1` (`aggadagdade`); Go Ops allowlist then
+converted that residual plus `pbhcusvb` (see Go Ops paragraph).
 
 **Go SQL allowlist `p_slugs` (2026-09-22 docs attest — not a SPA ship):**
 Syringa named Go SQL; Pulse **PASS** at tip `46ddaf01` (#148). Applied
@@ -123,6 +129,29 @@ missing named-go body apply, SPA tip still `9a80930a` expected; evidence
 `/workspace/sentinel-qa-allowlist-sql-46ddaf01/`). This docs attest does not
 deploy origin / Pages / Worker / Edge, does not re-apply SQL, and does not
 run bulk convert. Worker / Realtime / `writes_enabled` still HOLD.
+Go SQL residual is **historical**; later Go Ops allowlist bulk OFF is the
+next paragraph.
+
+**Go Ops allowlist bulk OFF 2→0 (2026-09-22 docs attest — not a SPA ship):**
+Syringa named Go Ops; Pulse **PASS** on existing live 3-arg RPC
+`capability_note_bulk_disable_secure(500,false,ARRAY[aggadagdade,pbhcusvb])`
+— **no re-migrate**, **not fleet**. Pre: `managed_live=2` plaintext
+(`aggadagdade`, `pbhcusvb`); encrypted=0 (count > Go SQL known residual 1;
+allowlist both). Pulse `converted=2`, `scope=allowlist`,
+`allowlist_requested=2`, `allowlist_matched_managed=2`, `skipped_encrypted=0`,
+`errors=[]`; post-verify `managed_live=0`, encrypted=0. LNO both unmanaged;
+plain-upsert 200 (not 409). Residual **cleared**. Claim `managed_live=0` only
+as Pulse post-verify + Sentinel spot; anon fleet RO count skipped (401).
+Live origin still `9a80930a` / Pages `8e64829c` / buildId
+`1789612258815-8yx2tdut` / `capabilityRoutesEnabled` true (ops apply does
+not move Pages). Git docs tip after #149 is `836753fe`. Pulse
+`/workspace/pulse-bulk-off-allowlist-20260922/`. Sentinel **READY** (bulk OFF
+live gate; BLOCKER/HIGH/MEDIUM none; LOWs: SPA bare free-edit deferred,
+first upsert 400 missing `charCount` then 200; evidence
+`/workspace/sentinel-qa-bulk-off-allowlist-20260922/`). This docs attest
+does not deploy origin / Pages / Worker / Edge, does not re-apply SQL, and
+does not re-run bulk RPC / fleet NULL. Worker / Realtime / `writes_enabled`
+still HOLD.
 
 **W2 live (named Pages go of #135/#137/#138/#139 + Go C #145):** canary-on
 plain `/<slug>` is free-edit (no convert-on-write default). Go C LNO-wins pin
@@ -133,8 +162,8 @@ still RO + banner. Canary stays on. SQL 240 already applied; W2 SQL
 `capability_note_plain_upsert` / `capability_note_disable_secure` applied
 live; U1 SQL `capability_note_convert_legacy` applied live; bulk RPC
 `capability_note_bulk_disable_secure` 3-arg `p_slugs` allowlist **applied**
-live (Go SQL Pulse PASS; git tip `46ddaf01` / #148; residual
-`aggadagdade` still managed); Edge
+live (Go SQL Pulse PASS; git tip `46ddaf01` / #148; Go Ops allowlist
+bulk OFF 2→0 Pulse PASS, residual **cleared**, origin still `9a80930a`); Edge
 `plain-upsert` / `disable-secure` / `convert-legacy` published (Pulse
 `umsg_01m21zhm…` for `convert-legacy`). Worker / `writes_enabled` / Realtime
 still HOLD. See [A′ Cutover restore](docs/security/a-prime-cutover-restore.md)

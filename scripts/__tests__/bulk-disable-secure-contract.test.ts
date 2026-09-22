@@ -236,4 +236,26 @@ describe("B1 bulk disable-secure contract", () => {
     expect(runbook).toContain("HOLD");
     expect(runbook).not.toContain("supabase db push");
   });
+
+  it("records Go Ops allowlist bulk OFF 2→0 live PASS without fleet NULL or origin ship", () => {
+    const runbook = source(RUNBOOK);
+    expect(runbook).toContain("Go Ops allowlist bulk OFF");
+    expect(runbook).toContain("2→0");
+    expect(runbook).toContain("ARRAY[aggadagdade,pbhcusvb]");
+    expect(runbook).toContain("pbhcusvb");
+    expect(runbook).toContain("converted=2");
+    expect(runbook).toContain("allowlist_requested=2");
+    expect(runbook).toContain("allowlist_matched_managed=2");
+    expect(runbook).toContain("not fleet");
+    expect(runbook).toContain("Residual **cleared**");
+    expect(runbook).toContain("/workspace/pulse-bulk-off-allowlist-20260922/");
+    expect(runbook).toContain("/workspace/sentinel-qa-bulk-off-allowlist-20260922/");
+    expect(runbook).toContain("836753fe");
+    expect(runbook).toContain("plain-upsert");
+    expect(runbook).toContain("9a80930a");
+    expect(runbook).toContain("does not ship origin");
+    expect(runbook).toContain("Do **not** call NULL/omit fleet");
+    expect(runbook).toContain("allowlist 2 slugs **applied live**");
+    expect(runbook).not.toContain("supabase db push");
+  });
 });

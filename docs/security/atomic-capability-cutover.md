@@ -205,7 +205,9 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    (`converted=6`; post-verify `managed_live=0` + Sentinel spot) is
    **historical**. 3-arg `p_slugs` allowlist **applied live** (Go SQL Pulse
    PASS; git tip `46ddaf01` / #148). Residual `managed_live=1`
-   (`aggadagdade`) still managed — **no bulk OFF**.
+   (`aggadagdade`) still managed — **no bulk OFF** — is **historical**.
+   **Go Ops allowlist bulk OFF** 2→0 Pulse PASS (`aggadagdade`, `pbhcusvb`;
+   converted=2; **not fleet**; residual **cleared**).
    Current live `deployedSha` `9a80930aec5d7c018879bd2a406a35c055477f06`.
    This docs PR does not re-apply SQL, does not run bulk convert, and does not
    deploy origin / Worker / Edge.
