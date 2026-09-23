@@ -34,7 +34,7 @@ const capabilityEdge = readFileSync(resolve(
 ), "utf8");
 
 describe("atomic cutover migration", () => {
-  it("pins documented SQL 240 migration identity at live product SHA 1b172544", () => {
+  it("pins documented SQL 240 migration identity at live product SHA 3b4ea9f9", () => {
     const sha256 = createHash("sha256").update(migration, "utf8").digest("hex");
     const lineCount = migration.endsWith("\n")
       ? migration.slice(0, -1).split("\n").length
@@ -76,6 +76,8 @@ describe("atomic cutover migration", () => {
     expect(contract).toContain("b44849c4");
     expect(contract).toContain("1b172544");
     expect(contract).toContain("5527f154");
+    expect(contract).toContain("3b4ea9f9");
+    expect(contract).toContain("62f641c7");
     expect(contract).toContain("34986611791");
     expect(contract).toContain("W2 is live");
     expect(contract).toContain("HOLD");
@@ -101,6 +103,9 @@ describe("atomic cutover migration", () => {
     expect(preflight).toContain("1b172544");
     expect(preflight).toContain("5527f154");
     expect(preflight).toContain("1790083696998-uk4r5sxu");
+    expect(preflight).toContain("3b4ea9f9");
+    expect(preflight).toContain("62f641c7");
+    expect(preflight).toContain("1790100180966-ukuhpb1q");
     expect(preflight).toContain("A′ live");
     expect(contract).toContain(
       "This is not SQL 240, not Realtime, not soak-complete.",
@@ -110,7 +115,7 @@ describe("atomic cutover migration", () => {
     );
   });
 
-  it("pins bulk disable-secure migration identity as applied live; origin now 1b172544", () => {
+  it("pins bulk disable-secure migration identity as applied live; origin now 3b4ea9f9", () => {
     const bulk = readFileSync(resolve(
       process.cwd(),
       "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql",
@@ -141,12 +146,15 @@ describe("atomic cutover migration", () => {
     expect(contract).toContain("9a80930a");
     expect(contract).toContain("44b02cb3");
     expect(contract).toContain("1b172544");
+    expect(contract).toContain("3b4ea9f9");
     expect(contract).toContain("bd11deed");
     expect(runbook).toContain("0cdcdc0f");
     expect(runbook).toContain("9a80930a");
     expect(runbook).toContain("44b02cb3");
     expect(runbook).toContain("1b172544");
-    expect(findings).toContain("Origin is `1b172544`");
+    expect(runbook).toContain("3b4ea9f9");
+    expect(findings).toContain("Origin is `3b4ea9f9`");
+    expect(findings).not.toContain("Origin is `1b172544`");
     expect(findings).not.toContain("Origin is `44b02cb3`");
     expect(findings).not.toContain("Origin is `9a80930a`");
     expect(findings).not.toContain("Origin is `0cdcdc0f`");
