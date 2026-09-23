@@ -223,7 +223,14 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    inset + update snooze (status-only chip, no MỚI, small heart snooze,
    larger update heart) is live. SW waiting can still serve pre-#153 update
    cluster UI until tip activates.
-   Current live `deployedSha` `1b1725446120ce9dd28bc7fe884c3768e37e435d`.
+   Same-canary origin SHA bump 2026-09-22 (#155):
+   `deployedSha` `3b4ea9f9c1decc39bc5dadf7923e45421b81823d`, still
+   `capabilityRoutesEnabled` true. #155 idle Ko-fi FAB dismiss 24h
+   (`kofi-fab-idle-dismiss-until`; dedicated, not `pwa-fab-snooze`) is live
+   on this line with #153 FAB UX. SW waiting can still serve stale UI until
+   tip activates. LOW: live update-detector may show the update cluster when
+   tip already matches.
+   Current live `deployedSha` `3b4ea9f9c1decc39bc5dadf7923e45421b81823d`.
    This docs PR does not re-apply SQL, does not run bulk convert, and does not
    deploy origin / Worker / Edge.
    This is not soak-complete.

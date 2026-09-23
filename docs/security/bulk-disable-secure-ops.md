@@ -11,7 +11,8 @@ Live production is the 3-arg RPC; the 2-arg overload is **DROP**ped.
 This document is a **docs attestation**. It does **not** re-apply SQL, does
 **not** re-run bulk convert / fleet NULL, and does **not** deploy origin /
 Pages / Worker / Edge. Worker / Realtime / `writes_enabled` still HOLD. Live
-SPA origin is `1b172544` / Pages `5527f154` (#153). Historical pin at #151
+SPA origin is `3b4ea9f9` / Pages `62f641c7` (#155). Historical pin at #153
+was `1b172544` / Pages `5527f154`. Historical pin at #151
 was `44b02cb3` / Pages `b44849c4`. Historical pin at Go C /
 Go SQL / Go Ops attests was `9a80930a` / Pages `8e64829c` (SQL/ops apply does not move
 Pages). Git docs tip after #149 is `836753fe` (docs tip at the Go Ops attest).
@@ -26,7 +27,7 @@ Git tip when applied: `46ddaf01` (#148 squash
 `46ddaf012bea1d01a6235e2be7e9132555d6cd84`). At that attest, live SPA origin remained
 `9a80930a` / Pages `8e64829c` (SQL/ops apply does not ship origin). Git docs
 tip after #149 (`836753fe`) may advance; live SPA later moved to `44b02cb3`,
-then `1b172544`.
+then `1b172544`, then `3b4ea9f9`.
 
 Historical 2-arg (Go A, superseded live): `public.capability_note_bulk_disable_secure(p_limit int, p_include_encrypted bool default false)`  
 Historical migration: `supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql`  
@@ -34,7 +35,8 @@ SHA-256: `a5d6623fda2ca811388396f7945ab19a305a95c84d423dc206d168f4425ab850`
 Git tip when applied: `bd11deed` (#142 lineage; tip also includes #143
 `pwa-update-smoke` harden). At that attest, live SPA origin was still
 `0cdcdc0f` / Pages `1b9ed3d1` (bulk OFF is SQL/ops, not a SPA ship). Current
-live origin is `1b172544` / Pages `5527f154`. Historical #151 pin was
+live origin is `3b4ea9f9` / Pages `62f641c7`. Historical #153 pin was
+`1b172544` / Pages `5527f154`. Historical #151 pin was
 `44b02cb3` / Pages `b44849c4`. Historical Go C pin was
 `9a80930a` / Pages `8e64829c`. Git docs tip may advance.
 
