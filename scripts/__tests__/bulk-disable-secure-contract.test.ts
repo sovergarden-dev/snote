@@ -93,6 +93,8 @@ describe("B1 bulk disable-secure contract", () => {
     expect(runbook).toContain("5527f154");
     expect(runbook).toContain("3b4ea9f9");
     expect(runbook).toContain("62f641c7");
+    expect(runbook).toContain("610662a9");
+    expect(runbook).toContain("33667a6a");
     expect(runbook).toContain("bd11deed");
     expect(runbook).toContain(
       "a5d6623fda2ca811388396f7945ab19a305a95c84d423dc206d168f4425ab850",
@@ -232,6 +234,8 @@ describe("B1 bulk disable-secure contract", () => {
     expect(runbook).toContain("5527f154");
     expect(runbook).toContain("3b4ea9f9");
     expect(runbook).toContain("62f641c7");
+    expect(runbook).toContain("610662a9");
+    expect(runbook).toContain("33667a6a");
     expect(runbook).toContain("does not move Pages");
     expect(runbook).toMatch(/NULL\/omit = fleet-wide/);
     expect(runbook).toMatch(/`\{\}` \/ cardinality 0 = \*\*no-op\*\*/);
@@ -271,6 +275,8 @@ describe("B1 bulk disable-secure contract", () => {
     expect(runbook).toContain("5527f154");
     expect(runbook).toContain("3b4ea9f9");
     expect(runbook).toContain("62f641c7");
+    expect(runbook).toContain("610662a9");
+    expect(runbook).toContain("33667a6a");
     expect(runbook).toContain("does not ship origin");
     expect(runbook).toContain("Do **not** call NULL/omit fleet");
     expect(runbook).toContain("allowlist 2 slugs **applied live**");

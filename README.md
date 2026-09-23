@@ -9,6 +9,7 @@ Production: [note.syrin.online](https://note.syrin.online/)
 #151 create-bare + encrypt≠owner + Legacy/Encrypt mutex UI;
 #153 Ko-fi FAB equal `bottom-4`/`right-4` inset + update snooze heart;
 #155 idle Ko-fi FAB dismiss 24h (`kofi-fab-idle-dismiss-until`);
+#157 polish Copy for AI — no slug header, selection copy, deep clean;
 prior #130/#131 W1 convert-on-write as product default is **superseded**)
 canary-on `CutoverNotePage` → editable `NotePage` for plain `/<slug>` and
 SplitView panes (no forced convert, no `#owner=` required to edit; Phase C
@@ -17,7 +18,10 @@ still on this line; Ko-fi + New Version FAB still on this line (#153 equal
 inset + status-only update chip, no MỚI, small heart snooze, larger update
 heart; #155 idle click opens `https://ko-fi.com/sovergarden` and writes
 localStorage `kofi-fab-idle-dismiss-until` = now+24h; PageIndicator offsets
-only while idle or update FAB mounted); FAB-primary
+only while idle or update FAB mounted); Copy cho AI copies cleaned markdown
+only (no `# Note:/slug` header; selection-aware from the note editor; deep
+clean; Pixel `export.ai` / `export.ai_tooltip`; token soft-warn and locked
+disable remain OUT); FAB-primary
 + Sonner suppress (#113/#116) still on this line; Choice A (#118)
 editable-plain default remains **superseded** on this line; PWA latch (#119)
 one hard-reload per Update apply still on this line; Pixel Legacy opt-in
@@ -29,8 +33,8 @@ Encrypt stays active on the owner path (#123); A′ (#126) RO default is
 **superseded**; Duplicate securely (#128) remains enabled on Legacy RO only
 (Edge `note-session` `import-legacy`); W2 + A3 + Go C (#145 LNO-wins) remain
 on this line; #151 create-bare remains on this line; #153 FAB UX remains on
-this line; #155 live on origin `3b4ea9f9`;
-Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e / §3k / §3l / §3m): `capabilityRoutesEnabled` true. Plain slug URLs persist via Edge
+this line; #155 remains on this line; #157 live on origin `610662a9`;
+Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e / §3k / §3l / §3m / §3n): `capabilityRoutesEnabled` true. Plain slug URLs persist via Edge
 `plain-upsert` (free-edit for anyone with the link). Home create always uses
 bare `seedAndOpen` (no default mint / no `#owner=`). Prior Home mint
 (fail-closed on idle; create → `/<slug>#owner=`) is **superseded** as default.
@@ -110,26 +114,42 @@ equal `bottom-4`/`right-4` inset PASS; update cluster PASS: status-only
 «Có update mới», no MỚI badge, small heart snooze + strike, larger update
 heart; after hard-activate tip). Known risk then: SW waiting can still serve
 pre-#153 update cluster UI until tip activates (Pulse digests matched tip;
-not a miss-ship). Current live origin `3b4ea9f9` / Pages `62f641c7`: Syringa
-named #155 Origin SPA ship to Cloudflare Pages `snote-g4-origin` /
-note.syrin.online (canary ON). Independent Sentinel `version.json`:
-`deployedSha` `3b4ea9f9c1decc39bc5dadf7923e45421b81823d`,
+not a miss-ship). Prior live origin `3b4ea9f9` / Pages `62f641c7` (#156 attest):
+Syringa named #155 Origin SPA ship to Cloudflare Pages `snote-g4-origin` /
+note.syrin.online (canary ON). Independent Sentinel `version.json` at that
+attest: `deployedSha` `3b4ea9f9c1decc39bc5dadf7923e45421b81823d`,
 `capabilityRoutesEnabled` true, `buildId` `1790100180966-ukuhpb1q`,
 `builtAt` `2026-09-22T18:03:22.407Z` (Pages preview `62f641c7`; full UUID not
-supplied — not invented). Git tip of the shipped SPA is #155 `3b4ea9f9`.
-Sentinel + Pixel **READY WITH KNOWN RISKS** (idle click opens
+supplied — not invented). Git tip of the shipped SPA was #155 `3b4ea9f9`.
+Sentinel + Pixel **READY WITH KNOWN RISKS** at that attest (idle click opens
 `https://ko-fi.com/sovergarden` + writes dedicated localStorage
 `kofi-fab-idle-dismiss-until` = now+24h PASS; reload persistence PASS;
 corrupt/missing key shows idle PASS; #153 update cluster still wins dismiss
 PASS: «Có update mới» / «Update available», no MỚI, snooze heart + strike,
 larger apply heart; after update snooze idle stays hidden while dismiss
 window active PASS; PageIndicator offsets only while idle or update FAB
-mounted). #153 FAB UX remains live on this line. LOW: live update-detector
+mounted). #153 FAB UX remains on this line. LOW then: live update-detector
 sometimes shows the update cluster when tip already matches (does not block
 dismiss; do not claim a perfect idle baseline without hard-activate / mock
-clear). Known risk: SW waiting can still serve stale UI until tip activates
+clear). Known risk then: SW waiting can still serve stale UI until tip activates
 (same class as #153; hard-activate unregister SW + clear caches was used in
-smoke). Edge XOR 409 **NOT VERIFIED** (still PARKED / not deployed). Walls HOLD:
+smoke). Current live origin `610662a9` / Pages `33667a6a`: Atlas named
+#157 Origin SPA ship to Cloudflare Pages `snote-g4-origin` /
+note.syrin.online (canary ON). Independent Sentinel `version.json`:
+`deployedSha` `610662a998541c06ee99288b666af52dcee05ad8`,
+`capabilityRoutesEnabled` true, `buildId` `1790148079761-vf6vjb0l`,
+`builtAt` `2026-09-23T07:21:42.226Z` (Pages preview `33667a6a`; full UUID not
+supplied — not invented). Git tip of the shipped SPA is #157 `610662a9`.
+Sentinel **READY WITH KNOWN RISKS** live; Pixel **READY** live. Pulse ship
+PASS (Pages `snote-g4-origin`; PWA update smoke PASS run 35831181399).
+PASSED: tip latch `610662a9`; full Copy cho AI — no `# Note:/slug`; deep
+clean (ZW strip, fence auto-close, HTML comment strip); selection path +
+selection toast; cleared/whitespace selection → full path; empty note toast
+EN+VI; no junk clipboard overwrite; label + tooltip VI+EN. Token soft-warn
+and locked disable remain OUT. LOW: stale client tab needs «Reload to update»
+until in-app reload (ops; Pulse PWA smoke already PASS; not a product AC miss).
+#155 idle dismiss and #153 FAB UX remain live on this line. Edge XOR 409
+**NOT VERIFIED** (still PARKED / not deployed). Walls HOLD:
 Worker / Realtime / SQL / `writes_enabled`. This docs attest does not deploy
 origin / Pages / Worker / Edge and does not apply SQL. Not soak-complete.
 
@@ -211,13 +231,15 @@ does not deploy origin / Pages / Worker / Edge, does not re-apply SQL, and
 does not re-run bulk RPC / fleet NULL. Worker / Realtime / `writes_enabled`
 still HOLD.
 
-**W2 live (named Pages go of #135/#137/#138/#139 + Go C #145 + #151 + #153 + #155):** canary-on
+**W2 live (named Pages go of #135/#137/#138/#139 + Go C #145 + #151 + #153 + #155 + #157):** canary-on
 plain `/<slug>` is free-edit (no convert-on-write default). Go C LNO-wins pin
 heal remains on this line (shipped on prior origin `9a80930a`). #151 create-bare
 + encrypt≠owner + Legacy/Encrypt mutex UI remains on this line (prior origin
 `44b02cb3` / Pages `b44849c4`). #153 Ko-fi FAB equal inset + update snooze
 remains on this line (prior origin `1b172544` / Pages `5527f154`). #155 idle
-Ko-fi FAB dismiss 24h is live on origin `3b4ea9f9` / Pages `62f641c7`. W1 convert-on-write as product
+Ko-fi FAB dismiss 24h remains on this line (prior origin `3b4ea9f9` / Pages
+`62f641c7`). #157 polish Copy for AI is live on origin `610662a9` / Pages
+`33667a6a`. W1 convert-on-write as product
 default is **superseded**. A′ (#126) Cutover/LNO RO default is
 **superseded**. `#owner=`/`#edit=` still render `NotePage`. `?legacyRo=1`
 still RO + banner. Canary stays on. SQL 240 already applied; W2 SQL
