@@ -233,10 +233,17 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    Same-canary origin SHA bump 2026-09-23 (#157):
    `deployedSha` `610662a998541c06ee99288b666af52dcee05ad8`, still
    `capabilityRoutesEnabled` true. #157 polish Copy for AI (no slug header,
-   selection copy, deep clean, Pixel `export.ai` / `export.ai_tooltip`) is
-   live. Token soft-warn and locked disable remain OUT. LOW: stale client tab
-   may need «Reload to update» until in-app reload.
-   Current live `deployedSha` `610662a998541c06ee99288b666af52dcee05ad8`.
+   selection copy, deep clean, Pixel `export.ai` / `export.ai_tooltip`) remains
+   on this line. Token soft-warn and locked disable remain OUT. LOW then: stale
+   client tab may need «Reload to update» until in-app reload.
+   Same-canary origin SHA bump 2026-09-23 (#159):
+   `deployedSha` `08c25172036610a2cdca3cd6af0cbefefc654d16`, still
+   `capabilityRoutesEnabled` true. #159 custom selection-match
+   `maxSelectionLength=4000` (L>4000 hard off) + nested-overflow scroll feel
+   (typewriter OFF; ~24px breathing + typewriter 45vh retained; no scroll
+   hijack / no `transform`+`will-change` on scroller) is live. SW stale-tab /
+   async-settle can still serve pre-tip UI until hard-activate.
+   Current live `deployedSha` `08c25172036610a2cdca3cd6af0cbefefc654d16`.
    This docs PR does not re-apply SQL, does not run bulk convert, and does not
    deploy origin / Worker / Edge.
    This is not soak-complete.

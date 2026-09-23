@@ -15,7 +15,7 @@ throw `capability API unavailable` without fetching, and default Auth
 minting stays off. Ordinary Vite builds follow `.env.example`
 (`VITE_CAPABILITY_ROUTES_ENABLED=false`) and attest
 `capabilityRoutesEnabled: false`. Live production `build:release` attests
-`capabilityRoutesEnabled: true` (findings §3e / §3k / §3l / §3m / §3n; live origin `610662a9`).
+`capabilityRoutesEnabled: true` (findings §3e / §3k / §3l / §3m / §3n / §3o; live origin `08c25172`).
 Prior origin `1b172544` shipped #153 Ko-fi FAB. Prior origin `44b02cb3` shipped #151 create-bare. Prior origin `9a80930a` shipped Go C LNO-wins (#145). Prior origin `0cdcdc0f` shipped W2 free-edit + Legacy opt-in (#135/#137/#138/#139; prior
 #130/#131 W1 convert-on-write as product default is **superseded**): canary-on
 plain `/slug` mounts `CutoverNotePage` → editable `NotePage` (free-edit; no
@@ -46,7 +46,11 @@ status-only, no MỚI, small heart snooze, larger update heart; #155 idle click
 opens `https://ko-fi.com/sovergarden` and writes dedicated localStorage
 `kofi-fab-idle-dismiss-until` = now+24h). Copy cho AI copies cleaned markdown
 only (no `# Note:/slug` header; selection-aware; deep clean; Pixel `export.ai`
-/ `export.ai_tooltip`; token soft-warn and locked disable remain OUT). FAB-primary + Sonner suppress (#113/#116) is live.
+/ `export.ai_tooltip`; token soft-warn and locked disable remain OUT). Custom
+selection-match `maxSelectionLength=4000` (L>4000 hard off) and typewriter-OFF
+nested-overflow scroll fix (`overflow-hidden` + `min-h-0`; ~24px breathing +
+typewriter 45vh retained; no scroll hijack / no `transform`+`will-change` on
+scroller) are live. FAB-primary + Sonner suppress (#113/#116) is live.
 Choice A (#118) is superseded. PWA latch (#119) is live. Pixel Legacy opt-in
 (#122) is live as `?legacyRo=1` / Legacy Advanced. A′ (#126) RO default is
 superseded. Duplicate securely (#128) is enabled on Legacy RO only. Encrypt
@@ -80,7 +84,7 @@ U1 SQL `capability_note_convert_legacy` applied live; previously published Edge
 (`invalid_state` 409) is **in-repo only / not deployed live**. Worker /
 `writes_enabled` / Realtime still HOLD.
 SQL `capability_note_bulk_disable_secure` is **applied** live (Go A+B Pulse
-PASS; git tip `bd11deed` / #142). Live origin is `610662a9` (#157). Prior origin `3b4ea9f9` was the #155 pin. Prior origin `1b172544` was the #153 pin. Prior origin `44b02cb3` was the #151 pin. Go C pin
+PASS; git tip `bd11deed` / #142). Live origin is `08c25172` (#159). Prior origin `610662a9` was the #157 pin. Prior origin `3b4ea9f9` was the #155 pin. Prior origin `1b172544` was the #153 pin. Prior origin `44b02cb3` was the #151 pin. Go C pin
 heal **shipped** live (#145 LNO-wins on prior origin `9a80930a`): stale `snote:legacy-secure:*` no longer
 latches unmanaged bare RO. Historical bulk OFF `managed_live` 26→0 is not a
 claim the fleet stayed 0 (`managed_live=3` at Go C live; later preflight 6).
@@ -100,8 +104,8 @@ When that canary is on, Home create always uses bare `seedAndOpen` /
 `POST note-session` `{action:"create"}` on create or Random. See
 [ADR-001](adr/001-home-capability-mint-before-sql-240.md) for the historical
 mint-before-240 decision. That Home mint path is **superseded** as default.
-This Home create path is live on origin `610662a9` (canary on; always bare
-`seedAndOpen`; findings §3e / §3k / §3l / §3m / §3n). Prior Home mint (fail-closed idle;
+This Home create path is live on origin `08c25172` (canary on; always bare
+`seedAndOpen`; findings §3e / §3k / §3l / §3m / §3n / §3o). Prior Home mint (fail-closed idle;
 create → `#owner=`) is **superseded** as default.
 It is not SQL 240. Recents and
 pins store only the slug, never the owner token. Losing the fragment
