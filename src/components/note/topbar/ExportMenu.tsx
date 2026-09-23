@@ -1,4 +1,4 @@
-// Export dropdown: copy URL, download as .md/.html/.pdf/.txt, copy as AI context, copy raw markdown URL.
+// Export dropdown: copy URL, download as .md/.html/.pdf/.txt, copy cleaned markdown for AI, copy raw markdown URL.
 import { ChevronDown, Copy, Download, FileCode, FileType, Sparkles, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { exportMarkdown, exportPlainText, exportHtml, exportPdf } from "@/lib/export";
-import { formatForAI, approxTokens } from "@/lib/ai-format";
+import { approxTokens, cleanForAI, resolveAiCopySource } from "@/lib/ai-format";
 import { toast } from "@/hooks/use-toast";
 import { useI18n } from "@/i18n";
 import { CANONICAL_ORIGIN } from "@/lib/capability/url";
@@ -17,10 +17,17 @@ import { CANONICAL_ORIGIN } from "@/lib/capability/url";
 interface ExportMenuProps {
   slug: string;
   getContent: () => string;
+  /** CodeMirror selection from the note editor only. Chrome/preview selection is ignored. */
+  getEditorSelection?: () => string;
   isEncrypted: boolean;
 }
 
-export function ExportMenu({ slug, getContent, isEncrypted }: ExportMenuProps) {
+export function ExportMenu({
+  slug,
+  getContent,
+  getEditorSelection,
+  isEncrypted,
+}: ExportMenuProps) {
   const { t } = useI18n();
 
   const copyNoteUrl = async () => {
@@ -29,15 +36,18 @@ export function ExportMenu({ slug, getContent, isEncrypted }: ExportMenuProps) {
   };
 
   const copyAsAI = async () => {
-    const text = getContent();
+    const { text, fromSelection } = resolveAiCopySource(
+      getEditorSelection?.() ?? "",
+      getContent(),
+    );
     if (!text) {
       toast({ title: t("toast.note_empty") });
       return;
     }
-    const formatted = formatForAI(slug, text);
+    const formatted = cleanForAI(text);
     await navigator.clipboard.writeText(formatted);
     toast({
-      title: t("toast.copied_ai"),
+      title: fromSelection ? t("toast.copied_ai_selection") : t("toast.copied_ai"),
       description: t("toast.copied_ai_desc", { n: approxTokens(formatted) }),
     });
   };
@@ -74,7 +84,7 @@ export function ExportMenu({ slug, getContent, isEncrypted }: ExportMenuProps) {
           <Download className="h-3.5 w-3.5" /> {t("export.txt")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={copyAsAI}>
+        <DropdownMenuItem onClick={copyAsAI} title={t("export.ai_tooltip")}>
           <Sparkles className="h-3.5 w-3.5" /> {t("export.ai")}
         </DropdownMenuItem>
         <DropdownMenuItem

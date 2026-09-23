@@ -1178,6 +1178,7 @@ export default function NotePage({
   const legacyContainment = legacyOnly || !capabilityAccess;
   const allowEncryptionTransitions = !legacyOnly && !isManaged;
   const getContent = () => doc.getText("content").toString();
+  const getEditorSelection = () => editorRef.current?.getSelectedText() ?? "";
   const legacyEncryptionSecret = legacyContainment ? readEncryptionSecret(location.hash) : "";
   const currentShareUrl = legacyContainment && typeof window !== "undefined"
     ? `${window.location.origin}/${slug}${
@@ -1224,6 +1225,7 @@ export default function NotePage({
           focusLine={focusLine}
           onToggleFocusLine={toggleFocusLine}
           getContent={() => doc.getText("content").toString()}
+          getEditorSelection={getEditorSelection}
           isEncrypted={encMeta.isEncrypted}
           encryption={encryption}
           capabilityAccess={capabilityAccess}
@@ -1249,6 +1251,7 @@ export default function NotePage({
           {showEditorPane && (
             <div className="flex-1 min-h-0 min-w-0">
               <Editor
+                ref={editorRef}
                 doc={doc}
                 awareness={provider.awareness}
                 className="h-full overflow-auto"
@@ -1311,6 +1314,7 @@ export default function NotePage({
         focusLine={focusLine}
         onToggleFocusLine={toggleFocusLine}
         getContent={getContent}
+        getEditorSelection={getEditorSelection}
         isEncrypted={encMeta.isEncrypted}
         encryption={encryption}
         capabilityAccess={capabilityAccess}
