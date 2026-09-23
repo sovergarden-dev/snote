@@ -226,11 +226,17 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    Same-canary origin SHA bump 2026-09-22 (#155):
    `deployedSha` `3b4ea9f9c1decc39bc5dadf7923e45421b81823d`, still
    `capabilityRoutesEnabled` true. #155 idle Ko-fi FAB dismiss 24h
-   (`kofi-fab-idle-dismiss-until`; dedicated, not `pwa-fab-snooze`) is live
+   (`kofi-fab-idle-dismiss-until`; dedicated, not `pwa-fab-snooze`) remains
    on this line with #153 FAB UX. SW waiting can still serve stale UI until
    tip activates. LOW: live update-detector may show the update cluster when
    tip already matches.
-   Current live `deployedSha` `3b4ea9f9c1decc39bc5dadf7923e45421b81823d`.
+   Same-canary origin SHA bump 2026-09-23 (#157):
+   `deployedSha` `610662a998541c06ee99288b666af52dcee05ad8`, still
+   `capabilityRoutesEnabled` true. #157 polish Copy for AI (no slug header,
+   selection copy, deep clean, Pixel `export.ai` / `export.ai_tooltip`) is
+   live. Token soft-warn and locked disable remain OUT. LOW: stale client tab
+   may need «Reload to update» until in-app reload.
+   Current live `deployedSha` `610662a998541c06ee99288b666af52dcee05ad8`.
    This docs PR does not re-apply SQL, does not run bulk convert, and does not
    deploy origin / Worker / Edge.
    This is not soak-complete.
