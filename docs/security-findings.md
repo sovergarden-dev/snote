@@ -1598,7 +1598,7 @@ Sentinel live smoke `version.json`: `deployedSha`
 Pages production deployment id `5527f154` (full UUID not supplied in this
 attest; Pulse clean-rebuild) replaces previous live origin `44b02cb3` /
 Pages `b44849c4`. Earlier same-SHA first deploy was Pages `66a0df1a` /
-buildId `1790082984868-xjuz78gh` — this attest pins the **current** live
+buildId `1790082984868-xjuz78gh` — that attest pinned the then-current live
 buildId. Sentinel + Pixel **READY WITH KNOWN RISKS** (2026-09-22 ICT): idle
 FAB inset PASS; update cluster PASS after hard-activate tip. Known risk:
 SW waiting can still serve pre-#153 update cluster UI until tip activates

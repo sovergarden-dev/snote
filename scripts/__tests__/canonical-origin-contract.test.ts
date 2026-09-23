@@ -2358,13 +2358,13 @@ describe("canonical production origin", () => {
     expect(readme).toContain("bottom-4");
     expect(readme).toContain("right-4");
     expect(readme).toContain("Có update mới");
-    expect(readme).toContain("MỚI");
+    expect(readme).toContain("no MỚI");
     expect(readme).toContain("PageIndicator");
     expect(readme).toContain("SW waiting");
     expect(readme).toContain("update-detector");
     expect(readme).toContain("does not deploy origin");
     expect(readme).toContain("READY WITH KNOWN RISKS");
-    expect(readme).toContain("capabilityRoutesEnabled");
+    expect(readme).toContain("`capabilityRoutesEnabled` true");
 
     expect(findings).toContain(
       "## 3m. Production #155 Origin SPA — verified; origin 3b4ea9f9; Edge XOR not shipped",
@@ -2381,7 +2381,7 @@ describe("canonical production origin", () => {
     expect(findings).toContain("dedicated");
     expect(findings).toContain("pwa-fab-snooze");
     expect(findings).toContain("Có update mới");
-    expect(findings).toContain("MỚI");
+    expect(findings).toContain("no MỚI");
     expect(findings).toContain("PageIndicator");
     expect(findings).toContain("--snote-fab-primary-disk");
     expect(findings).toContain("update-detector");
@@ -2396,6 +2396,7 @@ describe("canonical production origin", () => {
     expect(findings).toContain("READY WITH KNOWN RISKS");
     expect(findings).toContain("note-session");
     expect(findings).toContain("note-manage");
+    expect(findings).toContain("`capabilityRoutesEnabled` true");
 
     expect(client).toContain("This Home create path is live on origin `3b4ea9f9`");
     expect(client).toContain("kofi-fab-idle-dismiss-until");
