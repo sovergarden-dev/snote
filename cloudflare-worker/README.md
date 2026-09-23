@@ -9,7 +9,7 @@ Source Worker trong thư mục này khớp với Worker production `syrin-preren
 `5f94ab6c-fde5-4416-a3aa-74daaa2e6094` (PR #89, 2026-09-03).
 Committed `wrangler.toml` khớp production ở observability/logs
 (`enabled = true`, `invocation_logs = true`); traces và `workers_dev` vẫn tắt.
-Origin SPA hiện là `610662a9` (xem §3e / §3k / §3l / §3m / §3n); bulk Legacy OFF
+Origin SPA hiện là `08c25172` (xem §3e / §3k / §3l / §3m / §3n / §3o); bulk Legacy OFF
 (`capability_note_bulk_disable_secure`, historical Go C HOLD at #144 on
 `0cdcdc0f`) không đổi origin at apply time; Go C #145 later shipped on `9a80930a`;
 re-bulk OFF ALL 6 (2026-09-22) không đổi origin (vẫn `9a80930a` at that attest);
@@ -21,6 +21,7 @@ Go Ops allowlist bulk OFF 2→0 (2026-09-22; `aggadagdade`, `pbhcusvb`) không �
 #153 Origin SPA later shipped on `1b172544` / Pages `5527f154`;
 #155 Origin SPA later shipped on `3b4ea9f9` / Pages `62f641c7`;
 #157 Origin SPA later shipped on `610662a9` / Pages `33667a6a`;
+#159 Origin SPA later shipped on `08c25172` / Pages `1db84523`;
 Worker identity HOLD; không được coi origin là `931430c0`.
 Observability và invocation logs đã live trên production, không chỉ committed.
 Việc ghi nhận identity này không cho phép một deployment mới.
