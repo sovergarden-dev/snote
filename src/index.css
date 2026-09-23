@@ -255,10 +255,15 @@
    `transform`/`will-change` combo promoted the scroller to its own layer in
    a way that swallowed wheel/trackpad delta on some setups — the user could
    not scroll at all. Native `overflow: auto` on `.cm-scroller` is already
-   compositor-friendly; we only add non-invasive hints. */
+   compositor-friendly; we only add non-invasive hints.
+
+   Typewriter-OFF edge “hãm” was nested overflow, not this contain rule: the
+   Editor host used `overflow-auto` and the preview-off pane omitted `min-h-0`,
+   so leftover wheel delta at `.cm-scroller` start/end rubber-banded a second
+   scroller. Host now clips (`overflow-hidden` + `min-h-0`); keep contain. */
 @layer utilities {
   .cm-scroller {
-    /* Stop scroll chaining to the page without changing wheel behavior. */
+    /* Stop scroll chaining to the page. Not the rubber-band root cause. */
     overscroll-behavior: contain;
     /* iOS momentum scroll; harmless elsewhere. */
     -webkit-overflow-scrolling: touch;

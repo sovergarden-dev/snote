@@ -1254,7 +1254,7 @@ export default function NotePage({
                 ref={editorRef}
                 doc={doc}
                 awareness={provider.awareness}
-                className="h-full overflow-auto"
+                className="h-full min-h-0 overflow-hidden"
                 onScrollEl={setEditorScrollEl}
                 vim={vim}
                 editable={!writeFenced}
@@ -1351,13 +1351,13 @@ export default function NotePage({
           }
         >
           {showEditorPane && (
-            <div className={showPreviewPane && !narrow ? "flex-1 min-h-0 min-w-0" : "flex-1 min-w-0"}>
+            <div className="flex-1 min-h-0 min-w-0">
               <Editor
                 ref={editorRef}
                 doc={doc}
                 awareness={provider.awareness}
                 editable={!writeFenced}
-                className="h-full overflow-auto"
+                className="h-full min-h-0 overflow-hidden"
                 onScrollEl={setEditorScrollEl}
                 vim={vim}
               />

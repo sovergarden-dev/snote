@@ -22,7 +22,7 @@ import { EditorView, keymap, highlightActiveLine, drawSelection } from "@codemir
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
 import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from "@codemirror/language";
-import { findNext, findPrevious, searchKeymap, highlightSelectionMatches } from "@codemirror/search";
+import { findNext, findPrevious, searchKeymap } from "@codemirror/search";
 import { editorSearch, openReplacePanel, toggleFindPanel } from "@/components/note/search-panel";
 import { completionKeymap } from "@codemirror/autocomplete";
 import { yCollab } from "y-codemirror.next";
@@ -34,6 +34,7 @@ import { pasteMarkdown } from "@/lib/paste-markdown";
 import { tableNav } from "@/lib/table-nav";
 import { typewriterMode } from "@/lib/typewriter";
 import { wikiLink } from "@/lib/wiki-link";
+import { highlightSelectionMatches } from "@/lib/selection-match";
 
 interface EditorProps {
   doc: Y.Doc;
