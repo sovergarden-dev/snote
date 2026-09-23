@@ -164,6 +164,7 @@ describe("Export menu — localized trigger + dict coverage", () => {
     "export.pdf",
     "export.txt",
     "export.ai",
+    "export.ai_tooltip",
     "export.raw",
     "export.raw_tooltip",
   ] as const;

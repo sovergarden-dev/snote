@@ -53,6 +53,7 @@ interface TopbarProps {
   focusLine: boolean;
   onToggleFocusLine: () => void;
   getContent: () => string;
+  getEditorSelection?: () => string;
   isEncrypted: boolean;
   encryption?: Encryption | null;
   capabilityAccess?: CapabilityAccess | null;
@@ -95,6 +96,7 @@ export function Topbar({
   focusLine,
   onToggleFocusLine,
   getContent,
+  getEditorSelection,
   isEncrypted,
   encryption = null,
   capabilityAccess = null,
@@ -251,7 +253,12 @@ export function Topbar({
                   onTogglePagination={onTogglePagination}
                 />
               )}
-              <ExportMenu slug={slug} getContent={getContent} isEncrypted={isEncrypted} />
+              <ExportMenu
+                slug={slug}
+                getContent={getContent}
+                getEditorSelection={getEditorSelection}
+                isEncrypted={isEncrypted}
+              />
               {!compact && <HelpMenu onOpenShortcuts={() => setShortcutsOpen(true)} />}
             </div>
           </div>
@@ -334,7 +341,12 @@ export function Topbar({
               />
             )}
 
-            <ExportMenu slug={slug} getContent={getContent} isEncrypted={isEncrypted} />
+            <ExportMenu
+              slug={slug}
+              getContent={getContent}
+              getEditorSelection={getEditorSelection}
+              isEncrypted={isEncrypted}
+            />
 
             {!compact && (
               <>

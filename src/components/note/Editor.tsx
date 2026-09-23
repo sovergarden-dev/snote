@@ -53,6 +53,8 @@ interface EditorProps {
 export interface EditorHandle {
   /** Scroll to a 0-indexed line and place the cursor there. */
   jumpToLine: (line: number) => void;
+  /** Current CodeMirror selection; empty when the caret is collapsed. */
+  getSelectedText: () => string;
 }
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
@@ -82,6 +84,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           effects: EditorView.scrollIntoView(linePos.from, { y: "start", yMargin: 16 }),
         });
         view.focus();
+      },
+      getSelectedText: () => {
+        const view = viewRef.current;
+        if (!view) return "";
+        const { from, to } = view.state.selection.main;
+        if (from === to) return "";
+        return view.state.sliceDoc(from, to);
       },
     }),
     [],
