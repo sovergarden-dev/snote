@@ -5,7 +5,10 @@
 /** Zero-width / invisible characters stripped from an AI copy slice. */
 export const ZERO_WIDTH_CHARS = ["\u200B", "\u200C", "\u200D", "\uFEFF", "\u2060"] as const;
 
-const ZERO_WIDTH_RE = /[\u200B\u200C\u200D\uFEFF\u2060]/g;
+// Alternation, not a `[]` class: ZWNJ (U+200C) + ZWJ (U+200D) adjacent in a
+// class trips `no-misleading-character-class` even though each code point is
+// a separate alternative.
+const ZERO_WIDTH_RE = new RegExp(ZERO_WIDTH_CHARS.join("|"), "g");
 
 export function resolveAiCopySource(
   selection: string | undefined,
