@@ -23,6 +23,7 @@ export class LocalConvertProvider implements YjsProviderLike {
 
   private pendingBytes = 1;
   private destroyed = false;
+  private connectWork: Promise<void> | null = null;
   private persistEnabled = false;
   private persistArmed = false;
   private encryption: Encryption | null = null;
@@ -71,6 +72,16 @@ export class LocalConvertProvider implements YjsProviderLike {
   }
 
   async connect(
+    identity: { name: string; color: string },
+    options?: { prefetchedYdocState?: string | null; rowExists?: boolean },
+  ) {
+    if (this.destroyed) return;
+    if (this.connectWork) return this.connectWork;
+    this.connectWork = this.connectOnce(identity, options);
+    return this.connectWork;
+  }
+
+  private async connectOnce(
     identity: { name: string; color: string },
     options?: { prefetchedYdocState?: string | null; rowExists?: boolean },
   ) {

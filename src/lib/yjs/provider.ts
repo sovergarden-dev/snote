@@ -260,6 +260,7 @@ export class SupabaseYjsProvider {
   private clientId = Math.floor(Math.random() * 0xffffffff);
   private destroyed = false;
   private destroyPromise: Promise<void> | null = null;
+  private connectWork: Promise<void> | null = null;
   private abandoned = false;
   // Bytes of local updates that have not yet been durably saved to Postgres.
   // Reset to 0 after each successful `saveSnapshot`. Read via
@@ -423,8 +424,21 @@ export class SupabaseYjsProvider {
    * Connect with an optional pre-fetched snapshot. When the caller already
    * has the `ydoc_state` (e.g. from a single combined query in NotePage), we
    * skip the extra round-trip.
+   *
+   * Re-entry while connecting or already connected is a no-op (F1): a second
+   * pane or remount must not open another Realtime channel or Awareness self.
    */
   async connect(
+    identity: { name: string; color: string },
+    options?: { prefetchedYdocState?: string | null; rowExists?: boolean },
+  ) {
+    if (this.destroyed || this.isAbandoned()) return;
+    if (this.connectWork) return this.connectWork;
+    this.connectWork = this.connectOnce(identity, options);
+    return this.connectWork;
+  }
+
+  private async connectOnce(
     identity: { name: string; color: string },
     options?: { prefetchedYdocState?: string | null; rowExists?: boolean },
   ) {

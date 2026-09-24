@@ -14,6 +14,7 @@ const upsertCalls: Array<Record<string, unknown>> = [];
 type BroadcastHandler = (message: { payload: unknown }) => void | Promise<void>;
 type OutboundBroadcast = { event?: string; payload?: unknown; type?: string };
 const broadcastHandlers = new Map<string, BroadcastHandler>();
+const channelCreates: object[] = [];
 const channelSendMock = vi.fn<(message: OutboundBroadcast) => Promise<void>>(async () => {});
 
 vi.mock("@/integrations/supabase/client", () => ({
@@ -42,6 +43,7 @@ vi.mock("@/integrations/supabase/client", () => ({
         send: channelSendMock,
         unsubscribe: () => Promise.resolve(),
       };
+      channelCreates.push(channel);
       return channel;
     },
     removeChannel: () => {},
@@ -51,6 +53,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 // Polyfill rAF for jsdom — flush on next microtask tick.
 beforeEach(() => {
   broadcastHandlers.clear();
+  channelCreates.length = 0;
   channelSendMock.mockClear();
   localStorage.clear();
   globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
@@ -354,6 +357,51 @@ describe("SupabaseYjsProvider — Phase 2.5 broadcast batching", () => {
     // No additional rAF flush since queue is empty.
     await new Promise((r) => setTimeout(r, 5));
     expect(provider.getBroadcastCount()).toBe(2);
+  });
+});
+
+describe("SupabaseYjsProvider — connect idempotency (F1)", () => {
+  it("treats a second connect on a live provider as a no-op", async () => {
+    const { provider } = makeProvider("connect-once");
+    provider.setExpectedEncrypted(false);
+
+    await provider.connect(
+      { name: "First", color: "#111111" },
+      { prefetchedYdocState: null, rowExists: true },
+    );
+    await provider.connect(
+      { name: "Ghost", color: "#222222" },
+      { prefetchedYdocState: null, rowExists: true },
+    );
+
+    expect(channelCreates).toHaveLength(1);
+    expect(provider.awareness.getLocalState()?.user).toEqual({
+      name: "First",
+      color: "#111111",
+    });
+    await provider.destroy();
+  });
+
+  it("joins an in-flight connect instead of opening a second channel", async () => {
+    const { provider } = makeProvider("connect-inflight");
+    provider.setExpectedEncrypted(false);
+
+    const first = provider.connect(
+      { name: "First", color: "#111111" },
+      { prefetchedYdocState: null, rowExists: true },
+    );
+    const second = provider.connect(
+      { name: "Ghost", color: "#222222" },
+      { prefetchedYdocState: null, rowExists: true },
+    );
+    await Promise.all([first, second]);
+
+    expect(channelCreates).toHaveLength(1);
+    expect(provider.awareness.getLocalState()?.user).toEqual({
+      name: "First",
+      color: "#111111",
+    });
+    await provider.destroy();
   });
 });
 
