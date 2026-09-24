@@ -43,4 +43,21 @@ describe("LocalConvertProvider", () => {
     expect(events).not.toContain("synced-durable");
     await provider.destroy();
   });
+
+  it("treats a second connect as a no-op", async () => {
+    const doc = new Y.Doc();
+    const provider = new LocalConvertProvider("daily", doc, vi.fn());
+    const events: string[] = [];
+    provider.onSyncEvent((event) => events.push(event.type));
+
+    await provider.connect({ name: "Otter", color: "#000" });
+    await provider.connect({ name: "Ghost", color: "#fff" });
+
+    expect(events.filter((type) => type === "online")).toHaveLength(1);
+    expect(provider.awareness.getLocalState()?.user).toEqual({
+      name: "Otter",
+      color: "#000",
+    });
+    await provider.destroy();
+  });
 });

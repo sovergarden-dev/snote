@@ -2070,14 +2070,36 @@ describe("CapabilityYjsProvider", () => {
     expect(factoryCalls).toBe(1);
   });
 
-  it("disposes a superseded same-token private Realtime factory result", async () => {
-    const firstFactoryResult = deferred<CapabilityRealtimeHandle>();
-    const secondFactoryResult = deferred<CapabilityRealtimeHandle>();
-    const firstHandle = realtimeHandle();
-    const secondHandle = realtimeHandle();
-    const factory = vi.fn()
-      .mockImplementationOnce(() => firstFactoryResult.promise)
-      .mockImplementationOnce(() => secondFactoryResult.promise);
+  it("treats a second connect on a live provider as a no-op", async () => {
+    const handle = realtimeHandle();
+    const factory = vi.fn(async () => handle);
+    const provider = new CapabilityYjsProvider(
+      { slug: "daily", scope: "edit", token: TOKEN },
+      baseSession(),
+      new Y.Doc(),
+      {
+        api: apiHarness(),
+        outbox: new CapabilityOutbox("snote-capability-provider-test"),
+        realtimeFactory: factory as CapabilityRealtimeFactory,
+      },
+    );
+
+    await provider.connect({ name: "Tester", color: "#123456" });
+    await provider.connect({ name: "Ghost", color: "#000000" });
+
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(handle.dispose).not.toHaveBeenCalled();
+    expect(provider.awareness.getLocalState()?.user).toEqual({
+      name: "Tester",
+      color: "#123456",
+    });
+    await provider.destroy();
+  });
+
+  it("joins an in-flight connect instead of starting a second Realtime", async () => {
+    const factoryResult = deferred<CapabilityRealtimeHandle>();
+    const handle = realtimeHandle();
+    const factory = vi.fn().mockImplementation(() => factoryResult.promise);
     const provider = new CapabilityYjsProvider(
       { slug: "daily", scope: "edit", token: TOKEN },
       baseSession(),
@@ -2091,16 +2113,18 @@ describe("CapabilityYjsProvider", () => {
 
     const firstConnect = provider.connect({ name: "Tester", color: "#123456" });
     await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(1));
-    const secondConnect = provider.connect({ name: "Tester", color: "#123456" });
-    await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(2));
-    firstFactoryResult.resolve(firstHandle);
-    await vi.waitFor(() => expect(firstHandle.dispose).toHaveBeenCalledOnce());
-    secondFactoryResult.resolve(secondHandle);
+    const secondConnect = provider.connect({ name: "Ghost", color: "#000000" });
+    expect(factory).toHaveBeenCalledTimes(1);
+    factoryResult.resolve(handle);
     await Promise.all([firstConnect, secondConnect]);
-    await provider.destroy();
 
-    expect(firstHandle.dispose).toHaveBeenCalledOnce();
-    expect(secondHandle.dispose).toHaveBeenCalledOnce();
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(handle.dispose).not.toHaveBeenCalled();
+    expect(provider.awareness.getLocalState()?.user).toEqual({
+      name: "Tester",
+      color: "#123456",
+    });
+    await provider.destroy();
   });
 
   it("ignores callbacks emitted by a disposed private channel", async () => {

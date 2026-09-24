@@ -207,6 +207,19 @@ describe("note-host startSync", () => {
     expect(stop).toHaveBeenCalledTimes(1);
     releaseNoteHost("note:x");
   });
+
+  it("F1: two panes on the same host invoke connect at most once", () => {
+    const host = acquireNoteHost("note:x");
+    const connect = vi.fn();
+    const start = vi.fn(() => {
+      connect();
+      return () => {};
+    });
+    host.startSync("g1", start);
+    host.startSync("g1", start);
+    expect(connect).toHaveBeenCalledTimes(1);
+    releaseNoteHost("note:x");
+  });
 });
 
 describe("note-host gate", () => {

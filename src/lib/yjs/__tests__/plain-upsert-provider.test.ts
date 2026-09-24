@@ -64,4 +64,22 @@ describe("PlainUpsertProvider", () => {
     expect(onManaged).toHaveBeenCalledOnce();
     await provider.destroy();
   });
+
+  it("treats a second connect as a no-op", async () => {
+    const doc = new Y.Doc();
+    const upsert = vi.fn<PlainUpsertFn>(async () => ({ noteId: "n", created: true }));
+    const provider = new PlainUpsertProvider("daily", doc, upsert, vi.fn());
+    const events: string[] = [];
+    provider.onSyncEvent((event) => events.push(event.type));
+
+    await provider.connect({ name: "Otter", color: "#000" });
+    await provider.connect({ name: "Ghost", color: "#fff" });
+
+    expect(events.filter((type) => type === "online")).toHaveLength(1);
+    expect(provider.awareness.getLocalState()?.user).toEqual({
+      name: "Otter",
+      color: "#000",
+    });
+    await provider.destroy();
+  });
 });

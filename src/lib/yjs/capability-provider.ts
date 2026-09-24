@@ -209,6 +209,7 @@ export class CapabilityYjsProvider implements YjsProviderLike {
   private lastSnapshotAt = 0;
   private closing = false;
   private destroyed = false;
+  private connectWork: Promise<void> | null = null;
   private refreshTimer: number | null = null;
   private writeFenced = false;
   private terminalSyncFenced = false;
@@ -670,6 +671,13 @@ export class CapabilityYjsProvider implements YjsProviderLike {
   }
 
   async connect(identity: { name: string; color: string }) {
+    if (this.destroyed || this.closing) return;
+    if (this.connectWork) return this.connectWork;
+    this.connectWork = this.connectOnce(identity);
+    return this.connectWork;
+  }
+
+  private async connectOnce(identity: { name: string; color: string }) {
     if (this.destroyed || this.closing) return;
     if (!await this.applyDurableSession(this.session)) return;
     if (this.destroyed || this.closing) return;
