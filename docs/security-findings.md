@@ -1724,15 +1724,15 @@ Sentinel live smoke `version.json`: `deployedSha`
 `buildId` `1790261840240-kdcu3lki`, `builtAt` `2026-09-24T14:57:45.782Z`.
 Pages production deployment id `cf94d1b2` (full UUID not supplied in this
 attest) replaces previous live origin `08c25172` / Pages `1db84523`.
-Pixel **READY WITH KNOWN RISKS** live (A1 dual panes `/hage+hage` PASS; C1
-Sync OFF PASS; E1 `/hage + /hage` PASS; E2 tabs ~600px PASS. KNOWN: C2 not
+Pixel **READY WITH KNOWN RISKS** at that attest (A1 dual panes `/hage+hage` PASS; C1
+Sync OFF PASS; E1 `/hage + /hage` PASS; E2 tabs ~600px PASS. KNOWN then: C2 not
 scrolled; dual-edit skip; F1 owned by Sentinel. Artifacts
 `pixel-qa/same-note-split/pr161-live/`); Sentinel **READY WITH KNOWN RISKS**
-live (2026-09-24 ICT; evidence `sentinel-qa-pr161-live/`). PASSED: tip latch
+at that attest (2026-09-24 ICT; evidence `sentinel-qa-pr161-live/`). PASSED then: tip latch
 `a6756188`; no redirect; dual EditorView; sync OFF; F1 one Awareness self;
-cross-pane type sync. Carry: MEDIUM 1 (`provider.connect` non-idempotent);
+cross-pane type sync. Carry then: MEDIUM 1 (`provider.connect` non-idempotent);
 LOW 3 (dual Topbar self-dot, ownWindowEvents freeze, yCollab cursor). Atlas
-named parked risks for this attest: connect idempotency, dual Topbar (echo
+named parked risks at that attest: connect idempotency, dual Topbar (echo
 Sentinel carry). Do **not** claim plain READY. Edge XOR `invalid_state` 409
 **NOT VERIFIED** (`note-session` / `note-manage` **not** deployed; still
 PARKED). #151 Edge XOR remains **in-repo only / not deployed live**. Do

@@ -2841,7 +2841,7 @@ describe("canonical production origin", () => {
     expect(rollout).not.toContain("Origin remains `610662a9`");
   });
 
-  it("records live #161 Origin SPA a6756188 same-note split without claiming Edge XOR shipped", () => {
+  it("records historical #161 Origin SPA a6756188 same-note split without claiming Edge XOR shipped", () => {
     const readme = readFileSync("README.md", "utf8");
     const findings = readFileSync("docs/security-findings.md", "utf8");
     const client = readFileSync("docs/capability-client.md", "utf8");
