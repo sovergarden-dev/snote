@@ -17,6 +17,7 @@ const EXPECTED_APP_E2E = [
   "pwa-update-sw-stall.spec.ts",
   "pwa-update-throttle.spec.ts",
   "split-view-malformed-persistence.spec.ts",
+  "split-view-same-note.spec.ts",
   "theme-toggle-direct.spec.ts",
   "webgl-fallback.spec.ts",
 ];
@@ -50,6 +51,7 @@ describe("simplified delivery pipeline contract", () => {
     expect(ci).toContain("--retries=0");
     expect(ci).toContain("e2e/critical-a11y.spec.ts");
     expect(ci).toContain("e2e/pwa-update-sw-stall.spec.ts");
+    expect(ci).toContain("e2e/split-view-same-note.spec.ts");
     expect(ci).toContain("VITE_SUPABASE_URL: https://ci.invalid");
     expect(ci).toContain(
       "VITE_SUPABASE_PUBLISHABLE_KEY: ci-public-placeholder",

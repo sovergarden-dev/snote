@@ -88,6 +88,7 @@ jobs:
           e2e/critical-a11y.spec.ts
           e2e/pwa-update-sw-stall.spec.ts
           e2e/pwa-update-throttle.spec.ts
+          e2e/split-view-same-note.spec.ts
           --project=chromium
           --retries=0
       - name: Upload failure evidence

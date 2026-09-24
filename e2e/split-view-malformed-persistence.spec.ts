@@ -46,3 +46,4 @@ for (const c of cases) {
     await expect(panes).toHaveCount(2, { timeout: 5_000 });
   });
 }
+

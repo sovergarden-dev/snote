@@ -19,6 +19,17 @@ describe("split-view-persistence", () => {
     expect(got?.slugs).toEqual(["a", "b"]);
   });
 
+  it("A6: round-trips duplicate-slug paths without stripping", () => {
+    saveLastSplitView(["123", "123"]);
+    const got = loadLastSplitView();
+    expect(got?.count).toBe(2);
+    expect(got?.path).toBe("/123+123");
+    expect(got?.slugs).toEqual(["123", "123"]);
+    saveLastSplitView(["a", "a", "b"]);
+    expect(loadLastSplitView()?.path).toBe("/a+a+b");
+    expect(loadLastSplitView()?.slugs).toEqual(["a", "a", "b"]);
+  });
+
   it("round-trips 3 and 4 slugs", () => {
     saveLastSplitView(["a", "b", "c"]);
     expect(loadLastSplitView()?.path).toBe("/a+b+c");

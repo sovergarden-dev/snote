@@ -192,6 +192,7 @@ describe("CI toolchain contract", () => {
     expect(e2ePrWorkflows).toEqual([".github/workflows/ci.yml"]);
     expect(ci).toContain("e2e/critical-a11y.spec.ts");
     expect(ci).toContain("e2e/pwa-update-sw-stall.spec.ts");
+    expect(ci).toContain("e2e/split-view-same-note.spec.ts");
     expect(ci).toContain("--retries=0");
     expect(ci).not.toContain("PLAYWRIGHT_RETRIES");
     expect(ci).toContain("VITE_SUPABASE_URL: https://ci.invalid");

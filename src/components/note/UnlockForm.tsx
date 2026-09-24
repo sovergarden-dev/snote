@@ -14,6 +14,8 @@ interface UnlockFormProps {
   iterations: number;
   onUnlock: (key: CryptoKey) => void;
   embedded?: boolean;
+  /** Host-owned window events (F2). Duplicate panes share one listener. */
+  ownWindowEvents?: (types: readonly string[], handler: () => void) => () => void;
 }
 
 export function UnlockForm({
@@ -23,6 +25,7 @@ export function UnlockForm({
   iterations,
   onUnlock,
   embedded = false,
+  ownWindowEvents,
 }: UnlockFormProps) {
   const { t } = useI18n();
   const id = useId();
@@ -66,15 +69,22 @@ export function UnlockForm({
 
   useLayoutEffect(() => {
     mountedRef.current = true;
-    window.addEventListener("hashchange", cancelPending);
-    window.addEventListener("popstate", cancelPending);
+    const stop = ownWindowEvents
+      ? ownWindowEvents(["hashchange", "popstate"], cancelPending)
+      : (() => {
+          window.addEventListener("hashchange", cancelPending);
+          window.addEventListener("popstate", cancelPending);
+          return () => {
+            window.removeEventListener("hashchange", cancelPending);
+            window.removeEventListener("popstate", cancelPending);
+          };
+        })();
     return () => {
-      window.removeEventListener("hashchange", cancelPending);
-      window.removeEventListener("popstate", cancelPending);
+      stop();
       mountedRef.current = false;
       requestGenerationRef.current += 1;
     };
-  }, [cancelPending]);
+  }, [cancelPending, ownWindowEvents]);
 
   useLayoutEffect(() => {
     if (routerTargetRef.current === routerTarget) return;

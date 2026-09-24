@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Suspense, type ReactNode } from "react";
 import { BrowserRouter, MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +11,7 @@ import {
   markNoteEncrypted,
 } from "@/lib/encryption-pin";
 import { markLegacySecurePin } from "@/lib/legacy/legacy-secure-pin";
+import { __noteHostInternals } from "@/lib/yjs/note-host";
 import type {
   PollingNoteSession,
   PrivateRealtimeNoteSession,
@@ -538,6 +539,8 @@ function encryptedShareResponse(label: string) {
 
 describe("NotePage encryption gate", () => {
   beforeEach(() => {
+    cleanup();
+    __noteHostInternals.reset();
     harness.editorRender.mockClear();
     harness.previewRender.mockClear();
     harness.unlockRender.mockClear();
@@ -2420,5 +2423,100 @@ describe("NotePage encryption gate", () => {
 
     expect(harness.editorRender).not.toHaveBeenCalled();
     expect(harness.previewRender).not.toHaveBeenCalled();
+  });
+
+  it("B1/H3/F1: two same-slug panes share one doc, provider, connect, and IDB", async () => {
+    harness.metaForSlug.mockResolvedValue({
+      data: { is_encrypted: false },
+      error: null,
+    });
+    const addSpy = vi.spyOn(window, "addEventListener");
+    const view = render(
+      <MemoryRouter>
+        <NotePage embedSlug="plain" />
+        <NotePage embedSlug="plain" />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(view.getAllByTestId("editor")).toHaveLength(2));
+    expect(__noteHostInternals.size()).toBe(1);
+    expect(__noteHostInternals.retainCount("note:plain")).toBe(2);
+    expect(harness.docAcquire).toHaveBeenCalledTimes(1);
+    expect(harness.providerConstruct).toHaveBeenCalledTimes(1);
+    expect(harness.providerConnect).toHaveBeenCalledTimes(1);
+    expect(harness.idbConstruct).toHaveBeenCalledTimes(1);
+    expect(harness.idbConstruct).toHaveBeenCalledWith("note:plain");
+    const hashListeners = addSpy.mock.calls.filter((call) => call[0] === "hashchange").length;
+    expect(hashListeners).toBe(1);
+    addSpy.mockRestore();
+  });
+
+  it("B4: unmounting one same-slug pane does not destroy the shared host", async () => {
+    harness.metaForSlug.mockResolvedValue({
+      data: { is_encrypted: false },
+      error: null,
+    });
+    const view = render(
+      <MemoryRouter>
+        <NotePage embedSlug="plain" />
+        <NotePage embedSlug="plain" />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(view.getAllByTestId("editor")).toHaveLength(2));
+    expect(harness.providerDestroy).not.toHaveBeenCalled();
+    view.rerender(
+      <MemoryRouter>
+        <NotePage embedSlug="plain" />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(view.getAllByTestId("editor")).toHaveLength(1));
+    expect(__noteHostInternals.size()).toBe(1);
+    expect(__noteHostInternals.retainCount("note:plain")).toBe(1);
+    expect(harness.providerDestroy).not.toHaveBeenCalled();
+    expect(harness.docRelease).not.toHaveBeenCalled();
+    view.unmount();
+    expect(harness.providerDestroy).toHaveBeenCalledTimes(1);
+    expect(harness.docRelease).toHaveBeenCalledTimes(1);
+    expect(__noteHostInternals.size()).toBe(0);
+  });
+
+  it("B5: two same-slug capability panes open one session", async () => {
+    harness.capabilityOpenSession.mockResolvedValue(pollingSession());
+    const view = render(
+      <MemoryRouter initialEntries={[`/secret#owner=${CAPABILITY_TOKEN}`]}>
+        <NotePage embedSlug="secret" />
+        <NotePage embedSlug="secret" />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(view.getAllByTestId("editor")).toHaveLength(2));
+    expect(harness.capabilityOpenSession).toHaveBeenCalledTimes(1);
+    expect(harness.capabilityProviderConstruct).toHaveBeenCalledTimes(1);
+    expect(harness.capabilityProviderConnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("F2: unlocking one duplicate pane decrypts both from the shared host", async () => {
+    harness.metaForSlug.mockResolvedValue({
+      data: {
+        is_encrypted: true,
+        enc_salt: "salt-secret",
+        enc_check: "check-secret",
+        enc_iterations: 1000,
+        ydoc_state: "ciphertext-secret",
+      },
+    });
+    const view = render(
+      <MemoryRouter>
+        <NotePage embedSlug="secret" />
+        <NotePage embedSlug="secret" />
+      </MemoryRouter>,
+    );
+    await waitFor(() =>
+      expect(view.getAllByRole("dialog", { name: "Unlock encrypted note secret" }).length).toBeGreaterThan(0),
+    );
+    const unlock = harness.unlockProps.mock.calls.at(-1)?.[0].onUnlock as (key: CryptoKey) => void;
+    act(() => {
+      window.history.replaceState(window.history.state, "", `${window.location.pathname}#key`);
+      unlock({} as CryptoKey);
+    });
+    await waitFor(() => expect(view.getAllByTestId("editor")).toHaveLength(2));
   });
 });
