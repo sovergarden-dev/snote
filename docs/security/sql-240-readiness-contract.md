@@ -3,8 +3,8 @@
 - Status: **Docs package only** — does **not** authorize apply (SQL 240 already applied; do not re-apply)
 - Date: 2026-09-15
 - Repo: `sovergarden-dev/snote`
-- Live pin (product): origin `08c25172` / Pages `1db84523` / canary true; historical #157 origin `610662a9` / Pages `33667a6a`; historical #155 origin `3b4ea9f9` / Pages `62f641c7`; historical #153 origin `1b172544` / Pages `5527f154`; historical #151 origin `44b02cb3` / Pages `b44849c4`; historical Go C pin `9a80930a` / Pages `8e64829c`; historical smoke `34986611791` remains the `0cdcdc0f` / `1b9ed3d1` pin
-- Git tip (apply): `46ddaf01` (#148 3-arg `p_slugs` allowlist Go SQL **applied live**; historical `bd11deed` #142 2-arg bulk RPC + #143 PWA smoke harden) — live origin now `08c25172` (#159); #157 pin `610662a9` is **historical**; #155 pin `3b4ea9f9` is **historical**; #153 pin `1b172544` is **historical**; #151 pin `44b02cb3` is **historical**; Go C pin `9a80930a` is **historical**; re-bulk OFF ALL 6 Pulse PASS 2026-09-22 is **historical**; Go SQL residual `aggadagdade` still managed is **historical**; **Go Ops allowlist bulk OFF** 2→0 Pulse PASS (residual **cleared**, **not fleet**); this docs attest does not change origin
+- Live pin (product): origin `a6756188` / Pages `cf94d1b2` / canary true; historical #159 origin `08c25172` / Pages `1db84523`; historical #157 origin `610662a9` / Pages `33667a6a`; historical #155 origin `3b4ea9f9` / Pages `62f641c7`; historical #153 origin `1b172544` / Pages `5527f154`; historical #151 origin `44b02cb3` / Pages `b44849c4`; historical Go C pin `9a80930a` / Pages `8e64829c`; historical smoke `34986611791` remains the `0cdcdc0f` / `1b9ed3d1` pin
+- Git tip (apply): `46ddaf01` (#148 3-arg `p_slugs` allowlist Go SQL **applied live**; historical `bd11deed` #142 2-arg bulk RPC + #143 PWA smoke harden) — live origin now `a6756188` (#161); #159 pin `08c25172` is **historical**; #157 pin `610662a9` is **historical**; #155 pin `3b4ea9f9` is **historical**; #153 pin `1b172544` is **historical**; #151 pin `44b02cb3` is **historical**; Go C pin `9a80930a` is **historical**; re-bulk OFF ALL 6 Pulse PASS 2026-09-22 is **historical**; Go SQL residual `aggadagdade` still managed is **historical**; **Go Ops allowlist bulk OFF** 2→0 Pulse PASS (residual **cleared**, **not fleet**); this docs attest does not change origin
 - Owners: Aegis (gates) · Pulse (ops) · Forge (docs PR) · Atlas (coord) · Syringa (named apply)
 - Walls: SQL 240 already applied; W2 SQL `capability_note_plain_upsert` / `capability_note_disable_secure` applied live; U1 SQL `capability_note_convert_legacy` applied live; bulk RPC `capability_note_bulk_disable_secure` **applied** live (Go A+B Pulse PASS; Go C **shipped** live; re-bulk OFF ALL 6 Pulse PASS 2026-09-22 **historical**; 3-arg `p_slugs` allowlist **applied live** Go SQL Pulse PASS, git tip `46ddaf01` / #148; Go SQL residual `aggadagdade` still managed, **no bulk OFF** — **historical**; **Go Ops allowlist bulk OFF** 2→0 Pulse PASS, residual **cleared**, **not fleet**); previously published Edge `plain-upsert` / `disable-secure` / `convert-legacy` remain **published** (Pulse `umsg_01m21zhm…` for `convert-legacy`); #151 Edge XOR is **in-repo only / not deployed live**; Worker HOLD (no redeploy), `writes_enabled` HOLD, Realtime HOLD; this docs PR does not re-apply SQL U1 or run bulk OFF and does not re-publish Edge / couple Pages
 
@@ -16,7 +16,7 @@ Ops detail: [sql-240-ops-preflight.md](./sql-240-ops-preflight.md) (Pulse). This
 
 ## 0. Hard architecture gate (before any apply)
 
-**W2 is live** on origin `08c25172`: plain `/slug` = `CutoverNotePage` → editable `NotePage` (free-edit).
+**W2 is live** on origin `a6756188`: plain `/slug` = `CutoverNotePage` → editable `NotePage` (free-edit).
 W1 convert-on-write as product default is **superseded**. A′ Cutover/LNO RO default is **superseded**; A′ remains the `?legacyRo=1` / Legacy Advanced path.
 Choice A editable-plain is **not** the live default. SQL 240 already applied.
 Duplicate securely is enabled on Legacy RO only (PR #128; Edge `note-session` `import-legacy`).
@@ -38,7 +38,7 @@ table upsert); remaining gates below still HOLD apply.
 
 Choice A routing contract (`SNOTE-EDITABLE-PLAIN-SLUG-ROUTING-CONTRACT.md`, Aegis artifact name — not a path in this repo) is **superseded** by A′ then W1 then live W2 (findings §3e / #126 / #130 / #135). A′ was a **prerequisite** for 240, not SQL 240 apply (or same calendar day only if Atlas sequences SPA → soak smoke → 240).
 
-W2 free-edit is live on origin `08c25172` ([a-prime-cutover-restore.md](./a-prime-cutover-restore.md) records A′ as superseded default / remaining Legacy RO path; W1 convert-on-write is superseded as product default; prior #157 pin `610662a9`; prior #155 pin `3b4ea9f9`; prior #153 pin `1b172544`; prior #151 pin `44b02cb3`; prior Go C pin `9a80930a`; prior A3 pin `0cdcdc0f`). Choice A (#118) editable-plain default is **superseded**. Duplicate securely (#128) is enabled on Legacy RO only. This does not authorize re-apply.
+W2 free-edit is live on origin `a6756188` ([a-prime-cutover-restore.md](./a-prime-cutover-restore.md) records A′ as superseded default / remaining Legacy RO path; W1 convert-on-write is superseded as product default; prior #159 pin `08c25172`; prior #157 pin `610662a9`; prior #155 pin `3b4ea9f9`; prior #153 pin `1b172544`; prior #151 pin `44b02cb3`; prior Go C pin `9a80930a`; prior A3 pin `0cdcdc0f`). Choice A (#118) editable-plain default is **superseded**. Duplicate securely (#128) is enabled on Legacy RO only. This does not authorize re-apply.
 
 ---
 

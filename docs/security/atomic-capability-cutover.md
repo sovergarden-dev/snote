@@ -241,9 +241,16 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    `capabilityRoutesEnabled` true. #159 custom selection-match
    `maxSelectionLength=4000` (L>4000 hard off) + nested-overflow scroll feel
    (typewriter OFF; ~24px breathing + typewriter 45vh retained; no scroll
-   hijack / no `transform`+`will-change` on scroller) is live. SW stale-tab /
-   async-settle can still serve pre-tip UI until hard-activate.
-   Current live `deployedSha` `08c25172036610a2cdca3cd6af0cbefefc654d16`.
+   hijack / no `transform`+`will-change` on scroller) remains on this line.
+   SW stale-tab / async-settle can still serve pre-tip UI until hard-activate.
+   Same-canary origin SHA bump 2026-09-24 (#161):
+   `deployedSha` `a6756188f2536b7939e86528910522472440d22c`, still
+   `capabilityRoutesEnabled` true. #161 same-note split via tab-scoped
+   note-host (`/{slug}+{slug}` stays, no redirect; dual EditorView; sync
+   scroll default OFF; one Awareness self; cross-pane type sync; compact
+   mobile tabs `/{slug} · 1|2`) is live. Parked: `provider.connect`
+   non-idempotent; dual Topbar (echo Sentinel carry).
+   Current live `deployedSha` `a6756188f2536b7939e86528910522472440d22c`.
    This docs PR does not re-apply SQL, does not run bulk convert, and does not
    deploy origin / Worker / Edge.
    This is not soak-complete.

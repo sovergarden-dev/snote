@@ -11,6 +11,7 @@ Production: [note.syrin.online](https://note.syrin.online/)
 #155 idle Ko-fi FAB dismiss 24h (`kofi-fab-idle-dismiss-until`);
 #157 polish Copy for AI — no slug header, selection copy, deep clean;
 #159 selection-match cap 4000 + nested-overflow scroll feel;
+#161 same-note split via tab-scoped note-host;
 prior #130/#131 W1 convert-on-write as product default is **superseded**)
 canary-on `CutoverNotePage` → editable `NotePage` for plain `/<slug>` and
 SplitView panes (no forced convert, no `#owner=` required to edit; Phase C
@@ -25,7 +26,10 @@ clean; Pixel `export.ai` / `export.ai_tooltip`; token soft-warn and locked
 disable remain OUT); custom selection-match `maxSelectionLength=4000`
 (L>4000 hard off); typewriter-OFF nested-overflow scroll fix (`overflow-hidden`
 + `min-h-0`; ~24px breathing + typewriter 45vh retained; no scroll hijack /
-no `transform`+`will-change` on scroller); FAB-primary
+no `transform`+`will-change` on scroller); same-note split via
+tab-scoped note-host (`/{slug}+{slug}` stays, no redirect; dual
+EditorView; sync scroll default OFF; one Awareness self (F1);
+cross-pane type sync; compact mobile tabs `/{slug} · 1|2`); FAB-primary
 + Sonner suppress (#113/#116) still on this line; Choice A (#118)
 editable-plain default remains **superseded** on this line; PWA latch (#119)
 one hard-reload per Update apply still on this line; Pixel Legacy opt-in
@@ -37,8 +41,8 @@ Encrypt stays active on the owner path (#123); A′ (#126) RO default is
 **superseded**; Duplicate securely (#128) remains enabled on Legacy RO only
 (Edge `note-session` `import-legacy`); W2 + A3 + Go C (#145 LNO-wins) remain
 on this line; #151 create-bare remains on this line; #153 FAB UX remains on
-this line; #155 remains on this line; #157 remains on this line; #159 live on origin `08c25172`;
-Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e / §3k / §3l / §3m / §3n / §3o): `capabilityRoutesEnabled` true. Plain slug URLs persist via Edge
+this line; #155 remains on this line; #157 remains on this line; #159 remains on this line; #161 live on origin `a6756188`;
+Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e / §3k / §3l / §3m / §3n / §3o / §3p): `capabilityRoutesEnabled` true. Plain slug URLs persist via Edge
 `plain-upsert` (free-edit for anyone with the link). Home create always uses
 bare `seedAndOpen` (no default mint / no `#owner=`). Prior Home mint
 (fail-closed on idle; create → `/<slug>#owner=`) is **superseded** as default.
@@ -153,23 +157,44 @@ empty note toast EN+VI; no junk clipboard overwrite; label + tooltip VI+EN.
 Token soft-warn and locked disable remain OUT. LOW then: stale client tab
 needs «Reload to update» until in-app reload (ops; Pulse PWA smoke already
 PASS; not a product AC miss). #155 idle dismiss and #153 FAB UX remain on
-this line. Current live origin `08c25172` / Pages `1db84523`: Atlas named
+this line. Prior live origin `08c25172` / Pages `1db84523` (#160 attest): Atlas named
 #159 Origin SPA ship to Cloudflare Pages `snote-g4-origin` /
-note.syrin.online (canary ON). Independent Sentinel `version.json`:
-`deployedSha` `08c25172036610a2cdca3cd6af0cbefefc654d16`,
+note.syrin.online (canary ON). Independent Sentinel `version.json` at that
+attest: `deployedSha` `08c25172036610a2cdca3cd6af0cbefefc654d16`,
 `capabilityRoutesEnabled` true, `buildId` `1790170318028-nxe1ecb2`,
 `builtAt` `2026-09-23T13:32:22.922Z` (Pages preview `1db84523`; full UUID not
-supplied — not invented). Git tip of the shipped SPA is #159 `08c25172`.
-Pixel **READY** live; Sentinel **READY WITH KNOWN RISKS** live. Pulse ship
-PASS (Pages `snote-g4-origin`; PWA update smoke PASS run 35867325334).
-PASSED: tip latch `08c25172`; custom selection-match `maxSelectionLength=4000`
-(L>4000 hard off); nested-overflow scroll fix for typewriter OFF (Editor
-`overflow-hidden` + `min-h-0`; `.cm-scroller` is the only scroller); ~24px
-breathing + typewriter 45vh retained; no scroll hijack / no
-`transform`+`will-change` on scroller. A1 first-pass flake withdrawn after
-SW hard reset (stale-client / async-settle, not a tip defect). LOW: B4
-typewriter-ON soft ends unrun; B2 physical feel partially covered by Sentinel
-(Pixel closed B2). #157 Copy for AI remains on this line. Edge XOR 409
+supplied — not invented). Git tip of the shipped SPA was #159 `08c25172`.
+Pixel **READY** at that attest; Sentinel **READY WITH KNOWN RISKS** at that
+attest. Pulse ship PASS (Pages `snote-g4-origin`; PWA update smoke PASS run
+35867325334). PASSED then: tip latch `08c25172`; custom selection-match
+`maxSelectionLength=4000` (L>4000 hard off); nested-overflow scroll fix for
+typewriter OFF (Editor `overflow-hidden` + `min-h-0`; `.cm-scroller` is the
+only scroller); ~24px breathing + typewriter 45vh retained; no scroll hijack
+/ no `transform`+`will-change` on scroller. A1 first-pass flake withdrawn
+after SW hard reset (stale-client / async-settle, not a tip defect). LOW then:
+B4 typewriter-ON soft ends unrun; B2 physical feel partially covered by
+Sentinel (Pixel closed B2). #157 Copy for AI remains on this line. Current live origin `a6756188` / Pages `cf94d1b2`: Atlas named
+#161 Origin SPA ship to Cloudflare Pages `snote-g4-origin` /
+note.syrin.online (canary ON). Independent Sentinel `version.json`:
+`deployedSha` `a6756188f2536b7939e86528910522472440d22c`,
+`capabilityRoutesEnabled` true, `buildId` `1790261840240-kdcu3lki`,
+`builtAt` `2026-09-24T14:57:45.782Z` (Pages preview `cf94d1b2`; full UUID not
+supplied — not invented). Git tip of the shipped SPA is #161 `a6756188`.
+Pixel **READY WITH KNOWN RISKS** live; Sentinel **READY WITH KNOWN RISKS**
+live. Pulse ship PASS (`/workspace/pulse-ship-a6756188/`; Pages
+`snote-g4-origin`; PWA update smoke PASS run 36016460451). PASSED: tip latch
+`a6756188`; URL `/{slug}+{slug}` stays (no redirect); dual EditorView; sync
+scroll default OFF; one Awareness self (F1); cross-pane type sync; compact
+mobile tabs `/{slug} · 1|2`. Pixel A1 `/hage+hage` PASS; C1 Sync OFF PASS;
+E1 `/hage + /hage` PASS; E2 tabs ~600px PASS. KNOWN: C2 not scrolled;
+dual-edit skip; F1 owned by Sentinel (evidence
+`pixel-qa/same-note-split/pr161-live/`). Sentinel: no redirect; dual
+EditorView; sync OFF; F1 one Awareness self PASS; cross-pane type sync PASS.
+Carry: MEDIUM 1 (`provider.connect` non-idempotent); LOW 3 (dual Topbar
+self-dot, ownWindowEvents freeze, yCollab cursor); evidence
+`sentinel-qa-pr161-live/`. Atlas parked risks for this attest: connect
+idempotency, dual Topbar (echo Sentinel carry). Do **not** claim plain READY.
+#159 selection-match/scroll remains on this line. Edge XOR 409
 **NOT VERIFIED** (still PARKED / not deployed). Walls HOLD:
 Worker / Realtime / SQL / `writes_enabled`. This docs attest does not deploy
 origin / Pages / Worker / Edge and does not apply SQL. Not soak-complete.
@@ -252,7 +277,7 @@ does not deploy origin / Pages / Worker / Edge, does not re-apply SQL, and
 does not re-run bulk RPC / fleet NULL. Worker / Realtime / `writes_enabled`
 still HOLD.
 
-**W2 live (named Pages go of #135/#137/#138/#139 + Go C #145 + #151 + #153 + #155 + #157 + #159):** canary-on
+**W2 live (named Pages go of #135/#137/#138/#139 + Go C #145 + #151 + #153 + #155 + #157 + #159 + #161):** canary-on
 plain `/<slug>` is free-edit (no convert-on-write default). Go C LNO-wins pin
 heal remains on this line (shipped on prior origin `9a80930a`). #151 create-bare
 + encrypt≠owner + Legacy/Encrypt mutex UI remains on this line (prior origin
@@ -261,7 +286,9 @@ remains on this line (prior origin `1b172544` / Pages `5527f154`). #155 idle
 Ko-fi FAB dismiss 24h remains on this line (prior origin `3b4ea9f9` / Pages
 `62f641c7`). #157 polish Copy for AI remains on this line (prior origin
 `610662a9` / Pages `33667a6a`). #159 selection-match cap 4000 + nested-overflow
-scroll feel is live on origin `08c25172` / Pages `1db84523`. W1 convert-on-write as product
+scroll feel remains on this line (prior origin `08c25172` / Pages `1db84523`).
+#161 same-note split via tab-scoped note-host is live on origin `a6756188` /
+Pages `cf94d1b2`. W1 convert-on-write as product
 default is **superseded**. A′ (#126) Cutover/LNO RO default is
 **superseded**. `#owner=`/`#edit=` still render `NotePage`. `?legacyRo=1`
 still RO + banner. Canary stays on. SQL 240 already applied; W2 SQL

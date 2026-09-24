@@ -34,7 +34,7 @@ const capabilityEdge = readFileSync(resolve(
 ), "utf8");
 
 describe("atomic cutover migration", () => {
-  it("pins documented SQL 240 migration identity at live product SHA 08c25172", () => {
+  it("pins documented SQL 240 migration identity at live product SHA a6756188", () => {
     const sha256 = createHash("sha256").update(migration, "utf8").digest("hex");
     const lineCount = migration.endsWith("\n")
       ? migration.slice(0, -1).split("\n").length
@@ -82,6 +82,8 @@ describe("atomic cutover migration", () => {
     expect(contract).toContain("33667a6a");
     expect(contract).toContain("08c25172");
     expect(contract).toContain("1db84523");
+    expect(contract).toContain("a6756188");
+    expect(contract).toContain("cf94d1b2");
     expect(contract).toContain("34986611791");
     expect(contract).toContain("W2 is live");
     expect(contract).toContain("HOLD");
@@ -116,6 +118,9 @@ describe("atomic cutover migration", () => {
     expect(preflight).toContain("08c25172");
     expect(preflight).toContain("1db84523");
     expect(preflight).toContain("1790170318028-nxe1ecb2");
+    expect(preflight).toContain("a6756188");
+    expect(preflight).toContain("cf94d1b2");
+    expect(preflight).toContain("1790261840240-kdcu3lki");
     expect(preflight).toContain("A′ live");
     expect(contract).toContain(
       "This is not SQL 240, not Realtime, not soak-complete.",
@@ -125,7 +130,7 @@ describe("atomic cutover migration", () => {
     );
   });
 
-  it("pins bulk disable-secure migration identity as applied live; origin now 08c25172", () => {
+  it("pins bulk disable-secure migration identity as applied live; origin now a6756188", () => {
     const bulk = readFileSync(resolve(
       process.cwd(),
       "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql",
@@ -159,6 +164,7 @@ describe("atomic cutover migration", () => {
     expect(contract).toContain("3b4ea9f9");
     expect(contract).toContain("610662a9");
     expect(contract).toContain("08c25172");
+    expect(contract).toContain("a6756188");
     expect(contract).toContain("bd11deed");
     expect(runbook).toContain("0cdcdc0f");
     expect(runbook).toContain("9a80930a");
@@ -167,7 +173,9 @@ describe("atomic cutover migration", () => {
     expect(runbook).toContain("3b4ea9f9");
     expect(runbook).toContain("610662a9");
     expect(runbook).toContain("08c25172");
-    expect(findings).toContain("Origin is `08c25172`");
+    expect(runbook).toContain("a6756188");
+    expect(findings).toContain("Origin is `a6756188`");
+    expect(findings).not.toContain("Origin is `08c25172`");
     expect(findings).not.toContain("Origin is `610662a9`");
     expect(findings).not.toContain("Origin is `3b4ea9f9`");
     expect(findings).not.toContain("Origin is `1b172544`");
@@ -191,6 +199,7 @@ describe("atomic cutover migration", () => {
     expect(findings).toContain("## 3k.");
     expect(findings).toContain("## 3n.");
     expect(findings).toContain("## 3o.");
+    expect(findings).toContain("## 3p.");
     expect(findings).toContain("pbhcusvb");
     expect(findings).toContain("converted=2");
     expect(runbook).toContain("converted=2");
