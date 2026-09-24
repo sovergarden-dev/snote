@@ -82,4 +82,26 @@ describe("Editor dual viewport on one Y.Doc (B2/B3/C5)", () => {
     expect(rightRef.current?.getSelectedText()).toBe("");
     expect(second.state.selection.main.empty).toBe(true);
   });
+
+  it("F1: two EditorViews on one Awareness keep a single local client", async () => {
+    const doc = new Y.Doc();
+    doc.getText("content").insert(0, "hello");
+    const awareness = new Awareness(doc);
+    awareness.setLocalState({ user: { name: "me", color: "#000" } });
+    const { container } = render(
+      <>
+        <Editor doc={doc} awareness={awareness} />
+        <Editor doc={doc} awareness={awareness} />
+      </>,
+    );
+    await waitFor(() => expect(container.querySelectorAll(".cm-content")).toHaveLength(2));
+    const first = viewOf(container, 0);
+    const second = viewOf(container, 1);
+    first.dispatch(first.state.update({ changes: { from: 5, insert: "!" } }));
+    second.dispatch({ selection: { anchor: 0, head: 1 } });
+    await waitFor(() => expect(first.state.doc.toString()).toBe("hello!"));
+    const clientIds = [...awareness.getStates().keys()];
+    expect(clientIds).toEqual([awareness.clientID]);
+    expect(awareness.getLocalState()?.user).toEqual({ name: "me", color: "#000" });
+  });
 });

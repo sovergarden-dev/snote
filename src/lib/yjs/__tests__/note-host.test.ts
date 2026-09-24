@@ -72,6 +72,36 @@ describe("note-host registry (H1–H4)", () => {
     releaseNoteHost("note:x");
   });
 
+  it("H3: a new generation token does not construct a parallel host while panes are bound", () => {
+    const host = acquireNoteHost("note:x");
+    acquireNoteHost("note:x");
+    const factory = vi.fn(() => ({
+      doc: { id: 1 },
+      provider: { destroy: vi.fn() },
+      dispose: vi.fn(),
+    }));
+    host.bindResources("g1", factory);
+    host.bindResources("g2", factory);
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(host.hasResources("g1")).toBe(true);
+    expect(host.hasResources("g2")).toBe(false);
+    host.unbindResources("g1");
+    expect(factory).toHaveBeenCalledTimes(1);
+    host.unbindResources("g2");
+    expect(I.retainCount("note:x")).toBe(2);
+    const again = vi.fn(() => ({
+      doc: { id: 2 },
+      provider: { destroy: vi.fn() },
+      dispose: vi.fn(),
+    }));
+    host.bindResources("g2", again);
+    expect(again).toHaveBeenCalledTimes(1);
+    expect(host.hasResources("g2")).toBe(true);
+    host.unbindResources("g2");
+    releaseNoteHost("note:x");
+    releaseNoteHost("note:x");
+  });
+
   it("H4 / B4: unbinding one pane keeps the host while another retain remains", () => {
     const host = acquireNoteHost("note:x");
     acquireNoteHost("note:x");

@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UnlockForm } from "../UnlockForm";
+import { acquireNoteHost, releaseNoteHost, __noteHostInternals } from "@/lib/yjs/note-host";
 
 const harness = vi.hoisted(() => ({
   deriveKey: vi.fn(),
@@ -37,7 +38,12 @@ function renderUnlock(embedded = false) {
 describe("UnlockForm accessibility", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    __noteHostInternals.reset();
     harness.deriveKey.mockResolvedValue({} as CryptoKey);
+  });
+
+  afterEach(() => {
+    __noteHostInternals.reset();
   });
 
   it("labels navigation, password input, descriptions, and errors", async () => {
@@ -76,5 +82,38 @@ describe("UnlockForm accessibility", () => {
     expect(screen.getByLabelText("unlock.placeholder")).not.toHaveFocus();
     expect(container.firstElementChild).toHaveClass("h-full");
     expect(container.firstElementChild).not.toHaveClass("min-h-svh");
+  });
+
+  it("F2: two forms on one host install a single hashchange listener", () => {
+    const host = acquireNoteHost("note:secret");
+    const addSpy = vi.spyOn(window, "addEventListener");
+    const view = render(
+      <MemoryRouter initialEntries={["/secret"]}>
+        <UnlockForm
+          slug="secret"
+          salt="salt"
+          check="check"
+          iterations={1}
+          onUnlock={vi.fn()}
+          ownWindowEvents={host.ownWindowEvents}
+        />
+        <UnlockForm
+          slug="secret"
+          salt="salt"
+          check="check"
+          iterations={1}
+          onUnlock={vi.fn()}
+          ownWindowEvents={host.ownWindowEvents}
+        />
+      </MemoryRouter>,
+    );
+    const hashListeners = addSpy.mock.calls.filter((call) => call[0] === "hashchange").length;
+    const popListeners = addSpy.mock.calls.filter((call) => call[0] === "popstate").length;
+    expect(hashListeners).toBe(1);
+    expect(popListeners).toBe(1);
+    expect(__noteHostInternals.windowListenerCount()).toBe(2);
+    view.unmount();
+    addSpy.mockRestore();
+    releaseNoteHost("note:secret");
   });
 });

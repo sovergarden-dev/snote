@@ -349,8 +349,7 @@ export default function NotePage({
       const path = await plain.convertPlainNoteOnWrite({
         slug: startedSlug,
         doc,
-        source: (hostKey ? getNoteHost(hostKey)?.legacySource as LegacyNote | null : null)
-          ?? legacySourceRef.current,
+        source: legacySourceRef.current,
         api: runtime.createCapabilityApi(),
         encryption,
         encryptionSecret: readEncryptionSecret(window.location.hash),
@@ -385,7 +384,7 @@ export default function NotePage({
       convertBusyRef.current = false;
       setConvertBusy(false);
     }
-  }, [capabilityAccess, doc, encryption, hostKey, metaVersion, navigate, patchGate, provider, slug]);
+  }, [capabilityAccess, doc, encryption, metaVersion, navigate, patchGate, provider, slug]);
 
   const runDisable = useCallback(async () => {
     if (!doc || convertBusyRef.current || !capabilityAccess || capabilityAccess.scope !== "owner") return;
@@ -587,6 +586,7 @@ export default function NotePage({
       && existing.resolvedEncTarget.metaVersion === metaVersion
       && existing.encPhase !== "loading"
     ) {
+      if (live.legacySource) legacySourceRef.current = live.legacySource as LegacyNote;
       return;
     }
     live.setGate({ encPhase: "loading" });
@@ -1159,6 +1159,7 @@ export default function NotePage({
         check={encMeta.check!}
         iterations={iterationsFor(encMeta.iterations)}
         embedded={!!embedSlug}
+        ownWindowEvents={hostKey ? getNoteHost(hostKey)?.ownWindowEvents : undefined}
         onUnlock={(key) => {
           const currentTarget = currentEncTargetRef.current;
           if (currentTarget.slug !== slug || currentTarget.metaVersion !== metaVersion) return;

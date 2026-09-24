@@ -152,7 +152,7 @@ export class NoteHost {
    * One real window listener per event type for this host. Additional panes
    * register handlers that the same listener fans out to (F2).
    */
-  ownWindowEvents(types: readonly string[], handler: () => void): () => void {
+  ownWindowEvents = (types: readonly string[], handler: () => void): () => void => {
     this.eventHandlers.add(handler);
     if (this.eventHandlers.size === 1) {
       this.fanout = () => {
@@ -191,17 +191,13 @@ export class NoteHost {
       this.resourceBinds += 1;
       return this.resources as NoteHostResources<TProvider>;
     }
-    if (this.resources && this.resourceBinds <= 0) {
-      this.destroyResources();
-    }
-    if (this.resources && this.resourceGeneration === generation) {
+    if (this.resources && this.resourceBinds > 0) {
+      // H3: another pane still holds the live host. Never construct a
+      // parallel provider even if this pane's generation token changed.
       this.resourceBinds += 1;
       return this.resources as NoteHostResources<TProvider>;
     }
-    if (this.resources) {
-      this.resourceBinds += 1;
-      return this.resources as NoteHostResources<TProvider>;
-    }
+    if (this.resources) this.destroyResources();
     const created = factory();
     this.resources = created;
     this.resourceGeneration = generation;
@@ -209,8 +205,8 @@ export class NoteHost {
     return created;
   }
 
-  unbindResources(generation: string): void {
-    if (this.resourceGeneration !== generation && this.resourceBinds <= 0) return;
+  unbindResources(_generation?: string): void {
+    if (this.resourceBinds <= 0) return;
     this.resourceBinds -= 1;
     if (this.resourceBinds <= 0) {
       this.resourceBinds = 0;
@@ -219,23 +215,19 @@ export class NoteHost {
   }
 
   startSync(generation: string, start: () => () => void): () => void {
-    if (this.syncStop && this.syncGeneration === generation) {
+    if (this.syncStop && (this.syncGeneration === generation || this.syncBinds > 0)) {
       this.syncBinds += 1;
-      return () => this.stopSync(generation);
+      return () => this.stopSync();
     }
-    if (this.syncStop && this.syncBinds <= 0) {
+    if (this.syncStop) {
       this.syncStop();
       this.syncStop = null;
       this.syncGeneration = null;
     }
-    if (!this.syncStop) {
-      this.syncStop = start();
-      this.syncGeneration = generation;
-      this.syncBinds = 1;
-    } else {
-      this.syncBinds += 1;
-    }
-    return () => this.stopSync(generation);
+    this.syncStop = start();
+    this.syncGeneration = generation;
+    this.syncBinds = 1;
+    return () => this.stopSync();
   }
 
   hasResources(generation: string): boolean {
@@ -250,14 +242,9 @@ export class NoteHost {
     this.listeners.clear();
   }
 
-  private stopSync(generation: string): void {
+  private stopSync(): void {
     if (this.syncBinds <= 0) return;
-    if (this.syncGeneration !== generation && this.syncStop) {
-      this.syncBinds -= 1;
-      if (this.syncBinds > 0) return;
-    } else {
-      this.syncBinds -= 1;
-    }
+    this.syncBinds -= 1;
     if (this.syncBinds <= 0) {
       this.syncBinds = 0;
       this.syncStop?.();

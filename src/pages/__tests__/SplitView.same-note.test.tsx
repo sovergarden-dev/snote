@@ -222,6 +222,26 @@ describe("SplitView same-note split (Option D)", () => {
     expect(screen.queryByText("note:alpha")).not.toBeInTheDocument();
   });
 
+  it("E4: compact tablist arrows still cycle duplicate panes", async () => {
+    const { container } = renderSplit("/n+n");
+    await screen.findAllByText("note:n");
+    resize(container.querySelector("[data-split-workspace]")!, 640);
+    const tabs = screen.getAllByRole("tab");
+    tabs[0].focus();
+    fireEvent.keyDown(tabs[0], { key: "ArrowRight" });
+    expect(tabs[1]).toHaveFocus();
+    expect(tabs[1]).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(tabs[1], { key: "Home" });
+    expect(tabs[0]).toHaveFocus();
+    expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("G3: 3-pane layout still renders when a slug is duplicated", async () => {
+    renderSplit("/a+a+b");
+    expect(document.querySelectorAll("[data-split-view-pane]")).toHaveLength(3);
+    expect(document.querySelector("[data-split-view-pane='2']")).toHaveClass("md:col-span-2");
+  });
+
   it("A6: persisting the split keeps duplicate slug order", async () => {
     renderSplit("/123+123");
     await screen.findAllByText("note:123");
