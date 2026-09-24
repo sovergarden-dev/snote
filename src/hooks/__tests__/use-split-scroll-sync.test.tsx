@@ -44,6 +44,25 @@ describe("useSplitScrollSync", () => {
     expect(second.scrollTop).toBe(800);
   });
 
+  it("C2: with Sync OFF, scrolling pane 0 does not move pane 1", () => {
+    const { result } = renderHook(() => useSplitScrollSync(false, 2));
+    const first = scroller({ scrollHeight: 1_000, clientHeight: 200 });
+    const second = scroller({ scrollHeight: 2_000, clientHeight: 400, scrollTop: 50 });
+
+    act(() => {
+      result.current(0, first);
+      result.current(1, second);
+    });
+
+    first.scrollTop = 400;
+    act(() => first.dispatchEvent(new Event("scroll")));
+    expect(second.scrollTop).toBe(50);
+
+    second.scrollTop = 900;
+    act(() => second.dispatchEvent(new Event("scroll")));
+    expect(first.scrollTop).toBe(400);
+  });
+
   it("removes listeners when a pane unregisters or sync is disabled", () => {
     const { result, rerender } = renderHook(
       ({ enabled }) => useSplitScrollSync(enabled, 2),

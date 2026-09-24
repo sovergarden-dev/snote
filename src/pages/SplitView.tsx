@@ -24,6 +24,15 @@ import { useI18n } from "@/i18n";
 import { loadNotePage } from "@/lib/note-page-import";
 import { isUsableSlug } from "@/lib/slug";
 import { WIKI_NAV_EVENT } from "@/lib/wiki-link";
+import {
+  MAX_SPLIT_PANES,
+  MIN_SPLIT_PANES,
+  SPLIT_SLUG_RE,
+  parseSplitSlugs,
+  splitHasDuplicateSlugs,
+  splitPaneKey,
+  splitPaneTabLabel,
+} from "@/lib/split-view";
 
 const NotePage = lazy(() => loadNotePage());
 const CutoverNotePage = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
@@ -32,14 +41,12 @@ const CutoverNotePage = import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true
 const capabilityRoutesEnabled =
   import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true";
 
-const SLUG_RE = /^[a-zA-Z0-9_-]{1,64}$/;
-const MIN_PANES = 2;
-const MAX_PANES = 4;
-
 /**
- * SplitView shows 2–4 notes at once. Route: /:slugs where slugs = "a+b",
- * "a+b+c", or "a+b+c+d". Optional sync-scroll keeps every pane at the same
- * scroll ratio.
+ * SplitView shows 2–4 panes at once. Route: /:slugs where slugs = "a+b",
+ * "a+b+c", or "a+b+c+d", including same-note splits like "a+a" once the
+ * tab-scoped note-host registry is in place (see `src/lib/yjs/note-host.ts`).
+ * Optional sync-scroll keeps every pane at the same scroll ratio; duplicate
+ * note-identities default Sync OFF (C1) so dual viewport positions survive.
  *
  * Layouts:
  *   2 → left | right
@@ -48,29 +55,23 @@ const MAX_PANES = 4;
  */
 export default function SplitView() {
   const { slug = "" } = useParams();
-  const [syncScroll, setSyncScroll] = useState(true);
-
-  // Deduplicate: identical slugs on multiple panes cause provider/presence
-  // conflicts. Preserve first-occurrence order.
-  const rawSlugs = useMemo(() => slug.split("+").filter(Boolean), [slug]);
-  const slugs = useMemo(() => Array.from(new Set(rawSlugs)), [rawSlugs]);
+  const slugs = useMemo(() => parseSplitSlugs(slug), [slug]);
+  const hasDuplicate = splitHasDuplicateSlugs(slugs);
+  const [syncScroll, setSyncScroll] = useState(!hasDuplicate);
+  const [syncDefaultForDuplicate, setSyncDefaultForDuplicate] = useState(hasDuplicate);
+  if (syncDefaultForDuplicate !== hasDuplicate) {
+    setSyncDefaultForDuplicate(hasDuplicate);
+    setSyncScroll(!hasDuplicate);
+  }
   const registerScroller = useSplitScrollSync(syncScroll, slugs.length);
 
   // Invalid: wrong count or any slug fails the regex → go home.
   if (
-    rawSlugs.length < MIN_PANES ||
-    rawSlugs.length > MAX_PANES ||
-    rawSlugs.some((s) => !SLUG_RE.test(s))
+    slugs.length < MIN_SPLIT_PANES ||
+    slugs.length > MAX_SPLIT_PANES ||
+    slugs.some((s) => !SPLIT_SLUG_RE.test(s))
   ) {
     return <Navigate to="/" replace />;
-  }
-  // All identical → collapse to single-note route.
-  if (slugs.length === 1) {
-    return <Navigate to={`/${slugs[0]}`} replace />;
-  }
-  // Some duplicates removed → redirect to the canonical unique-slug URL.
-  if (slugs.length !== rawSlugs.length) {
-    return <Navigate to={`/${slugs.join("+")}`} replace />;
   }
 
   return (
@@ -120,14 +121,19 @@ function SplitViewBody({
       if (!target || !isUsableSlug(target)) return;
       const existing = slugs.indexOf(target);
       if (existing >= 0) {
+        // F3: identity already shown → activate that pane; do not mount a
+        // second host. First matching pane is the focus target.
         setActivePane(existing);
-        tabRefs.current[existing]?.focus();
+        const tab = tabRefs.current[existing];
+        if (tab) tab.focus();
+        else document.getElementById(`split-panel-${existing}`)?.focus();
         return;
       }
       const next = slugs.slice();
       const index = Math.min(Math.max(activePane, 0), next.length - 1);
       next[index] = target;
-      if (new Set(next).size !== next.length) return;
+      // F4: a replace that creates a duplicate slug is valid after the host
+      // registry exists — do not silent-no-op.
       navigate("/" + next.join("+"));
     };
     window.addEventListener(WIKI_NAV_EVENT, onNav);
@@ -234,9 +240,9 @@ function SplitViewBody({
           aria-label={t("help.split_label")}
           className="flex shrink-0 overflow-x-auto border-b border-border bg-background px-1"
         >
-          {slugs.map((paneSlug, index) => (
+          {slugs.map((_, index) => (
             <button
-              key={paneSlug}
+              key={splitPaneKey(index)}
               ref={(element) => {
                 tabRefs.current[index] = element;
               }}
@@ -254,7 +260,7 @@ function SplitViewBody({
               onClick={() => setActivePane(index)}
               onKeyDown={(event) => activateFromKey(event, index)}
             >
-              /{paneSlug}
+              {splitPaneTabLabel(slugs, index)}
             </button>
           ))}
         </div>
@@ -285,9 +291,10 @@ function SplitViewBody({
             .join(" ");
           return (
             <SplitPane
-              key={`${s}-${i}`}
+              key={splitPaneKey(i)}
               index={i}
               slug={s}
+              label={splitPaneTabLabel(slugs, i)}
               compact={compact}
               active={activePane === i}
               className={`${spanClass} ${borderClass}`}
@@ -304,6 +311,7 @@ function SplitViewBody({
 function SplitPane({
   index,
   slug,
+  label,
   compact,
   active,
   className,
@@ -312,6 +320,7 @@ function SplitPane({
 }: {
   index: number;
   slug: string;
+  label: string;
   compact: boolean;
   active: boolean;
   className: string;
@@ -333,7 +342,7 @@ function SplitPane({
       data-split-active={active ? "true" : undefined}
       role={compact ? "tabpanel" : "region"}
       aria-labelledby={compact ? `split-tab-${index}` : undefined}
-      aria-label={compact ? undefined : `/${slug}`}
+      aria-label={compact ? undefined : label}
       hidden={compact && !active}
       tabIndex={-1}
       onPointerDown={onActivate}

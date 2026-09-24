@@ -38,6 +38,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/i18n";
 import { deriveKey, encryptBytes, decryptBytes, verifyCheck, iterationsFor } from "@/lib/crypto";
 import { acquireDoc, releaseDoc } from "@/lib/yjs/doc-cache";
+import { getNoteHost, noteHostKey, type NoteHostGate } from "@/lib/yjs/note-host";
+import { useNoteHost } from "@/hooks/use-note-host";
 import type { LegacyNote } from "@/lib/legacy/cutover";
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
@@ -199,6 +201,8 @@ export default function NotePage({
     return parsed && parsed.scope !== "view" && parsed.slug === slug ? parsed : null;
   }, [legacyOnly, slug, location.pathname, location.search, location.hash]);
   const capabilityToken = capabilityAccess?.token ?? null;
+  const hostKey = validSlug ? noteHostKey({ slug, capabilityToken }) : null;
+  const { gate } = useNoteHost(hostKey);
   const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
   const { visible: showPreview, setVisible: setShowPreview } = usePreviewVisible();
   // On narrow viewports (< 900 px) the editor + preview are NOT shown
@@ -238,7 +242,7 @@ export default function NotePage({
   // Provider generations are invalidated when the persisted encryption mode
   // changes. Resource construction itself happens after commit below so an
   // abandoned concurrent render cannot pin a document or leak a provider.
-  const [providerEpoch, setProviderEpoch] = useState(0);
+  const providerEpoch = gate.providerEpoch;
 
   // Celebrate when crossing the goal threshold (once per goal value).
   // `confettiTrigger` bumps in lockstep with the toast so a CSS-only burst
@@ -285,17 +289,10 @@ export default function NotePage({
   // violated the durable encrypted-state pin and must never mount
   // local/network persistence as plaintext.
   // Editor/Preview and network sync stay unmounted until the gate is ready.
-  const [encPhase, setEncPhase] = useState<"loading" | "needs-key" | "blocked" | "error" | "ready">("loading");
-  const [encMeta, setEncMeta] = useState<EncMeta>({
-    isEncrypted: false,
-    salt: null,
-    check: null,
-    iterations: null,
-    ydocState: null,
-    rowExists: false,
-  });
-  const [encryption, setEncryption] = useState<Encryption | null>(null);
-  const [capabilityAdmission, setCapabilityAdmission] = useState<CapabilityAdmission | null>(null);
+  const encPhase = gate.encPhase;
+  const encMeta = gate.encMeta;
+  const encryption = (gate.encryption ?? null) as Encryption | null;
+  const capabilityAdmission = (gate.capabilityAdmission ?? null) as CapabilityAdmission | null;
   const admittedCapability = capabilityAccess
     && capabilityAdmission
     && capabilityAdmission.access.token === capabilityAccess.token
@@ -304,20 +301,27 @@ export default function NotePage({
     ? capabilityAdmission
     : null;
   const legacySourceRef = useRef<LegacyNote | null>(null);
-  const [plainProviderCtor, setPlainProviderCtor] = useState<PlainRuntime["PlainUpsertProvider"] | null>(null);
+  const plainProviderCtor = (gate.plainProviderCtor ?? null) as PlainRuntime["PlainUpsertProvider"] | null;
   const [convertBusy, setConvertBusy] = useState(false);
-  const [convertError, setConvertError] = useState<"network" | "permission" | "retry" | "converted" | null>(null);
+  const convertError = gate.convertError;
   const convertBusyRef = useRef(false);
   const convertErrorRef = useRef<"network" | "permission" | "retry" | "converted" | null>(null);
   const [legacyBusyKind, setLegacyBusyKind] = useState<"on" | "off">("on");
+  const patchGate = useCallback((partial: Partial<NoteHostGate>) => {
+    if (!hostKey) return;
+    getNoteHost(hostKey)?.setGate(partial);
+  }, [hostKey]);
+  useEffect(() => {
+    convertErrorRef.current = convertError;
+  }, [convertError]);
 
   // Bumped by the hashchange listener (lock/unlock) and by Retry on the
-  // enc-meta error gate so the meta-fetch effect re-runs.
-  const [metaVersion, setMetaVersion] = useState(0);
-  const [resolvedEncTarget, setResolvedEncTarget] = useState<EncGateTarget | null>(null);
+  // enc-meta error gate so the meta-fetch effect re-runs. Owned by the host
+  // so sibling panes of the same note-identity share one revision (F2).
+  const metaVersion = gate.metaVersion;
+  const resolvedEncTarget = gate.resolvedEncTarget;
   const [resources, setResources] = useState<NoteResources | null>(null);
   const currentEncTargetRef = useRef<EncGateTarget>({ slug, metaVersion });
-  const observedHashRef = useRef(window.location.hash);
   const routerTarget = `${location.key}\u0000${location.pathname}\u0000${location.search}\u0000${location.hash}`;
   const routerTargetRef = useRef(routerTarget);
   const encTargetIsCurrent = resolvedEncTarget?.slug === slug
@@ -338,14 +342,15 @@ export default function NotePage({
     convertBusyRef.current = true;
     setLegacyBusyKind("on");
     setConvertBusy(true);
-    setConvertError(null);
+    patchGate({ convertError: null });
     try {
       const runtime = capabilityRuntime ?? await loadCapabilityRuntime();
       const plain = plainRuntime ?? await loadPlainRuntime();
       const path = await plain.convertPlainNoteOnWrite({
         slug: startedSlug,
         doc,
-        source: legacySourceRef.current,
+        source: (hostKey ? getNoteHost(hostKey)?.legacySource as LegacyNote | null : null)
+          ?? legacySourceRef.current,
         api: runtime.createCapabilityApi(),
         encryption,
         encryptionSecret: readEncryptionSecret(window.location.hash),
@@ -368,7 +373,7 @@ export default function NotePage({
       const kind = (plainRuntime ?? await loadPlainRuntime()).mapDuplicateFailure(error);
       const feedback = kind === "permission" || kind === "network" ? kind : "retry";
       convertErrorRef.current = feedback;
-      setConvertError(feedback);
+      patchGate({ convertError: feedback });
       if (provider && "emitConvertError" in provider) {
         (provider as { emitConvertError: (message: string) => void }).emitConvertError(feedback);
       }
@@ -380,7 +385,7 @@ export default function NotePage({
       convertBusyRef.current = false;
       setConvertBusy(false);
     }
-  }, [capabilityAccess, doc, encryption, metaVersion, navigate, provider, slug]);
+  }, [capabilityAccess, doc, encryption, hostKey, metaVersion, navigate, patchGate, provider, slug]);
 
   const runDisable = useCallback(async () => {
     if (!doc || convertBusyRef.current || !capabilityAccess || capabilityAccess.scope !== "owner") return;
@@ -390,7 +395,7 @@ export default function NotePage({
     convertBusyRef.current = true;
     setLegacyBusyKind("off");
     setConvertBusy(true);
-    setConvertError(null);
+    patchGate({ convertError: null });
     try {
       const runtime = capabilityRuntime ?? await loadCapabilityRuntime();
       const { bytesToBase64 } = await import("@/lib/yjs/base64");
@@ -425,7 +430,7 @@ export default function NotePage({
       const kind = (plainRuntime ?? await loadPlainRuntime()).mapDuplicateFailure(error);
       const feedback = kind === "permission" || kind === "network" ? kind : "retry";
       convertErrorRef.current = feedback;
-      setConvertError(feedback);
+      patchGate({ convertError: feedback });
       toast({
         title: tRef.current("security.legacy_secure_fail_off"),
         variant: "destructive",
@@ -434,14 +439,12 @@ export default function NotePage({
       convertBusyRef.current = false;
       setConvertBusy(false);
     }
-  }, [capabilityAccess, doc, metaVersion, navigate, slug]);
+  }, [capabilityAccess, doc, metaVersion, navigate, patchGate, slug]);
 
   useEffect(() => {
     convertErrorRef.current = null;
     convertBusyRef.current = false;
-    setConvertError(null);
     setConvertBusy(false);
-    setPlainProviderCtor(null);
   }, [slug]);
 
   useEffect(() => {
@@ -454,10 +457,9 @@ export default function NotePage({
   }, [provider]);
 
   const observeHash = useCallback((nextHash: string) => {
-    if (observedHashRef.current === nextHash) return;
-    observedHashRef.current = nextHash;
-    setMetaVersion((n) => n + 1);
-  }, []);
+    if (!hostKey) return;
+    getNoteHost(hostKey)?.observeHash(nextHash);
+  }, [hostKey]);
 
   // Commit request identity only after React commits this render. Mutating the
   // ref during render lets an abandoned concurrent render invalidate the
@@ -470,9 +472,12 @@ export default function NotePage({
   // registers global listeners. Do neither until the encryption gate has
   // authorized this exact target, then own both from a committed effect so
   // React can pair acquisition with cleanup, including StrictMode replays.
+  // Same-note split panes bind through the tab-scoped host (H1–H4) so a
+  // second pane never constructs a parallel provider/doc/session.
   useLayoutEffect(() => {
     if (
       !validSlug
+      || !hostKey
       || encPhase !== "ready"
       || !encTargetIsCurrent
       || (capabilityAccess && !admittedCapability)
@@ -484,49 +489,62 @@ export default function NotePage({
         && import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true"
       )
     ) return;
+    const live = getNoteHost(hostKey);
+    if (!live) return;
     const docCacheKey = admittedCapability
       ? `capability:${admittedCapability.session.noteId}:${admittedCapability.session.scope}:${admittedCapability.session.generation}`
       : slug;
-    const ownedDoc = acquireDoc(docCacheKey);
-    const seed = plainRuntime?.consumeConvertSeed(slug);
-    if (seed) Y.applyUpdate(ownedDoc, seed);
-    const CapabilityYjsProvider = admittedCapability?.YjsProvider;
-    const ownedProvider: YjsProviderLike = admittedCapability && CapabilityYjsProvider
-      ? new CapabilityYjsProvider(
-          admittedCapability.access,
-          admittedCapability.session,
-          ownedDoc,
-          { pollingOnly: true },
-        )
-      : plainProviderCtor && !legacyOnly
-        ? new plainProviderCtor(
-            slug,
+    const generation = `${docCacheKey}:${metaVersion}:${providerEpoch}`;
+    const bound = live.bindResources(generation, () => {
+      const ownedDoc = acquireDoc(docCacheKey);
+      const seed = plainRuntime?.consumeConvertSeed(slug);
+      if (seed) Y.applyUpdate(ownedDoc, seed);
+      const CapabilityYjsProvider = admittedCapability?.YjsProvider;
+      const ownedProvider: YjsProviderLike = admittedCapability && CapabilityYjsProvider
+        ? new CapabilityYjsProvider(
+            admittedCapability.access,
+            admittedCapability.session,
             ownedDoc,
-            async (body, keepalive) => {
-              const runtime = capabilityRuntime ?? await loadCapabilityRuntime();
-              return runtime.createCapabilityApi().upsertPlainNote(body, keepalive);
-            },
-            () => {
-              markLegacySecurePin(slug);
-              convertErrorRef.current = "converted";
-              setConvertError("converted");
-            },
+            { pollingOnly: true },
           )
-        : new SupabaseYjsProvider(slug, ownedDoc);
+        : plainProviderCtor && !legacyOnly
+          ? new plainProviderCtor(
+              slug,
+              ownedDoc,
+              async (body, keepalive) => {
+                const runtime = capabilityRuntime ?? await loadCapabilityRuntime();
+                return runtime.createCapabilityApi().upsertPlainNote(body, keepalive);
+              },
+              () => {
+                markLegacySecurePin(slug);
+                convertErrorRef.current = "converted";
+                getNoteHost(hostKey)?.setGate({ convertError: "converted" });
+              },
+            )
+          : new SupabaseYjsProvider(slug, ownedDoc);
+      return {
+        doc: ownedDoc,
+        provider: ownedProvider,
+        dispose: () => {
+          void ownedProvider.destroy();
+          releaseDoc(docCacheKey);
+        },
+      };
+    });
     setResources({
       slug,
       metaVersion,
       providerEpoch,
-      doc: ownedDoc,
-      provider: ownedProvider,
+      doc: bound.doc as Y.Doc,
+      provider: bound.provider as YjsProviderLike,
     });
     return () => {
-      void ownedProvider.destroy();
-      releaseDoc(docCacheKey);
+      live.unbindResources(generation);
     };
   }, [
     slug,
     validSlug,
+    hostKey,
     metaVersion,
     providerEpoch,
     encPhase,
@@ -540,16 +558,15 @@ export default function NotePage({
   ]);
 
   useLayoutEffect(() => {
+    if (!hostKey) return;
+    const live = getNoteHost(hostKey);
+    if (!live) return;
     const syncHash = () => observeHash(window.location.hash);
-    window.addEventListener("hashchange", syncHash);
-    window.addEventListener("popstate", syncHash);
+    const stop = live.ownWindowEvents(["hashchange", "popstate"], syncHash);
     // Close the commit-to-subscription race by reconciling once immediately.
     syncHash();
-    return () => {
-      window.removeEventListener("hashchange", syncHash);
-      window.removeEventListener("popstate", syncHash);
-    };
-  }, [observeHash]);
+    return stop;
+  }, [observeHash, hostKey]);
 
   // React Router navigation can change/remove a fragment through
   // history.pushState(), which does not emit hashchange or popstate.
@@ -561,8 +578,18 @@ export default function NotePage({
 
   // Single combined fetch: enc-meta + ydoc_state in one round-trip.
   useEffect(() => {
-    if (!validSlug) return;
-    setEncPhase("loading");
+    if (!validSlug || !hostKey) return;
+    const live = getNoteHost(hostKey);
+    if (!live) return;
+    const existing = live.getGate();
+    if (
+      existing.resolvedEncTarget?.slug === slug
+      && existing.resolvedEncTarget.metaVersion === metaVersion
+      && existing.encPhase !== "loading"
+    ) {
+      return;
+    }
+    live.setGate({ encPhase: "loading" });
     let cancelled = false;
     const requestTarget: EncGateTarget = { slug, metaVersion };
     const requestRouterTarget = routerTarget;
@@ -593,7 +620,10 @@ export default function NotePage({
         let rowExists = false;
         if (capabilityAccess) {
           const runtime = capabilityRuntime ?? await loadCapabilityRuntime();
-          const session = await runtime.createCapabilityApi().openSession(capabilityAccess.token);
+          const session = await live.openOnce(
+            `session:${capabilityAccess.token}:${metaVersion}`,
+            () => runtime.createCapabilityApi().openSession(capabilityAccess.token),
+          );
           if (!isCurrentRequest()) return;
           if (
             session.slug !== slug
@@ -603,11 +633,13 @@ export default function NotePage({
             throw new Error("capability session unavailable");
           }
           convertErrorRef.current = null;
-          setConvertError(null);
-          setCapabilityAdmission({
-            access: capabilityAccess,
-            session,
-            YjsProvider: runtime.CapabilityYjsProvider,
+          live.setGate({
+            convertError: null,
+            capabilityAdmission: {
+              access: capabilityAccess,
+              session,
+              YjsProvider: runtime.CapabilityYjsProvider,
+            },
           });
           data = {
             is_encrypted: session.encryption.enabled,
@@ -618,18 +650,21 @@ export default function NotePage({
           };
           rowExists = true;
         } else if (!legacyOnly && import.meta.env.VITE_CAPABILITY_ROUTES_ENABLED === "true") {
-          setCapabilityAdmission(null);
-          setPlainProviderCtor(null);
+          live.setGate({ capabilityAdmission: null, plainProviderCtor: null });
           const runtime = plainRuntime ?? await loadPlainRuntime();
           if (!isCurrentRequest()) return;
-          const note = await runtime.createLegacyNoteApi().open(slug);
+          const note = await live.openOnce(
+            `lno:${slug}:${metaVersion}`,
+            () => runtime.createLegacyNoteApi().open(slug),
+          );
           if (!isCurrentRequest()) return;
           // LNO-wins: leftover pin after bulk OFF must not latch A3. Only
           // clear after a successful unmanaged/vacant open. LNO errors keep
           // the pin (fail-closed) via the catch path.
           if (hasLegacySecurePin(slug)) clearLegacySecurePin(slug);
           legacySourceRef.current = note;
-          setPlainProviderCtor(() => runtime.PlainUpsertProvider);
+          live.legacySource = note;
+          live.setGate({ plainProviderCtor: runtime.PlainUpsertProvider });
           if (!note) {
             data = {
               is_encrypted: false,
@@ -650,13 +685,17 @@ export default function NotePage({
             rowExists = true;
           }
         } else {
-          setCapabilityAdmission(null);
+          live.setGate({ capabilityAdmission: null });
           legacySourceRef.current = null;
-          const response = await supabase
-            .from("notes")
-            .select("is_encrypted, enc_salt, enc_check, enc_iterations, ydoc_state")
-            .eq("slug", slug)
-            .maybeSingle();
+          live.legacySource = null;
+          const response = await live.openOnce(
+            `notes:${slug}:${metaVersion}`,
+            async () => supabase
+              .from("notes")
+              .select("is_encrypted, enc_salt, enc_check, enc_iterations, ydoc_state")
+              .eq("slug", slug)
+              .maybeSingle(),
+          );
           if (response.error) throw response.error;
           data = response.data;
           rowExists = !!response.data;
@@ -670,12 +709,12 @@ export default function NotePage({
           ydocState: data?.ydoc_state ?? null,
           rowExists,
         };
-        setEncMeta((prev) => {
-          // Encryption mode flipped since last fetch — force a provider rebuild.
-          if (prev.isEncrypted !== meta.isEncrypted) {
-            setProviderEpoch((n) => n + 1);
-          }
-          return meta;
+        const prevMeta = live.getGate().encMeta;
+        live.setGate({
+          encMeta: meta,
+          ...(prevMeta.isEncrypted !== meta.isEncrypted
+            ? { providerEpoch: live.getGate().providerEpoch + 1 }
+            : {}),
         });
 
         // The legacy table still permits an attacker to alter encryption
@@ -689,17 +728,21 @@ export default function NotePage({
           : getEncryptionPinState(slug) === "clear";
         if (!encryptionStateIsTrusted) {
           if (!isCurrentRequest()) return;
-          setEncryption(null);
-          setEncPhase("blocked");
-          setResolvedEncTarget(requestTarget);
+          live.setGate({
+            encryption: null,
+            encPhase: "blocked",
+            resolvedEncTarget: requestTarget,
+          });
           return;
         }
 
         if (!meta.isEncrypted) {
           if (!isCurrentRequest()) return;
-          setEncryption(null);
-          setEncPhase("ready");
-          setResolvedEncTarget(requestTarget);
+          live.setGate({
+            encryption: null,
+            encPhase: "ready",
+            resolvedEncTarget: requestTarget,
+          });
           return;
         }
         const hashKey = readEncryptionSecret(window.location.hash);
@@ -710,12 +753,14 @@ export default function NotePage({
             const ok = await verifyCheck(key, meta.check);
             if (!isCurrentRequest()) return;
             if (ok) {
-              setEncryption({
-                encrypt: (b) => encryptBytes(key, b),
-                decrypt: (b) => decryptBytes(key, b),
+              live.setGate({
+                encryption: {
+                  encrypt: (b) => encryptBytes(key, b),
+                  decrypt: (b) => decryptBytes(key, b),
+                },
+                encPhase: "ready",
+                resolvedEncTarget: requestTarget,
               });
-              setEncPhase("ready");
-              setResolvedEncTarget(requestTarget);
               return;
             }
           } catch (e) {
@@ -724,8 +769,7 @@ export default function NotePage({
           }
         }
         if (!isCurrentRequest()) return;
-        setEncPhase("needs-key");
-        setResolvedEncTarget(requestTarget);
+        live.setGate({ encPhase: "needs-key", resolvedEncTarget: requestTarget });
       } catch (error) {
         if (isCurrentRequest()) {
           if (!capabilityAccess) {
@@ -734,11 +778,13 @@ export default function NotePage({
               if (plain.mapDuplicateFailure(error) === "converted") {
                 markLegacySecurePin(slug);
                 convertErrorRef.current = "converted";
-                setConvertError("converted");
-                setPlainProviderCtor(null);
-                setEncryption(null);
-                setEncPhase("ready");
-                setResolvedEncTarget(requestTarget);
+                live.setGate({
+                  convertError: "converted",
+                  plainProviderCtor: null,
+                  encryption: null,
+                  encPhase: "ready",
+                  resolvedEncTarget: requestTarget,
+                });
                 return;
               }
             } catch {
@@ -746,8 +792,7 @@ export default function NotePage({
             }
           }
           console.warn("Encryption metadata query failed");
-          setEncPhase("error");
-          setResolvedEncTarget(requestTarget);
+          live.setGate({ encPhase: "error", resolvedEncTarget: requestTarget });
         }
       }
     })();
@@ -757,6 +802,7 @@ export default function NotePage({
   }, [
     slug,
     validSlug,
+    hostKey,
     metaVersion,
     capabilityAccess,
     capabilityToken,
@@ -773,14 +819,13 @@ export default function NotePage({
     const applyLegacySecurePin = () => {
       if (hasLegacySecurePin(slug)) {
         convertErrorRef.current = "converted";
-        setConvertError("converted");
-        setPlainProviderCtor(null);
+        patchGate({ convertError: "converted", plainProviderCtor: null });
         return;
       }
       if (convertErrorRef.current !== "converted") return;
       convertErrorRef.current = null;
-      setConvertError(null);
-      setMetaVersion((n) => n + 1);
+      patchGate({ convertError: null });
+      if (hostKey) getNoteHost(hostKey)?.bumpMeta();
     };
     const onLegacySecureStorage = (event: StorageEvent) => {
       if (event.key !== null && event.key !== legacySecurePinKey(slug)) return;
@@ -798,7 +843,7 @@ export default function NotePage({
       window.removeEventListener("storage", onLegacySecureStorage);
       window.removeEventListener(LEGACY_SECURE_PIN_CHANGE_EVENT, onLegacySecureLocal);
     };
-  }, [slug, validSlug, capabilityAccess]);
+  }, [slug, validSlug, capabilityAccess, hostKey, patchGate]);
 
   useEffect(() => {
     if (!validSlug || convertError !== "converted" || capabilityAccess) return;
@@ -818,8 +863,7 @@ export default function NotePage({
         ? pinState === "pinned"
         : pinState === "clear";
       if (stillTrusted) return;
-      setEncryption(null);
-      setEncPhase("blocked");
+      patchGate({ encryption: null, encPhase: "blocked" });
     };
     const onStorage = (event: StorageEvent) => {
       if (event.key !== null && event.key !== encryptionPinStorageKey(slug)) return;
@@ -837,7 +881,7 @@ export default function NotePage({
       window.removeEventListener("storage", onStorage);
       window.removeEventListener(ENCRYPTION_PIN_CHANGE_EVENT, onLocalPinChange);
     };
-  }, [slug, validSlug, encPhase, encTargetIsCurrent, encMeta.isEncrypted]);
+  }, [slug, validSlug, encPhase, encTargetIsCurrent, encMeta.isEncrypted, patchGate]);
 
   // When inside the Syrin Note Chrome extension side panel, tell the host
   // which slug we're on so it can remember the last-opened note. We retry
@@ -917,8 +961,12 @@ export default function NotePage({
 
 
   // Mount IDB + connect provider once enc decision is made.
+  // Host startSync owns IDB/connect/awareness-local/snapshots so a second pane
+  // cannot admit a ghost self (F1) or a second IndexedDB persistence.
   useEffect(() => {
-    if (!validSlug || !doc || !provider || encPhase !== "ready" || !encTargetIsCurrent) return;
+    if (!validSlug || !hostKey || !doc || !provider || encPhase !== "ready" || !encTargetIsCurrent) return;
+    const live = getNoteHost(hostKey);
+    if (!live) return;
     provider.setEncryption(encryption);
     provider.setExpectedEncrypted(encMeta.isEncrypted);
 
@@ -927,18 +975,99 @@ export default function NotePage({
     rememberMetadata(slug);
     void hydrateNoteIndex();
 
-    // y-indexeddb stores Yjs structs as plaintext. Capability outbox replaces
-    // it for secure notes, and encrypted legacy notes must not mount it.
-    const idb = !capabilityAccess && !encMeta.isEncrypted
-      ? new IndexeddbPersistence(`note:${slug}`, doc)
-      : null;
-    // Knowledge index: live Y.Text after this gate only. Never scan y-indexeddb
-    // (`note:${slug}`) for encrypted notes. Persist derived graphs only when
-    // this note is already plaintext on device.
     const indexDurable = !encMeta.isEncrypted && !capabilityAccess;
-    let disposed = false;
+    const generation = `${slug}:${metaVersion}:${providerEpoch}`;
+    const stopSync = live.startSync(generation, () => {
+      const idb = !capabilityAccess && !encMeta.isEncrypted
+        ? new IndexeddbPersistence(`note:${slug}`, doc)
+        : null;
+      let disposed = false;
+      const unsubSync = provider.onSyncEvent((ev) => {
+        if (ev.type === "recovered") {
+          toast({
+            title: tRef.current("toast.synced_remote"),
+            description: tRef.current("toast.synced_remote_desc", { bytes: ev.bytes }),
+          });
+        }
+      });
+      const ytext = doc.getText("content");
+      const snapshotProtection = encMeta.isEncrypted ? encryption : null;
+      const snapshotsEnabled = !capabilityAccess;
+      let prevContent = ytext.toString();
+      let lastBigDeleteAt = 0;
+      const onDocChange = () => {
+        const text = ytext.toString();
+        const removed = prevContent.length - text.length;
+        const now = Date.now();
+        if (
+          snapshotsEnabled &&
+          removed > SUDDEN_DELETE_THRESHOLD &&
+          now - lastBigDeleteAt > SUDDEN_DELETE_WINDOW_MS &&
+          prevContent.length >= SUDDEN_DELETE_THRESHOLD
+        ) {
+          lastBigDeleteAt = now;
+          void recordOnSuddenDelete(slug, prevContent, snapshotProtection);
+        }
+        prevContent = text;
+      };
+      ytext.observe(onDocChange);
 
-    
+      (idb?.whenSynced ?? Promise.resolve()).then(() => {
+        if (disposed) return;
+        return provider
+          .connect(identity, {
+            prefetchedYdocState: encMeta.ydocState,
+            rowExists: encMeta.rowExists,
+          })
+          .catch((e) => console.warn("Provider connect failed", e));
+      }).then(() => {
+        if (disposed) return;
+        applyTemplateSeedIfEmpty(ytext, slug);
+        prevContent = ytext.toString();
+        if (snapshotsEnabled) {
+          void maybeSaveSnapshot(slug, prevContent, snapshotProtection);
+        }
+      });
+
+      let snapshotTimer: number | null = null;
+      const onVisibility = () => {
+        if (disposed) return;
+        if (document.visibilityState === "hidden") {
+          if (snapshotTimer !== null) window.clearInterval(snapshotTimer);
+          snapshotTimer = null;
+          void maybeSaveSnapshot(slug, ytext.toString(), snapshotProtection);
+        } else {
+          snapshotTimer = window.setInterval(() => {
+            void maybeSaveSnapshot(slug, ytext.toString(), snapshotProtection);
+          }, SNAPSHOT_INTERVAL_MS);
+        }
+      };
+      if (snapshotsEnabled) {
+        snapshotTimer = window.setInterval(() => {
+          void maybeSaveSnapshot(slug, ytext.toString(), snapshotProtection);
+        }, SNAPSHOT_INTERVAL_MS);
+        document.addEventListener("visibilitychange", onVisibility);
+      }
+
+      const handleBeforeUnload = () => {
+        if (disposed) return;
+        provider.flushBeacon();
+      };
+      window.addEventListener("beforeunload", handleBeforeUnload);
+      window.addEventListener("pagehide", handleBeforeUnload);
+
+      return () => {
+        disposed = true;
+        window.removeEventListener("beforeunload", handleBeforeUnload);
+        window.removeEventListener("pagehide", handleBeforeUnload);
+        if (snapshotsEnabled) document.removeEventListener("visibilitychange", onVisibility);
+        if (snapshotTimer !== null) window.clearInterval(snapshotTimer);
+        ytext.unobserve(onDocChange);
+        unsubSync();
+        idb?.destroy();
+      };
+    });
+
     const unsubAwareness = provider.onAwareness((states) => {
       const list: PresenceUser[] = [];
       states.forEach((state, clientId) => {
@@ -949,24 +1078,7 @@ export default function NotePage({
       setUsers(list);
     });
 
-    // Phase 2.2 — toast on `recovered` (DB had updates we didn't on reconnect).
-    // Conflict events are surfaced by SyncIndicator's pill+popover, not a toast.
-    const unsubSync = provider.onSyncEvent((ev) => {
-      if (ev.type === "recovered") {
-        toast({
-          title: tRef.current("toast.synced_remote"),
-          description: tRef.current("toast.synced_remote_desc", { bytes: ev.bytes }),
-        });
-      }
-    });
-
     const ytext = doc.getText("content");
-    const snapshotProtection = encMeta.isEncrypted ? encryption : null;
-    const snapshotsEnabled = !capabilityAccess;
-    let prevContent = ytext.toString();
-    let lastBigDeleteAt = 0;
-
-    // Debounced counts: avoid string scan + setState on every keystroke.
     let countTimer: number | null = null;
     let indexTimer: number | null = null;
     const updateCounts = () => {
@@ -974,19 +1086,6 @@ export default function NotePage({
       const chars = text.length;
       const words = text.trim() ? text.trim().split(/\s+/).length : 0;
       setCounts({ chars, words });
-
-      const removed = prevContent.length - text.length;
-      const now = Date.now();
-      if (
-        snapshotsEnabled &&
-        removed > SUDDEN_DELETE_THRESHOLD &&
-        now - lastBigDeleteAt > SUDDEN_DELETE_WINDOW_MS &&
-        prevContent.length >= SUDDEN_DELETE_THRESHOLD
-      ) {
-        lastBigDeleteAt = now;
-        void recordOnSuddenDelete(slug, prevContent, snapshotProtection);
-      }
-      prevContent = text;
     };
     const scheduleCounts = () => {
       if (countTimer) window.clearTimeout(countTimer);
@@ -1000,70 +1099,32 @@ export default function NotePage({
     upsertPlaintextNote(slug, ytext.toString(), { durable: indexDurable });
     ytext.observe(scheduleCounts);
 
-    (idb?.whenSynced ?? Promise.resolve()).then(() => {
-      if (disposed) return;
-      return provider
-        .connect(identity, {
-          prefetchedYdocState: encMeta.ydocState,
-          rowExists: encMeta.rowExists,
-        })
-        .catch((e) => console.warn("Provider connect failed", e));
-    }).then(() => {
-      if (disposed) return;
-      applyTemplateSeedIfEmpty(ytext, slug);
-      prevContent = ytext.toString();
-      updateCounts();
-      upsertPlaintextNote(slug, prevContent, { durable: indexDurable });
-      if (snapshotsEnabled) {
-        void maybeSaveSnapshot(slug, prevContent, snapshotProtection);
-      }
-    });
-
-    // Pause snapshot interval while tab hidden; flush when visible again.
-    let snapshotTimer: number | null = null;
-    const onVisibility = () => {
-      if (disposed) return;
-      if (document.visibilityState === "hidden") {
-        if (snapshotTimer !== null) window.clearInterval(snapshotTimer);
-        snapshotTimer = null;
-        // Best-effort flush before browser may freeze the tab.
-        void maybeSaveSnapshot(slug, ytext.toString(), snapshotProtection);
-      } else {
-        snapshotTimer = window.setInterval(() => {
-          void maybeSaveSnapshot(slug, ytext.toString(), snapshotProtection);
-        }, SNAPSHOT_INTERVAL_MS);
-      }
-    };
-    if (snapshotsEnabled) {
-      snapshotTimer = window.setInterval(() => {
-        void maybeSaveSnapshot(slug, ytext.toString(), snapshotProtection);
-      }, SNAPSHOT_INTERVAL_MS);
-      document.addEventListener("visibilitychange", onVisibility);
-    }
-
-    const handleBeforeUnload = () => {
-      if (disposed) return;
-      // sendBeacon survives the page teardown; sync supabase fetch may not.
-      provider.flushBeacon();
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    window.addEventListener("pagehide", handleBeforeUnload);
-
     return () => {
-      disposed = true;
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      window.removeEventListener("pagehide", handleBeforeUnload);
-      if (snapshotsEnabled) document.removeEventListener("visibilitychange", onVisibility);
-      if (snapshotTimer !== null) window.clearInterval(snapshotTimer);
+      stopSync();
       if (countTimer) window.clearTimeout(countTimer);
       if (indexTimer) window.clearTimeout(indexTimer);
       ytext.unobserve(scheduleCounts);
-      
       unsubAwareness();
-      unsubSync();
-      idb?.destroy();
     };
-  }, [slug, validSlug, doc, provider, embedSlug, encPhase, encTargetIsCurrent, encryption, encMeta.isEncrypted, encMeta.ydocState, encMeta.rowExists, capabilityAccess, capabilityToken, plainProviderCtor]);
+  }, [
+    slug,
+    validSlug,
+    hostKey,
+    doc,
+    provider,
+    embedSlug,
+    encPhase,
+    encTargetIsCurrent,
+    encryption,
+    encMeta.isEncrypted,
+    encMeta.ydocState,
+    encMeta.rowExists,
+    metaVersion,
+    providerEpoch,
+    capabilityAccess,
+    capabilityToken,
+    plainProviderCtor,
+  ]);
 
   if (!validSlug) return <Navigate to="/" replace />;
 
@@ -1087,7 +1148,7 @@ export default function NotePage({
       >
         <p className="font-medium text-destructive">{t("unlock.metadata_unavailable")}</p>
         <p className="text-sm text-muted-foreground">{t("unlock.metadata_unavailable_desc")}</p>
-        <Button type="button" onClick={() => setMetaVersion((n) => n + 1)}>
+        <Button type="button" onClick={() => hostKey && getNoteHost(hostKey)?.bumpMeta()}>
           {t("common.retry")}
         </Button>
       </div>
@@ -1106,17 +1167,20 @@ export default function NotePage({
           // no navigation event will update our observer. Adopt it here
           // without starting another metadata request; a later removal must
           // still be detected and close the gate.
-          observedHashRef.current = window.location.hash;
+          const liveHost = hostKey ? getNoteHost(hostKey) : null;
+          liveHost?.adoptHash(window.location.hash);
           // replaceState() emits no browser navigation event. Notify every
-          // other mounted gate (notably the sibling SplitView pane) after this
-          // instance adopts the hash, so a key replaced elsewhere cannot
+          // other mounted gate (notably a distinct-slug SplitView sibling)
+          // after this host adopts the hash, so a key replaced elsewhere cannot
           // leave stale plaintext mounted.
           window.dispatchEvent(new Event("hashchange"));
-          setEncryption({
-            encrypt: (b) => encryptBytes(key, b),
-            decrypt: (b) => decryptBytes(key, b),
+          liveHost?.setGate({
+            encryption: {
+              encrypt: (b) => encryptBytes(key, b),
+              decrypt: (b) => decryptBytes(key, b),
+            },
+            encPhase: "ready",
           });
-          setEncPhase("ready");
         }}
       />
     ) : (
