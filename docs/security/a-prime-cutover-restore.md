@@ -1,7 +1,7 @@
 # A′ Cutover restore — SPA routing (superseded as live default by W2)
 
-- Status: **Superseded as live default** by W2 free-edit + Legacy opt-in on origin `08c25172` / Pages `1db84523` (named Pages go of #135/#137/#138/#139 + Go C #145 + #151 + #153 + #155 + #157 + #159). Remaining live path: `?legacyRo=1` / Legacy Advanced → Cutover/LNO RO, plus AC A3 bare-after-Legacy-ON RO. Prior #157 pin was `610662a9` / Pages `33667a6a`. Prior #155 pin was `3b4ea9f9` / Pages `62f641c7`. Prior #153 pin was `1b172544` / Pages `5527f154`. Prior #151 pin was `44b02cb3` / Pages `b44849c4`. Prior Go C pin was `9a80930a` / Pages `8e64829c`. Prior W2 A3 pin was `0cdcdc0f` / Pages `1b9ed3d1`. Prior W1 pin was `2ae9a230` / Pages `fb35474a` (#130/#131). Prior A′+Duplicate pin was `f84183ba` / Pages `74637d87` (#128 on #126).
-- Date: 2026-09-08 (A′ ship); superseded 2026-09-09 (W1); superseded 2026-09-15 (W2 A3); Go C live 2026-09-17; #151 live 2026-09-22; #153 live 2026-09-22; #155 live 2026-09-22; #157 live 2026-09-23; #159 live 2026-09-23
+- Status: **Superseded as live default** by W2 free-edit + Legacy opt-in on origin `a6756188` / Pages `cf94d1b2` (named Pages go of #135/#137/#138/#139 + Go C #145 + #151 + #153 + #155 + #157 + #159 + #161). Remaining live path: `?legacyRo=1` / Legacy Advanced → Cutover/LNO RO, plus AC A3 bare-after-Legacy-ON RO. Prior #159 pin was `08c25172` / Pages `1db84523`. Prior #157 pin was `610662a9` / Pages `33667a6a`. Prior #155 pin was `3b4ea9f9` / Pages `62f641c7`. Prior #153 pin was `1b172544` / Pages `5527f154`. Prior #151 pin was `44b02cb3` / Pages `b44849c4`. Prior Go C pin was `9a80930a` / Pages `8e64829c`. Prior W2 A3 pin was `0cdcdc0f` / Pages `1b9ed3d1`. Prior W1 pin was `2ae9a230` / Pages `fb35474a` (#130/#131). Prior A′+Duplicate pin was `f84183ba` / Pages `74637d87` (#128 on #126).
+- Date: 2026-09-08 (A′ ship); superseded 2026-09-09 (W1); superseded 2026-09-15 (W2 A3); Go C live 2026-09-17; #151 live 2026-09-22; #153 live 2026-09-22; #155 live 2026-09-22; #157 live 2026-09-23; #159 live 2026-09-23; #161 live 2026-09-24
 - Owners: Aegis (contract) · Pixel (UX) · Atlas (coord) · Syringa (named go)
 - Canary: keep `VITE_CAPABILITY_ROUTES_ENABLED` / `capabilityRoutesEnabled` **on**
 
@@ -11,7 +11,7 @@ Choice A (#118) made canary-on plain `/<slug>` mount editable `NotePage`
 default was superseded by W2** (#135): plain `/slug` is free-edit, without
 forced convert-on-write and without the Choice A table path.
 
-Live origin `08c25172` is W2 free-edit + Legacy opt-in + Go C LNO-wins + #151 create-bare + #153 Ko-fi FAB + #155 idle dismiss 24h + #157 polish Copy for AI + #159 selection-match/scroll: plain `/slug` =
+Live origin `a6756188` is W2 free-edit + Legacy opt-in + Go C LNO-wins + #151 create-bare + #153 Ko-fi FAB + #155 idle dismiss 24h + #157 polish Copy for AI + #159 selection-match/scroll + #161 same-note split: plain `/slug` =
 editable `NotePage` (anyone with the link; no `#owner=` required to edit).
 Home create always uses bare `seedAndOpen` (no default mint / no `#owner=`).
 Encrypt is allowed on unmanaged without forcing `#owner=`. Legacy↔Encrypt is
@@ -31,7 +31,7 @@ Realtime still HOLD.
 
 ## Mount table (canary on) — A′ design; live default is W2
 
-W2 live default (origin `08c25172`):
+W2 live default (origin `a6756188`):
 
 | URL | Mount |
 |---|---|
@@ -102,7 +102,8 @@ legacy-on, bare-after-on, bare-tab2, legacy-off; evidence
 `0cdcdc0f` / Pages `1b9ed3d1` (BLOCKER/HIGH/MEDIUM none; evidence
 `sentinel-qa-a3-0cdcdc0f/`). LOW: normal new-version reminder; one owner-link
 load needing hard reload; optional cold localStorage-clear not run.
-Current live origin `08c25172` / Pages `1db84523`: #159 **shipped**.
+Current live origin `a6756188` / Pages `cf94d1b2`: #161 **shipped**.
+Prior #159 pin `08c25172` / Pages `1db84523` remains on this line.
 Prior #157 pin `610662a9` / Pages `33667a6a` remains on this line.
 Prior #155 pin `3b4ea9f9` / Pages `62f641c7` remains on this line.
 Prior #153 pin `1b172544` / Pages `5527f154` remains on this line.
@@ -121,7 +122,7 @@ post-verify `managed_live=0` + Sentinel spot) is **historical**. 3-arg
 / #148). Residual `managed_live=1` (`aggadagdade`) still managed — **no bulk
 OFF** — is **historical**. **Go Ops allowlist bulk OFF** 2→0 Pulse PASS
 (residual **cleared**; origin still `9a80930a` at that attest; **not fleet**). Live origin
-is `08c25172`. Historical Pixel cold-browser PASS WITH KNOWN
+is `a6756188`. Historical Pixel cold-browser PASS WITH KNOWN
 RISKS at first bulk OFF (`hage`, `design` bare editable + Synced; evidence
 `pixel-qa/bulk-off-verify/` / `/workspace/pixel-qa/bulk-off-verify/`).
 
