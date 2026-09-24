@@ -13,7 +13,7 @@ Atomic SQL `20260724000000_atomic_capability_cutover.sql` is applied.
 This attest does not re-apply 240. Worker / `writes_enabled` / Realtime still HOLD.
 Capability SPA canary is on
 (`VITE_CAPABILITY_ROUTES_ENABLED` is true; live `version.json`
-`capabilityRoutesEnabled` is true; see §3e / §3k / §3l / §3m / §3n / §3o / §3p). W2 free-edit + Legacy opt-in is
+`capabilityRoutesEnabled` is true; see §3e / §3k / §3l / §3m / §3n / §3o / §3p / §3q). W2 free-edit + Legacy opt-in is
 live: canary-on plain `/<slug>` and SplitView panes mount `CutoverNotePage` →
 editable `NotePage` (free-edit; no forced convert; no `#owner=` required to
 edit); `#owner`/`#edit` still render `NotePage`. Home create always uses bare
@@ -41,9 +41,9 @@ Edge `legacy-note-open` is republished with `managed:true` for managed slugs.
 SQL `capability_note_bulk_disable_secure` is **applied** live (Syringa Go A
 then B; Pulse **PASS**; git tip `bd11deed` / #142; #143 is git-only PWA smoke
 harden). 3-arg `p_slugs` allowlist is **applied live** (Go SQL Pulse **PASS**;
-git tip `46ddaf01` / #148; 2-arg DROP). Live SPA origin is `a6756188`. Go C
+git tip `46ddaf01` / #148; 2-arg DROP). Live SPA origin is `4e23fe22`. Go C
 pin heal **shipped** live (#145 LNO-wins on prior origin `9a80930a`). See §3g,
-§3k, §3l, §3m, §3n, §3o, and §3p. Historical bulk OFF Go B
+§3k, §3l, §3m, §3n, §3o, §3p, and §3q. Historical bulk OFF Go B
 `managed_live` 26→0 is not a claim the fleet stayed 0 (`managed_live=3` at
 Go C live; later preflight 6). Re-bulk OFF ALL 6 (2026-09-22) Pulse
 post-verify `managed_live=0` + Sentinel spot is **historical**. Go SQL
@@ -51,10 +51,10 @@ residual `managed_live=1` (`aggadagdade`) still managed — **no bulk OFF**
 — is **historical**. Later **Go Ops allowlist bulk OFF** 2→0 Pulse **PASS**
 (`aggadagdade`, `pbhcusvb`; converted=2; **not fleet**; residual **cleared**;
 post `managed_live=0`). Anon fleet count unavailable (401). See §3f / §3h /
-§3i / §3j / §3k / §3l / §3m / §3n / §3o / §3p.
+§3i / §3j / §3k / §3l / §3m / §3n / §3o / §3p / §3q.
 W1 convert-on-write as product default is **superseded**.
 Optional `?legacyRo=1` still RO + banner. Phase C is live: RawView `/:slug.md` loads via LNO `open`;
-Home availability uses LNO `exists` (empty legacy rows are taken). Duplicate securely is enabled on Legacy RO only (PR #128; Edge `note-session` `import-legacy`). Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is live (#153 equal `bottom-4`/`right-4` inset; update chip status-only, no MỚI, small heart snooze, larger update heart; #155 idle dismiss 24h via dedicated localStorage `kofi-fab-idle-dismiss-until`). Copy cho AI copies cleaned markdown only (no `# Note:/slug` header; selection-aware; deep clean; Pixel `export.ai` / `export.ai_tooltip`; token soft-warn and locked disable remain OUT). Custom selection-match `maxSelectionLength=4000` (L>4000 hard off) and typewriter-OFF nested-overflow scroll fix (`overflow-hidden` + `min-h-0`; ~24px breathing + typewriter 45vh retained; no scroll hijack / no `transform`+`will-change` on scroller) are live. Same-note split via tab-scoped note-host (`/{slug}+{slug}` stays, no redirect; dual EditorView; sync scroll default OFF; one Awareness self (F1); cross-pane type sync; compact mobile tabs `/{slug} · 1|2`) is live. FAB-primary + Sonner suppress (#113/#116) is live. Choice A (#118) editable-plain default is **superseded**. PWA latch (#119) one hard-reload per Update apply is live. Pixel Legacy opt-in (#122) is live as Legacy Advanced. `#owner=` Encrypt stays active. A′ (#126) RO default is **superseded**. Duplicate securely (#128) remains on Legacy RO. Prior Home mint when canary is on
+Home availability uses LNO `exists` (empty legacy rows are taken). Duplicate securely is enabled on Legacy RO only (PR #128; Edge `note-session` `import-legacy`). Pixel HIGH UX H1–H6 is live. H2 opaque Mode/Export is live. Ko-fi + New Version FAB is live (#153 equal `bottom-4`/`right-4` inset; update chip status-only, no MỚI, small heart snooze, larger update heart; #155 idle dismiss 24h via dedicated localStorage `kofi-fab-idle-dismiss-until`). Copy cho AI copies cleaned markdown only (no `# Note:/slug` header; selection-aware; deep clean; Pixel `export.ai` / `export.ai_tooltip`; token soft-warn and locked disable remain OUT). Custom selection-match `maxSelectionLength=4000` (L>4000 hard off) and typewriter-OFF nested-overflow scroll fix (`overflow-hidden` + `min-h-0`; ~24px breathing + typewriter 45vh retained; no scroll hijack / no `transform`+`will-change` on scroller) are live. Same-note split via tab-scoped note-host (`/{slug}+{slug}` stays, no redirect; dual EditorView; sync scroll default OFF; one Awareness self (F1); cross-pane type sync; compact mobile tabs `/{slug} · 1|2`) is live. `provider.connect()` idempotent latch on shared Yjs providers (MEDIUM-2 CLOSED) is live. FAB-primary + Sonner suppress (#113/#116) is live. Choice A (#118) editable-plain default is **superseded**. PWA latch (#119) one hard-reload per Update apply is live. Pixel Legacy opt-in (#122) is live as Legacy Advanced. `#owner=` Encrypt stays active. A′ (#126) RO default is **superseded**. Duplicate securely (#128) remains on Legacy RO. Prior Home mint when canary is on
 (create → `/<slug>#owner=`; fail-closed idle; historical origin `9a80930a`)
 is **superseded** as default by #151 bare `seedAndOpen`.
 Home mint before SQL 240 is accepted as
@@ -190,9 +190,9 @@ Production Worker `syrin-prerender` was redeployed 2026-09-03 ~20:42 UTC /
 - Staging `syrin-prerender-staging` was not deployed (still G3C staging
   versions from 2026-08-24)
 
-This is not the live SPA origin. Origin is `a6756188` (see §3e / §3k / §3l / §3m / §3n / §3o / §3p).
+This is not the live SPA origin. Origin is `4e23fe22` (see §3e / §3k / §3l / §3m / §3n / §3o / §3p / §3q).
 At this Worker deploy, origin was not redeployed (then `27da93eb`);
-origin later bumped to `e05c73ea`, then `addeeb29`, then `7d00fd52`, then `77d791af`, then `9df65d53`, then `9bf5e92b`, then `b6824541`, then `a8f7eeb8`, then `5c33ac24`, then `9dc0240e`, then `15ec8285`, then `0073d53b`, then `1e76e2b7`, then `b4eba5d2`, then `f84183ba`, then `2ae9a230`, then `0cdcdc0f`, then `9a80930a`, then `44b02cb3`, then `1b172544`, then `3b4ea9f9`, then `610662a9`, then `08c25172`, then `a6756188`. Do not claim origin is `931430c0`. Git `main`
+origin later bumped to `e05c73ea`, then `addeeb29`, then `7d00fd52`, then `77d791af`, then `9df65d53`, then `9bf5e92b`, then `b6824541`, then `a8f7eeb8`, then `5c33ac24`, then `9dc0240e`, then `15ec8285`, then `0073d53b`, then `1e76e2b7`, then `b4eba5d2`, then `f84183ba`, then `2ae9a230`, then `0cdcdc0f`, then `9a80930a`, then `44b02cb3`, then `1b172544`, then `3b4ea9f9`, then `610662a9`, then `08c25172`, then `a6756188`, then `4e23fe22`. Do not claim origin is `931430c0`. Git `main`
 includes this Worker SHA and may be ahead of live origin for later docs-only PRs; that
 does not change Worker identity or treat later main commits as live origin.
 
@@ -1585,7 +1585,7 @@ This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
 not soak-complete. Origin attest only. At that attest, live SPA origin was
-`44b02cb3`. Later origin is §3l / §3m / §3n / §3o / §3p.
+`44b02cb3`. Later origin is §3l / §3m / §3n / §3o / §3p / §3q.
 
 Same-canary origin SHA bump 2026-09-22: Pages `snote-g4-origin` redeployed
 #153 Ko-fi FAB equal inset + update snooze heart, git `1b172544`. Canary
@@ -1615,7 +1615,7 @@ This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
 not soak-complete. Origin attest only. At that attest, live SPA origin was
-`1b172544`. Later origin is §3m / §3n / §3o / §3p.
+`1b172544`. Later origin is §3m / §3n / §3o / §3p / §3q.
 
 Same-canary origin SHA bump 2026-09-22: Pages `snote-g4-origin` redeployed
 #155 idle Ko-fi FAB dismiss 24h, git `3b4ea9f9`. Canary stays on
@@ -1647,7 +1647,7 @@ This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
 not soak-complete. Origin attest only. At that attest, live SPA origin was
-`3b4ea9f9`. Later origin is §3n / §3o / §3p.
+`3b4ea9f9`. Later origin is §3n / §3o / §3p / §3q.
 
 Same-canary origin SHA bump 2026-09-23: Pages `snote-g4-origin` redeployed
 #157 polish Copy for AI, git `610662a9`. Canary stays on
@@ -1681,7 +1681,7 @@ This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
 not soak-complete. Origin attest only. At that attest, live SPA origin was
-`610662a9`. Later origin is §3o / §3p.
+`610662a9`. Later origin is §3o / §3p / §3q.
 
 Same-canary origin SHA bump 2026-09-23: Pages `snote-g4-origin` redeployed
 #159 selection-match cap 4000 + nested-overflow scroll feel, git `08c25172`.
@@ -1712,7 +1712,7 @@ This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
 not soak-complete. Origin attest only. At that attest, live SPA origin was
-`08c25172`. Later origin is §3p.
+`08c25172`. Later origin is §3p / §3q.
 
 Same-canary origin SHA bump 2026-09-24: Pages `snote-g4-origin` redeployed
 #161 same-note split via tab-scoped note-host, git `a6756188`. Canary stays
@@ -1736,20 +1736,53 @@ named parked risks for this attest: connect idempotency, dual Topbar (echo
 Sentinel carry). Do **not** claim plain READY. Edge XOR `invalid_state` 409
 **NOT VERIFIED** (`note-session` / `note-manage` **not** deployed; still
 PARKED). #151 Edge XOR remains **in-repo only / not deployed live**. Do
-**not** claim Edge XOR live PASS. #161 is live on this line. #159
+**not** claim Edge XOR live PASS. #161 was live on this line at
+that attest. #159
 selection-match/scroll remains on this line. Worker remains `931430c0` /
 `5f94ab6c`. Walls HOLD: Worker / Realtime / SQL / `writes_enabled`. This
 docs PR does not deploy origin / Edge / SQL schema.
 This is not SQL 240, not Realtime, not soak-complete.
 Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
 this bump does not restart soak. This is a same-canary origin SHA bump,
-not soak-complete. Origin attest only. Origin is `a6756188`.
+not soak-complete. Origin attest only. At that attest, live SPA origin was
+`a6756188`. Later origin is §3q.
+
+Same-canary origin SHA bump 2026-09-24: Pages `snote-g4-origin` redeployed
+#163 `provider.connect()` idempotent latch (MEDIUM-2 CLOSED), git
+`4e23fe22`. Canary stays on (`capabilityRoutesEnabled` true). Option D
+same-note split remains on this tip: URL `/{slug}+{slug}` stays (no
+redirect); dual EditorView; sync scroll default OFF; one Awareness self
+(F1); cross-pane type sync. Sentinel live smoke `version.json`:
+`deployedSha` `4e23fe22346394155fc365f7cbca540a5c9242cb`,
+`capabilityRoutesEnabled` true, `buildId` `1790270578761-qdexmj04`,
+`builtAt` `2026-09-24T17:23:16.683Z`. Pages production deployment id
+`b53b133a` (full UUID not supplied in this attest) replaces previous live
+origin `a6756188` / Pages `cf94d1b2`. Pixel **READY WITH KNOWN RISKS** live
+(A1/C1/E1/E2 PASS; KNOWN LOW dual Topbar self-dot carry #161. Artifacts
+`/workspace/pixel-qa/same-note-split/pr163-live/`); Sentinel **READY WITH
+KNOWN RISKS** live (2026-09-24 ICT; GitHub QA #163 @ `dd5c98ad` MEDIUM-2
+CLOSED, LOW sticky `connectWork` after soft-fail early-return; live smoke
+latch PASS, no redirect, dual EditorView, Sync OFF, cross-pane sync, F1
+one Awareness self PASS). PASSED: tip latch `4e23fe22`; MEDIUM-2
+`provider.connect()` idempotent latch PASS; no redirect; dual EditorView;
+sync OFF; F1 one Awareness self; cross-pane type sync. Carry: LOW sticky
+`connectWork` after soft-fail (retry needs destroy+recreate); #161
+Pixel/Sentinel LOWs (dual Topbar self-dot / yCollab / ownWindowEvents);
+Edge XOR PARKED / in-repo only / NOT VERIFIED live. Do **not** claim Edge
+XOR live PASS. Do **not** claim plain READY. #163 is live on this line.
+#161 same-note split remains on this line. Worker remains `931430c0` /
+`5f94ab6c`. Walls HOLD: Worker / Realtime / SQL / `writes_enabled`. This
+docs PR does not deploy origin / Edge / SQL schema.
+This is not SQL 240, not Realtime, not soak-complete.
+Soak ≥48h started ~12:01 ICT from the first canary origin `c5914c8e`;
+this bump does not restart soak. This is a same-canary origin SHA bump,
+not soak-complete. Origin attest only. Origin is `4e23fe22`.
 
 ## 3f. Production bulk Legacy/Secure OFF — verified; origin unchanged
 
 Docs attestation only (2026-09-16). This section does not deploy origin /
 Pages / Worker / Edge and does not re-apply SQL. Origin later moved to
-`9a80930a` (§3g), then `44b02cb3` (§3k), then `1b172544` (§3l), then `3b4ea9f9` (§3m), then `610662a9` (§3n), then `08c25172` (§3o), then `a6756188` (§3p).
+`9a80930a` (§3g), then `44b02cb3` (§3k), then `1b172544` (§3l), then `3b4ea9f9` (§3m), then `610662a9` (§3n), then `08c25172` (§3o), then `a6756188` (§3p), then `4e23fe22` (§3q).
 
 Syringa named Go A then B; Pulse **PASS**. Git tip when applied: `bd11deed`
 (`bd11deedf95bec1f2e207a59fecdad974d861ff7`; migration
@@ -1977,7 +2010,7 @@ Previously published Edge `plain-upsert` / `disable-secure` /
 `convert-legacy`). This docs PR does not republish Edge.
 
 This is not SQL 240, not Realtime, not soak-complete. At that attest, live
-SPA origin was `44b02cb3`. Later origin is §3l / §3m / §3n / §3o / §3p.
+SPA origin was `44b02cb3`. Later origin is §3l / §3m / §3n / §3o / §3p / §3q.
 
 ## 3l. Production #153 Origin SPA — verified; origin 1b172544; Edge XOR not shipped
 
@@ -2017,7 +2050,7 @@ Previously published Edge `plain-upsert` / `disable-secure` /
 `convert-legacy`). This docs PR does not republish Edge.
 
 This is not SQL 240, not Realtime, not soak-complete. At that attest, live
-SPA origin was `1b172544`. Later origin is §3m / §3n / §3o / §3p.
+SPA origin was `1b172544`. Later origin is §3m / §3n / §3o / §3p / §3q.
 
 ## 3m. Production #155 Origin SPA — verified; origin 3b4ea9f9; Edge XOR not shipped
 
@@ -2060,7 +2093,7 @@ Previously published Edge `plain-upsert` / `disable-secure` /
 `convert-legacy`). This docs PR does not republish Edge.
 
 This is not SQL 240, not Realtime, not soak-complete. At that attest, live
-SPA origin was `3b4ea9f9`. Later origin is §3n / §3o / §3p.
+SPA origin was `3b4ea9f9`. Later origin is §3n / §3o / §3p / §3q.
 
 ## 3n. Production #157 Origin SPA — verified; origin 610662a9; Edge XOR not shipped
 
@@ -2104,7 +2137,7 @@ Previously published Edge `plain-upsert` / `disable-secure` /
 `convert-legacy`). This docs PR does not republish Edge.
 
 This is not SQL 240, not Realtime, not soak-complete. At that attest, live
-SPA origin was `610662a9`. Later origin is §3o / §3p.
+SPA origin was `610662a9`. Later origin is §3o / §3p / §3q.
 
 ## 3o. Production #159 Origin SPA — verified; origin 08c25172; Edge XOR not shipped
 
@@ -2148,7 +2181,7 @@ Previously published Edge `plain-upsert` / `disable-secure` /
 `convert-legacy`). This docs PR does not republish Edge.
 
 This is not SQL 240, not Realtime, not soak-complete. At that attest, live
-SPA origin was `08c25172`. Later origin is §3p.
+SPA origin was `08c25172`. Later origin is §3p / §3q.
 
 ## 3p. Production #161 Origin SPA — verified; origin a6756188; Edge XOR not shipped
 
@@ -2189,7 +2222,52 @@ Previously published Edge `plain-upsert` / `disable-secure` /
 `convert-legacy` remain **published** (Pulse `umsg_01m21zhm…` for
 `convert-legacy`). This docs PR does not republish Edge.
 
-This is not SQL 240, not Realtime, not soak-complete. Origin is `a6756188`.
+This is not SQL 240, not Realtime, not soak-complete. At that attest, live
+SPA origin was `a6756188`. Later origin is §3q.
+
+## 3q. Production #163 Origin SPA — verified; origin 4e23fe22; Edge XOR not shipped
+
+Docs attestation only (2026-09-24). This section does not deploy origin /
+Pages / Worker / Edge and does not apply SQL. Atlas named the live Origin
+SPA ship; this PR only records it.
+
+#163 **shipped** live on origin `4e23fe22` / Pages `b53b133a` (canary ON):
+`provider.connect()` idempotent latch on shared Yjs providers (MEDIUM-2
+CLOSED). Option D same-note split via tab-scoped note-host remains on this
+tip. URL `/{slug}+{slug}` stays (no redirect). Dual EditorView. Sync scroll
+default OFF. One Awareness self (F1). Cross-pane type sync works. Edge XOR
+(`convert-legacy` / `set-encryption` → `invalid_state` 409) remains
+**in-repo only / not deployed live** (PARKED). `note-session` /
+`note-manage` were **not** redeployed. Sentinel Edge XOR 409 **NOT
+VERIFIED**. Do **not** claim Edge XOR live PASS.
+
+Independent Sentinel `version.json`: `deployedSha`
+`4e23fe22346394155fc365f7cbca540a5c9242cb`; Pages `b53b133a`;
+`capabilityRoutesEnabled` true; `buildId` `1790270578761-qdexmj04`;
+`builtAt` `2026-09-24T17:23:16.683Z`. Full Pages UUID not supplied — not
+invented. Prior live SPA pin was `a6756188` / Pages `cf94d1b2` (#162 attest).
+Pulse ship PASS (`/workspace/pulse-ship-4e23fe22/`; Pages `snote-g4-origin`;
+PWA update smoke PASS run 36033841796).
+
+Sentinel: **READY WITH KNOWN RISKS** live (2026-09-24 ICT; GitHub QA #163 @
+`dd5c98ad` MEDIUM-2 CLOSED, LOW sticky `connectWork` after soft-fail
+early-return; live smoke latch PASS, no redirect `/{slug}+{slug}`, dual
+EditorView, Sync OFF, cross-pane sync, F1 one Awareness self PASS). Pixel:
+**READY WITH KNOWN RISKS** live (A1/C1/E1/E2 PASS; KNOWN LOW dual Topbar
+self-dot carry #161; evidence
+`/workspace/pixel-qa/same-note-split/pr163-live/`). PASSED: tip latch
+`4e23fe22`; MEDIUM-2 `provider.connect()` idempotent latch PASS; no
+redirect; dual EditorView; sync OFF; F1 one Awareness self; cross-pane type
+sync. Carry: LOW sticky `connectWork` after soft-fail (retry needs
+destroy+recreate); #161 Pixel/Sentinel LOWs (dual Topbar self-dot /
+yCollab / ownWindowEvents); Edge XOR PARKED. Do **not** claim plain READY.
+Walls HOLD: Worker / Realtime / SQL / `writes_enabled`.
+
+Previously published Edge `plain-upsert` / `disable-secure` /
+`convert-legacy` remain **published** (Pulse `umsg_01m21zhm…` for
+`convert-legacy`). This docs PR does not republish Edge.
+
+This is not SQL 240, not Realtime, not soak-complete. Origin is `4e23fe22`.
 
 ## 4. Public `notes` access — cutover migration applied; soak still required
 

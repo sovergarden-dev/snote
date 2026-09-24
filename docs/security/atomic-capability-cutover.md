@@ -248,9 +248,17 @@ The [SQL 240 readiness contract](./sql-240-readiness-contract.md) and
    `capabilityRoutesEnabled` true. #161 same-note split via tab-scoped
    note-host (`/{slug}+{slug}` stays, no redirect; dual EditorView; sync
    scroll default OFF; one Awareness self; cross-pane type sync; compact
-   mobile tabs `/{slug} · 1|2`) is live. Parked: `provider.connect`
-   non-idempotent; dual Topbar (echo Sentinel carry).
-   Current live `deployedSha` `a6756188f2536b7939e86528910522472440d22c`.
+   mobile tabs `/{slug} · 1|2`) remains on this line. Parked then:
+   `provider.connect` non-idempotent; dual Topbar (echo Sentinel carry).
+   Same-canary origin SHA bump 2026-09-24 (#163):
+   `deployedSha` `4e23fe22346394155fc365f7cbca540a5c9242cb`, still
+   `capabilityRoutesEnabled` true. #163 `provider.connect()` idempotent
+   latch on shared Yjs providers (MEDIUM-2 CLOSED) is live. Option D
+   same-note split remains on this tip. Carry LOW: sticky `connectWork`
+   after soft-fail (retry needs destroy+recreate); #161 dual Topbar
+   self-dot / yCollab / ownWindowEvents. Edge XOR remains PARKED /
+   in-repo only / not deployed live.
+   Current live `deployedSha` `4e23fe22346394155fc365f7cbca540a5c9242cb`.
    This docs PR does not re-apply SQL, does not run bulk convert, and does not
    deploy origin / Worker / Edge.
    This is not soak-complete.

@@ -34,7 +34,7 @@ const capabilityEdge = readFileSync(resolve(
 ), "utf8");
 
 describe("atomic cutover migration", () => {
-  it("pins documented SQL 240 migration identity at live product SHA a6756188", () => {
+  it("pins documented SQL 240 migration identity at live product SHA 4e23fe22", () => {
     const sha256 = createHash("sha256").update(migration, "utf8").digest("hex");
     const lineCount = migration.endsWith("\n")
       ? migration.slice(0, -1).split("\n").length
@@ -84,6 +84,8 @@ describe("atomic cutover migration", () => {
     expect(contract).toContain("1db84523");
     expect(contract).toContain("a6756188");
     expect(contract).toContain("cf94d1b2");
+    expect(contract).toContain("4e23fe22");
+    expect(contract).toContain("b53b133a");
     expect(contract).toContain("34986611791");
     expect(contract).toContain("W2 is live");
     expect(contract).toContain("HOLD");
@@ -121,6 +123,9 @@ describe("atomic cutover migration", () => {
     expect(preflight).toContain("a6756188");
     expect(preflight).toContain("cf94d1b2");
     expect(preflight).toContain("1790261840240-kdcu3lki");
+    expect(preflight).toContain("4e23fe22");
+    expect(preflight).toContain("b53b133a");
+    expect(preflight).toContain("1790270578761-qdexmj04");
     expect(preflight).toContain("A′ live");
     expect(contract).toContain(
       "This is not SQL 240, not Realtime, not soak-complete.",
@@ -130,7 +135,7 @@ describe("atomic cutover migration", () => {
     );
   });
 
-  it("pins bulk disable-secure migration identity as applied live; origin now a6756188", () => {
+  it("pins bulk disable-secure migration identity as applied live; origin now 4e23fe22", () => {
     const bulk = readFileSync(resolve(
       process.cwd(),
       "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql",
@@ -174,7 +179,9 @@ describe("atomic cutover migration", () => {
     expect(runbook).toContain("610662a9");
     expect(runbook).toContain("08c25172");
     expect(runbook).toContain("a6756188");
-    expect(findings).toContain("Origin is `a6756188`");
+    expect(runbook).toContain("4e23fe22");
+    expect(findings).toContain("Origin is `4e23fe22`");
+    expect(findings).not.toContain("Origin is `a6756188`");
     expect(findings).not.toContain("Origin is `08c25172`");
     expect(findings).not.toContain("Origin is `610662a9`");
     expect(findings).not.toContain("Origin is `3b4ea9f9`");
