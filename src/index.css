@@ -1218,3 +1218,12 @@ html.dark .markdown-preview .md-alert-caution { --md-alert-accent: #f85149; }
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+
+/* Contrast guard: light-on-dark for Jade/Aurora, ink-on-paper for Obsidian,
+   regardless of the light/dark theme the visitor was on before. */
+[data-app-root][data-scene="cyber-linh-khi"] [data-scene-type="wordmark"] { color: hsl(166 70% 88%); }
+[data-app-root][data-scene="cyber-linh-khi"] [data-scene-type="ui"] { color: hsl(166 25% 78%); }
+[data-app-root][data-scene="ethereal-aurora"] [data-scene-type="wordmark"] { color: hsl(320 100% 95%); }
+[data-app-root][data-scene="ethereal-aurora"] [data-scene-type="ui"] { color: hsl(285 45% 88%); }
+[data-app-root][data-scene="obsidian-ink"] [data-scene-type="wordmark"] { color: #1a1410; }
+[data-app-root][data-scene="obsidian-ink"] [data-scene-type="ui"] { color: hsl(25 18% 28%); }
