@@ -64,13 +64,13 @@ void main() {
   float n2 = fbm(vec2(p.x * 0.40 - t * 0.10, 8.0));
   float y1 = 0.08 + n1 * 0.22 + 0.06 * sin(p.x * 1.4 + t);
   float y2 = -0.34 + n2 * 0.16 + 0.05 * sin(p.x * 0.8 - t * 0.7);
-  float b1 = exp(-pow((p.y - y1) / 0.055, 2.0));
-  float b2 = exp(-pow((p.y - y2) / 0.042, 2.0));
-  float chi = b1 + b2 * 0.7;
+  float b1 = exp(-pow((p.y - y1) / 0.14, 2.0));
+  float b2 = exp(-pow((p.y - y2) / 0.11, 2.0));
+  float chi = b1 + b2 * 0.75;
 
   vec3 base = vec3(0.012, 0.016, 0.015);
-  vec3 jade = vec3(0.22, 0.62, 0.48);
-  vec3 col = base + jade * chi * 0.85;
+  vec3 jade = vec3(0.10, 0.40, 0.32);
+  vec3 col = base + jade * chi;
 
   float centre = exp(-(p.x * p.x) * 3.5) * smoothstep(0.45, 0.0, abs(p.y));
   col = mix(col, base, centre * 0.45);
@@ -80,7 +80,7 @@ void main() {
 
   // Dither / grain to kill banding on OLED.
   float grain = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
-  col += (grain - 0.5) * 0.018;
+  col += (grain - 0.5) * 0.008;
 
   gl_FragColor = vec4(col, 1.0);
 }
