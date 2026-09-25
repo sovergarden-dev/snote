@@ -881,6 +881,22 @@ html.zen-mode {
 :is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-empty] .rounded-full {
   display: none;
 }
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-empty] p {
+  font-family: var(--home-ui-family);
+  color: var(--home-section-label);
+}
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-empty] .justify-center {
+  justify-content: flex-start;
+}
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-empty] button {
+  border-radius: var(--home-control-radius);
+  background: var(--home-btn-quiet-bg);
+  color: var(--home-btn-quiet-fg);
+  border: 1px solid var(--home-btn-quiet-border);
+  font-family: var(--home-mono-family);
+  box-shadow: none;
+  transform: none;
+}
 
 [data-app-root][data-scene="digital-constellation"] {
   /* Deep-space navy. Cool slate UI chrome that reads as star-chart paper. */
