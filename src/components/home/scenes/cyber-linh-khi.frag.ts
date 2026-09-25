@@ -67,36 +67,44 @@ void main() {
                  fbm(p * 0.9 + 1.6 * q + vec2(8.3, 2.8) - 0.13 * t));
   float field = fbm(p * 0.9 + 1.4 * r);
 
-  // Horizontal flow band: 2–3 long bands cutting across the canvas, warped
-  // by the field itself so they curl naturally.
-  float band = 1.0 - abs(sin(p.y * 1.35 + r.x * 1.8 + t * 0.6));
-  band = pow(band, 0.55);
+  // 2–3 long curling bands: a sharper ridge profile (not a wide fog wash),
+  // warped by the field so each band curls as it crosses the canvas.
+  float wave = p.y * 1.25 + r.x * 1.6 + 0.35 * sin(p.x * 1.3 + t * 0.4) + t * 0.5;
+  float band = 1.0 - abs(sin(wave));
+  band = pow(band, 3.2);
 
-  // Combine: chi only blooms where field peaks AND band is strong.
-  float chi = smoothstep(0.05, 0.85, field * 0.5 + 0.5) * band;
-  chi = pow(chi, 1.2);
+  // Chi only blooms where field peaks AND a band passes.
+  float chi = smoothstep(-0.15, 0.75, field * 0.5 + 0.5) * band;
+  chi = pow(chi, 1.15);
 
   // Palette — deep void → jade peak.
   vec3 base = vec3(0.003, 0.008, 0.014); // ~#01030a
   vec3 jade = vec3(0.122, 0.776, 0.561); // ~#1fc68f
   vec3 mint = vec3(0.369, 0.917, 0.788); // ~#5eead4
+  vec3 gold = vec3(0.83, 0.72, 0.42);    // single warm thread
 
   vec3 col = base;
-  col += jade * chi * 0.55;
-  // Highlight tip — only the brightest peaks get the bright mint shimmer.
-  float peak = smoothstep(0.6, 0.95, chi);
-  col += mint * peak * 0.45;
+  col += jade * chi * 0.60;
+  float peak = smoothstep(0.62, 0.95, chi);
+  col += mint * peak * 0.40;
+  // Faint warm-gold thread, only on the very brightest ridge.
+  float thread = smoothstep(0.86, 0.99, chi) * smoothstep(0.35, 0.8, field * 0.5 + 0.5);
+  col = mix(col, gold, thread * 0.18);
 
   // Subtle jade shimmer: low-amplitude pulse only where chi is present.
   float shimmer = sin(t * 4.2 + p.x * 3.0 + r.y * 5.0) * 0.5 + 0.5;
-  col.g += chi * shimmer * 0.06;
-  col.b += chi * shimmer * 0.025;
+  col.g += chi * shimmer * 0.05;
+  col.b += chi * shimmer * 0.02;
 
-  // Soft bottom edge glow.
-  float glow = pow(max(0.0, 0.32 - uv.y), 2.0) * 0.18;
+  // Bottom edge glow — pulled down so it never competes with the form.
+  float glow = pow(max(0.0, 0.18 - uv.y), 2.0) * 0.12;
   col += jade * glow;
 
-  // Vignette — keep center for hero copy, pull edges to void.
+  // Darken the hero column centre so copy reads on ink.
+  float centre = exp(-(p.x * p.x) * 5.0) * smoothstep(0.55, 0.0, abs(p.y - 0.05));
+  col *= 1.0 - 0.55 * centre;
+
+  // Vignette — pull edges to void.
   float vig = smoothstep(1.20, 0.28, length(p));
   col *= mix(0.42, 1.0, vig);
 
