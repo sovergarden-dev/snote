@@ -593,12 +593,12 @@ export default function Home() {
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-[11px] text-muted-foreground">
+            <p data-scene-type="ui" className="mt-2 text-[11px] text-muted-foreground">
               {t("home.recent.local_only")}
             </p>
           </section>
         ) : recents.length === 0 ? (
-          <section className="mt-12 rounded-lg border border-dashed border-border bg-muted/30 px-6 py-8 text-center">
+          <section data-scene-empty className="mt-12 rounded-lg border border-dashed border-border bg-muted/30 px-6 py-8 text-center">
             <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-background ring-1 ring-border">
               {/* Custom hand-drawn notebook+pen mark — gentler than the
                   generic Sparkles icon for an empty-state. */}

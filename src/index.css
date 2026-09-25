@@ -870,6 +870,17 @@ html.zen-mode {
   color: var(--home-kbd-fg);
   border-radius: var(--home-control-radius);
 }
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-empty] {
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  padding-left: 0;
+  padding-right: 0;
+  text-align: left;
+}
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-empty] .rounded-full {
+  display: none;
+}
 
 [data-app-root][data-scene="digital-constellation"] {
   /* Deep-space navy. Cool slate UI chrome that reads as star-chart paper. */
