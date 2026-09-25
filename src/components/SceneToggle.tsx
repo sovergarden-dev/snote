@@ -60,6 +60,13 @@ export const SceneToggle = forwardRef<HTMLButtonElement>((_props, ref) => {
     };
   }, []);
 
+  // Selecting a scene pins light/dark. Restore that pin on load too, so a
+  // dark scene does not come back on top of a light-theme card.
+  useEffect(() => {
+    const scheme = SCENE_REGISTRY.find((s) => s.id === committedScene)?.forceColorScheme;
+    if (scheme) setTheme(scheme);
+  }, [committedScene, setTheme]);
+
   const select = (id: string) => {
     const def = SCENE_REGISTRY.find((s) => s.id === id);
     const label = def ? t(def.labelKey as Parameters<typeof t>[0]) : id;
