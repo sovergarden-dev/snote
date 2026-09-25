@@ -481,7 +481,7 @@ export type Database = {
       capability_admission_consume: {
         Args: {
           p_byte_cost?: number
-          p_operation: "create" | "sync" | "membership"
+          p_operation: string
           p_request_cost?: number
           p_subject_hash: string
         }
@@ -497,7 +497,11 @@ export type Database = {
         Returns: Json
       }
       capability_note_bulk_disable_secure: {
-        Args: { p_include_encrypted?: boolean; p_limit: number; p_slugs?: string[] }
+        Args: {
+          p_include_encrypted?: boolean
+          p_limit: number
+          p_slugs?: string[]
+        }
         Returns: Json
       }
       capability_note_convert_legacy: {
