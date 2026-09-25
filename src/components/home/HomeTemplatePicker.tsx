@@ -37,6 +37,7 @@ export function HomeTemplatePicker({
       </label>
       <select
         id="home-template"
+        data-scene-btn="picker"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={t("home.templates.aria")}

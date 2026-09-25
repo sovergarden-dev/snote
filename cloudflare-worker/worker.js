@@ -37,8 +37,8 @@ const PRODUCTION_SUPABASE_WS_ORIGIN =
 const SECURITY_CSP_PREFIX =
   "default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; " +
   "frame-ancestors 'self' chrome-extension://*; script-src 'self' https://challenges.cloudflare.com; " +
-  "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://flagcdn.com " +
-  "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev; font-src 'self' data:; ";
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://flagcdn.com " +
+  "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev; font-src 'self' data: https://fonts.gstatic.com; ";
 const SECURITY_CSP_SUFFIX =
   " https://challenges.cloudflare.com; " +
   "frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; " +

@@ -43,10 +43,14 @@ float snoise(vec2 v) {
   return 130.0 * dot(m, g);
 }
 
-// Soft horizontal aurora ribbon centered on yc, thickness s.
+// Aurora ribbon centred on yc, thickness s. A slow curl term bends the
+// ribbon into an arc (varies along x and drifts with time) so bands sweep
+// across the frame instead of sitting as flat horizontal blurs.
 float ribbon(vec2 p, float yc, float s, float t, float wobble) {
-  float warp = snoise(vec2(p.x * 1.4, t * 0.6 + wobble)) * 0.22;
-  float d = abs(p.y - yc - warp);
+  float curl = sin(p.x * 1.1 + wobble + t * 0.18) * 0.16
+             + 0.18 * p.x * p.x * sin(wobble * 0.7 + t * 0.09);
+  float warp = snoise(vec2(p.x * 1.2 + curl, t * 0.5 + wobble)) * 0.16;
+  float d = abs(p.y - yc - curl - warp);
   return exp(-d * d / (2.0 * s * s));
 }
 
@@ -59,10 +63,9 @@ void main() {
   // Deep midnight base — slight purple shift toward the top.
   vec3 base = mix(vec3(0.020, 0.012, 0.040), vec3(0.046, 0.020, 0.071), uv.y);
 
-  // Three ribbons, each a different pastel.
-  float b1 = ribbon(p, 0.18 + sin(t * 0.21) * 0.05, 0.22, t, 0.0);
-  float b2 = ribbon(p, -0.05 + cos(t * 0.17) * 0.06, 0.18, t, 4.7);
-  float b3 = ribbon(p, -0.28 + sin(t * 0.13 + 1.1) * 0.04, 0.26, t, 9.3);
+  float b1 = ribbon(p, 0.20 + sin(t * 0.21) * 0.05, 0.16, t, 0.0);
+  float b2 = ribbon(p, -0.04 + cos(t * 0.17) * 0.06, 0.13, t, 4.7);
+  float b3 = ribbon(p, -0.30 + sin(t * 0.13 + 1.1) * 0.04, 0.19, t, 9.3);
 
   vec3 pink   = vec3(0.984, 0.812, 0.906); // #fbcfe8
   vec3 violet = vec3(0.655, 0.545, 0.980); // #a78bfa
@@ -73,11 +76,15 @@ void main() {
   col += violet * b2 * 0.50;
   col += cyan   * b3 * 0.45;
 
-  // Sparse highlight grains for depth.
-  float grain = snoise(p * 7.0 + t * 0.4);
-  col += vec3(0.9, 0.8, 1.0) * smoothstep(0.65, 0.95, grain) * 0.08;
+  // Very sparse cool highlight — only where a ribbon is already bright.
+  float glint = smoothstep(0.82, 0.98, snoise(p * 3.0 + t * 0.15));
+  col += vec3(0.80, 0.90, 1.0) * glint * max(b1, max(b2, b3)) * 0.10;
 
-  // Vignette so center copy is the brightest part of the frame.
+  // Darken the middle third slightly so copy stays readable.
+  float mid = smoothstep(0.30, 0.0, abs(uv.y - 0.5)) * smoothstep(0.55, 0.0, abs(p.x));
+  col *= 1.0 - 0.28 * mid;
+
+  // Vignette.
   float vig = smoothstep(1.20, 0.30, length(p));
   col *= mix(0.55, 1.0, vig);
 

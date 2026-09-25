@@ -31,6 +31,8 @@ interface Blot {
   bornAt: number;
   seed: number;
   drip: boolean;
+  /** One irregular cinnabar seal stamp per session, at most. */
+  seal: boolean;
 }
 
 function mulberry32(seed: number) {
@@ -129,7 +131,7 @@ function drawBlot(ctx: CanvasRenderingContext2D, b: Blot, w: number, h: number, 
     fillBlobPath(
       ctx, cx + ox, cy + oy, baseR * scale,
       b.seed + i * 17, freq, stretch,
-      `rgba(15, 12, 10, ${a.toFixed(3)})`,
+      `rgba(28, 22, 16, ${a.toFixed(3)})`,
     );
   }
 
@@ -140,7 +142,7 @@ function drawBlot(ctx: CanvasRenderingContext2D, b: Blot, w: number, h: number, 
     fillBlobPath(
       ctx, cx + ox, cy + oy, baseR * (0.38 + i * 0.08),
       b.seed + 503 + i * 31, 2.2 + i * 0.4, 0,
-      `rgba(15, 12, 10, ${(0.06 * alphaMul).toFixed(3)})`,
+      `rgba(28, 22, 16, ${(0.06 * alphaMul).toFixed(3)})`,
     );
   }
 
@@ -155,7 +157,19 @@ function drawBlot(ctx: CanvasRenderingContext2D, b: Blot, w: number, h: number, 
       fillBlobPath(
         ctx, cx + (jitter() - 0.5) * baseR * 0.1, cy + dy + t * baseR * 0.6,
         baseR * scale, b.seed + 911 + i * 13, 2.0, 1.2,
-        `rgba(15, 12, 10, ${a.toFixed(3)})`,
+        `rgba(28, 22, 16, ${a.toFixed(3)})`,
+      );
+    }
+  }
+  // Cinnabar seal: a single small irregular stamp, low alpha.
+  if (b.seal) {
+    const sr = baseR * 0.22;
+    const sx = cx + baseR * 0.55, sy = cy + baseR * 0.4;
+    for (let i = 0; i < 3; i++) {
+      fillBlobPath(
+        ctx, sx + (jitter() - 0.5) * sr * 0.1, sy + (jitter() - 0.5) * sr * 0.1,
+        sr * (1 - i * 0.12), b.seed + 1301 + i * 7, 0.9, 0,
+        `rgba(140, 42, 36, ${((0.07 - i * 0.015) * alphaMul).toFixed(3)})`,
       );
     }
   }
@@ -259,6 +273,7 @@ export default function ObsidianInk({ paused, onReady, signal }: SceneProps) {
     let paperBackground: HTMLCanvasElement | OffscreenCanvas | null = null;
 
     const blots: Blot[] = [];
+    let sealUsed = false;
 
     const resize = () => {
       w = host.clientWidth || 1;
@@ -275,14 +290,28 @@ export default function ObsidianInk({ paused, onReady, signal }: SceneProps) {
     const spawnBlot = (now: number) => {
       const seed = (nextSeed = (nextSeed * 1103515245 + 12345) >>> 0);
       const rng = mulberry32(seed);
-      const onLeft = rng() < 0.5;
+      // Bias toward edges/corners: pick a side band, keep the centre column
+      // (≈ 30–70% x) mostly clear.
+      const edge = rng();
+      let x: number, y: number;
+      if (edge < 0.7) {
+        const onLeft = rng() < 0.5;
+        const d = Math.pow(rng(), 1.6) * 0.26; // cluster near the edge
+        x = onLeft ? 0.02 + d : 0.98 - d;
+        y = rng() < 0.5 ? 0.05 + Math.pow(rng(), 1.4) * 0.45 : 0.95 - Math.pow(rng(), 1.4) * 0.45;
+      } else {
+        x = rng() < 0.5 ? rng() * 0.28 : 0.72 + rng() * 0.28;
+        y = rng() < 0.5 ? rng() * 0.12 : 0.88 + rng() * 0.12;
+      }
+      const seal = !sealUsed && rng() < 0.18;
+      if (seal) sealUsed = true;
       blots.push({
-        x: onLeft ? rng() * 0.32 : 0.68 + rng() * 0.30,
-        y: 0.08 + rng() * 0.78,
+        x, y,
         radius: 0.10 + rng() * 0.10,
         bornAt: now,
         seed,
         drip: rng() < 0.20,
+        seal,
       });
       while (blots.length > 0 && now - blots[0].bornAt > BLOT_TTL_MS + FADE_OUT_MS) {
         blots.shift();

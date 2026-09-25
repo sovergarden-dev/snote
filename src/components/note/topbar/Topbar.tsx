@@ -172,6 +172,7 @@ export function Topbar({
       {zen && !compact && <div className="zen-hover-zone" aria-hidden />}
       {narrow ? (
         <header
+          data-scene-chrome
           className={`zen-topbar sticky top-0 z-30 flex flex-col ${sceneHeaderClass}`}
           style={sceneHeaderStyle}
         >
@@ -265,6 +266,7 @@ export function Topbar({
         </header>
       ) : (
         <header
+          data-scene-chrome
           className={`zen-topbar sticky top-0 z-30 flex h-11 items-center gap-2 px-3 ${sceneHeaderClass}`}
           style={sceneHeaderStyle}
         >

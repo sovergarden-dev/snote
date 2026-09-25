@@ -513,6 +513,7 @@ function ShareReady({ head, doc, t }: { head: React.ReactNode; doc: Y.Doc; t: Re
       {head}
       <AppShell className="flex min-h-svh flex-col">
         <header
+          data-scene-chrome
           className={
             "sticky top-0 z-30 flex h-11 items-center gap-2 border-b px-3 text-sm " +
             (hasScene

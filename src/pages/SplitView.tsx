@@ -177,6 +177,7 @@ function SplitViewBody({
         <meta name="twitter:description" content={desc} />
       </Helmet>
       <header
+        data-scene-chrome
         className={
           "flex h-11 shrink-0 items-center gap-3 border-b px-3 text-xs " +
           (hasScene

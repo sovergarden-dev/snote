@@ -284,6 +284,7 @@ export default function Home() {
         {t("home.skip_to_slug")}
       </a>
       <header
+        data-scene-chrome
         className={cn(
           "relative z-10 flex h-12 items-center justify-between border-b px-4 motion-reduce:transition-none",
           hasScene
@@ -298,7 +299,7 @@ export default function Home() {
       >
         <div className="flex items-center gap-2">
           <img src="/logo.webp" alt="Syrin Notes logo" width="24" height="24" decoding="async" className="h-6 w-6 rounded-md object-contain" />
-          <span className="font-semibold tracking-tight">Syrin Notes</span>
+          <span data-scene-type="wordmark" className="font-semibold tracking-tight">Syrin Notes</span>
         </div>
         <div className="flex items-center gap-1">
           {!isMobile && (
@@ -311,8 +312,9 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto w-full max-w-xl px-4 py-12 md:py-20">
+      <main data-scene-main className="relative z-10 mx-auto w-full max-w-xl px-4 py-12 md:py-20">
         <h1
+          data-scene-type="title"
           className="bg-clip-text text-3xl font-semibold tracking-tight text-transparent md:text-4xl motion-safe:animate-[fade-in_500ms_ease-out] motion-reduce:animate-none"
           style={
             hasScene
@@ -322,7 +324,7 @@ export default function Home() {
         >
           {t("home.tagline")}
         </h1>
-        <p className="mt-3 text-muted-foreground motion-safe:animate-[fade-in_500ms_ease-out_80ms_both] motion-reduce:animate-none">
+        <p data-scene-type="ui" className="mt-3 text-muted-foreground motion-safe:animate-[fade-in_500ms_ease-out_80ms_both] motion-reduce:animate-none">
           {t("home.intro_prefix")}
           <code className="rounded bg-muted px-1.5 py-0.5 text-sm text-foreground">/hello</code>
           {t("home.intro_suffix")}
@@ -336,6 +338,7 @@ export default function Home() {
           }}
         >
           <div
+            data-scene-control
             className={cn(
               "relative flex flex-1 items-center rounded-md border bg-transparent outline-none",
               motionSafe,
@@ -358,6 +361,7 @@ export default function Home() {
             <span className="pl-3 text-sm text-muted-foreground select-none">/</span>
             <Input
               id="home-slug"
+              data-scene-slug
               autoFocus
               value={slug}
               onChange={(e) => {
@@ -399,6 +403,7 @@ export default function Home() {
           </div>
           <Button
             type="submit"
+            data-scene-btn="primary"
             disabled={!slug.trim()}
           >
             {slugStatus === "taken" ? t("home.btn.open_existing") : t("home.btn.open")}
@@ -415,6 +420,7 @@ export default function Home() {
           <Button
             variant="outline"
             size="sm"
+            data-scene-btn="quiet"
             onClick={() => {
               seedAndOpen(randomSlug());
             }}
@@ -434,10 +440,10 @@ export default function Home() {
           >
             <HomeTemplatePicker value={templateId} onChange={setTemplateId} />
           </Suspense>
-          <span className="text-[11px] text-muted-foreground">
-            {t("home.cmdk_hint_prefix")}<kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">{formatModShortcut(["K"])}</kbd>
+          <span data-scene-type="ui" className="text-[11px] text-muted-foreground">
+            {t("home.cmdk_hint_prefix")}<kbd data-scene-kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">{formatModShortcut(["K"])}</kbd>
             {" / "}
-            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">{formatModShortcut(["P"])}</kbd>{t("home.cmdk_hint_suffix")}
+            <kbd data-scene-kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">{formatModShortcut(["P"])}</kbd>{t("home.cmdk_hint_suffix")}
           </span>
         </div>
 
@@ -458,7 +464,7 @@ export default function Home() {
             className="sticky top-0 z-10 mt-10 -mx-4 bg-background/95 px-4 pb-3 pt-3 supports-[backdrop-filter]:bg-background/80 motion-safe:backdrop-blur"
             aria-label={t("home.pinned.aria")}
           >
-            <h2 className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <h2 data-scene-type="section" className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <Star className="h-3 w-3 fill-primary text-primary" />
               {t("home.pinned.title")}
             </h2>
@@ -494,10 +500,11 @@ export default function Home() {
         {visibleRecents.length > 0 ? (
           <section className="mt-12">
             <h2
+              data-scene-type="section"
               className="mb-3 text-xs font-medium uppercase tracking-wider"
               style={
                 hasScene
-                  ? { color: "var(--home-section-label)", fontFamily: "var(--home-mono-family)" }
+                  ? { color: "var(--home-section-label)", fontFamily: "var(--home-section-family)" }
                   : { color: "hsl(var(--muted-foreground))" }
               }
             >
