@@ -668,6 +668,11 @@ html.zen-mode {
   --home-kbd-bg: hsl(168 20% 8% / 0.8);
   --home-kbd-fg: hsl(160 20% 86%);
   --home-kbd-border: hsl(168 16% 24% / 0.8);
+  --home-input-border: hsl(168 18% 30% / 0.65);
+  --home-input-focus-border: hsl(160 35% 48% / 0.8);
+  --home-input-focus-ring: hsl(160 35% 48% / 0.22);
+  --home-row-hover-bg: hsl(160 30% 40% / 0.08);
+  --home-row-hover-ring: transparent;
 }
 
 [data-app-root][data-scene="ethereal-aurora"] {
@@ -707,6 +712,11 @@ html.zen-mode {
   --home-kbd-bg: hsl(250 22% 12% / 0.55);
   --home-kbd-fg: hsl(36 25% 90%);
   --home-kbd-border: hsl(250 16% 28% / 0.5);
+  --home-input-border: hsl(36 16% 62% / 0.28);
+  --home-input-focus-border: hsl(36 30% 78% / 0.55);
+  --home-input-focus-ring: hsl(36 30% 78% / 0.18);
+  --home-row-hover-bg: hsl(36 30% 80% / 0.06);
+  --home-row-hover-ring: transparent;
 }
 
 [data-app-root][data-scene="obsidian-ink"] {
@@ -746,6 +756,10 @@ html.zen-mode {
   --home-kbd-bg: hsl(38 33% 97%);
   --home-kbd-fg: #1a1410;
   --home-kbd-border: hsl(30 20% 12% / 0.45);
+  --home-input-border: hsl(25 14% 28% / 0.35);
+  --home-input-focus-border: hsl(25 22% 18%);
+  --home-input-focus-ring: hsl(25 22% 18% / 0.16);
+  --home-row-hover-ring: transparent;
 }
 
 :is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-main] {
@@ -815,7 +829,9 @@ html.zen-mode {
   background-color: var(--home-icon-btn-bg);
   box-shadow: none;
 }
-:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-chrome] button:hover { background-color: var(--home-icon-btn-hover); }
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-chrome] img {
+  border-radius: var(--home-control-radius);
+}
 
 @media (prefers-reduced-motion: no-preference) {
   :is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"])
