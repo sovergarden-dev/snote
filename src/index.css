@@ -735,77 +735,75 @@ html.zen-mode {
   --home-kbd-border: hsl(30 20% 12% / 0.45);
 }
 
-:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) {
-  & [data-scene-main] {
-    max-width: var(--home-main-max);
-    padding-top: var(--home-main-py);
-    padding-bottom: var(--home-main-py);
-  }
-  & [data-scene-main] > form { margin-top: var(--home-stack-gap); }
-  & [data-scene-type="wordmark"] {
-    font-family: var(--home-display-family);
-    letter-spacing: var(--home-title-tracking);
-    font-weight: var(--home-title-weight);
-  }
-  & [data-scene-type="title"] {
-    font-family: var(--home-display-family);
-    font-weight: var(--home-title-weight);
-    letter-spacing: var(--home-title-tracking);
-    font-style: var(--home-title-style);
-    line-height: 1.15;
-    padding-bottom: 0.08em; /* keep italic/serif descenders inside bg-clip */
-  }
-  & [data-scene-type="ui"],
-  & [data-scene-main] :is(label, button, select) {
-    font-family: var(--home-ui-family);
-    letter-spacing: var(--home-lead-tracking);
-  }
-  & [data-scene-type="section"] {
-    font-family: var(--home-section-family);
-    letter-spacing: var(--home-section-tracking);
-  }
-  & [data-scene-slug] { font-family: var(--home-mono-family); }
-  & [data-scene-control],
-  & select[data-scene-btn="picker"] { border-radius: var(--home-control-radius); }
-
-  & [data-scene-btn="primary"] {
-    font-family: var(--home-ui-family);
-    border-radius: var(--home-btn-radius);
-    letter-spacing: var(--home-btn-tracking);
-    text-transform: var(--home-btn-transform);
-    background: var(--home-btn-bg);
-    color: var(--home-btn-fg);
-    border: 1px solid var(--home-btn-border);
-    box-shadow: var(--home-btn-shadow);
-  }
-  & [data-scene-btn="primary"]:hover:not(:disabled) { filter: brightness(1.12); }
-  & :is([data-scene-btn="quiet"], select[data-scene-btn="picker"]) {
-    font-family: var(--home-ui-family);
-    border-radius: var(--home-btn-radius);
-    background: var(--home-btn-quiet-bg);
-    color: var(--home-btn-quiet-fg);
-    border: 1px solid var(--home-btn-quiet-border);
-  }
-  & [data-scene-btn="quiet"] {
-    letter-spacing: var(--home-btn-tracking);
-    text-transform: var(--home-btn-transform);
-  }
-  & :is([data-scene-btn="quiet"], select[data-scene-btn="picker"]):hover { background: var(--home-icon-btn-hover); }
-  & [data-scene-kbd] {
-    background: var(--home-kbd-bg);
-    color: var(--home-kbd-fg);
-    border-color: var(--home-kbd-border);
-    border-radius: var(--home-control-radius);
-  }
-  /* Top-bar controls only (Home header + Note/Split/Share top bars). */
-  & [data-scene-chrome] button {
-    border-radius: var(--home-btn-radius);
-    color: var(--home-icon-btn-fg);
-    background-color: var(--home-icon-btn-bg);
-    box-shadow: inset 0 0 0 1px var(--home-icon-btn-border);
-  }
-  & [data-scene-chrome] button:hover { background-color: var(--home-icon-btn-hover); }
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-main] {
+  max-width: var(--home-main-max);
+  padding-top: var(--home-main-py);
+  padding-bottom: var(--home-main-py);
 }
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-main] > form { margin-top: var(--home-stack-gap); }
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-type="wordmark"] {
+  font-family: var(--home-display-family);
+  letter-spacing: var(--home-title-tracking);
+  font-weight: var(--home-title-weight);
+}
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-type="title"] {
+  font-family: var(--home-display-family);
+  font-weight: var(--home-title-weight);
+  letter-spacing: var(--home-title-tracking);
+  font-style: var(--home-title-style);
+  line-height: 1.15;
+  padding-bottom: 0.08em; /* keep italic/serif descenders inside bg-clip */
+}
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-type="ui"],
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-main] :is(label, button, select) {
+  font-family: var(--home-ui-family);
+  letter-spacing: var(--home-lead-tracking);
+}
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-type="section"] {
+  font-family: var(--home-section-family);
+  letter-spacing: var(--home-section-tracking);
+}
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-slug] { font-family: var(--home-mono-family); }
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-control],
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) select[data-scene-btn="picker"] { border-radius: var(--home-control-radius); }
+
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-btn="primary"] {
+  font-family: var(--home-ui-family);
+  border-radius: var(--home-btn-radius);
+  letter-spacing: var(--home-btn-tracking);
+  text-transform: var(--home-btn-transform);
+  background: var(--home-btn-bg);
+  color: var(--home-btn-fg);
+  border: 1px solid var(--home-btn-border);
+  box-shadow: var(--home-btn-shadow);
+}
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-btn="primary"]:hover:not(:disabled) { filter: brightness(1.12); }
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) :is([data-scene-btn="quiet"], select[data-scene-btn="picker"]) {
+  font-family: var(--home-ui-family);
+  border-radius: var(--home-btn-radius);
+  background: var(--home-btn-quiet-bg);
+  color: var(--home-btn-quiet-fg);
+  border: 1px solid var(--home-btn-quiet-border);
+}
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-btn="quiet"] {
+  letter-spacing: var(--home-btn-tracking);
+  text-transform: var(--home-btn-transform);
+}
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) :is([data-scene-btn="quiet"], select[data-scene-btn="picker"]):hover { background: var(--home-icon-btn-hover); }
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-kbd] {
+  background: var(--home-kbd-bg);
+  color: var(--home-kbd-fg);
+  border-color: var(--home-kbd-border);
+  border-radius: var(--home-control-radius);
+}
+/* Top-bar controls only (Home header + Note/Split/Share top bars). */
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-chrome] button {
+  border-radius: var(--home-btn-radius);
+  color: var(--home-icon-btn-fg);
+  background-color: var(--home-icon-btn-bg);
+  box-shadow: inset 0 0 0 1px var(--home-icon-btn-border);
+}
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-chrome] button:hover { background-color: var(--home-icon-btn-hover); }
 
 @media (prefers-reduced-motion: no-preference) {
   :is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"])
