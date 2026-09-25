@@ -848,7 +848,15 @@ html.zen-mode {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-main] ul,
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-main] ul {
+  border-radius: var(--home-control-radius);
+  overflow: hidden;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-main] li {
+  --tw-ring-color: transparent;
+}
 :is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-main] > section.sticky,
 :is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) [data-scene-chip] {
   -webkit-backdrop-filter: none;
