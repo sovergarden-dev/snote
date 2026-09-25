@@ -292,22 +292,15 @@ export default function ObsidianInk({ paused, onReady, signal }: SceneProps) {
       const rng = mulberry32(seed);
       // Bias toward edges/corners: pick a side band, keep the centre column
       // (≈ 30–70% x) mostly clear.
-      const edge = rng();
-      let x: number, y: number;
-      if (edge < 0.7) {
-        const onLeft = rng() < 0.5;
-        const d = Math.pow(rng(), 1.6) * 0.26; // cluster near the edge
-        x = onLeft ? 0.02 + d : 0.98 - d;
-        y = rng() < 0.5 ? 0.05 + Math.pow(rng(), 1.4) * 0.45 : 0.95 - Math.pow(rng(), 1.4) * 0.45;
-      } else {
-        x = rng() < 0.5 ? rng() * 0.28 : 0.72 + rng() * 0.28;
-        y = rng() < 0.5 ? rng() * 0.12 : 0.88 + rng() * 0.12;
-      }
+      const onLeft = rng() < 0.5;
+      const onTop = rng() < 0.5;
+      const x = onLeft ? 0.02 + rng() * 0.08 : 0.90 + rng() * 0.08;
+      const y = onTop ? 0.02 + rng() * 0.1 : 0.88 + rng() * 0.1;
       const seal = !sealUsed && rng() < 0.18;
       if (seal) sealUsed = true;
       blots.push({
         x, y,
-        radius: 0.10 + rng() * 0.10,
+        radius: 0.08 + rng() * 0.05,
         bornAt: now,
         seed,
         drip: rng() < 0.20,
