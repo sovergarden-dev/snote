@@ -89,7 +89,7 @@ function fillBlobPath(
     // Seamless across θ by sampling fbm on the unit circle.
     const n1 = fbm2(ct * freq,        st * freq,        seed);
     const n2 = fbm2(ct * freq * 2.1,  st * freq * 2.1,  seed + 1) * 0.5;
-    const distort = 1 + 0.55 * n1 + 0.25 * n2;
+    const distort = 1 + 0.28 * n1 + 0.12 * n2;
     // Optional downward stretch for drips.
     const tongue = stretchDown > 0 ? 1 + stretchDown * Math.max(0, -st) : 1;
     const r = baseR * distort * tongue;
