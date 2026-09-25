@@ -71,7 +71,7 @@ void main() {
   // warped by the field so each band curls as it crosses the canvas.
   float wave = p.y * 1.25 + r.x * 1.6 + 0.35 * sin(p.x * 1.3 + t * 0.4) + t * 0.5;
   float band = 1.0 - abs(sin(wave));
-  band = pow(band, 3.2);
+  band = pow(band, 8.0);
 
   // Chi only blooms where field peaks AND a band passes.
   float chi = smoothstep(-0.15, 0.75, field * 0.5 + 0.5) * band;
@@ -79,25 +79,13 @@ void main() {
 
   // Palette — deep void → jade peak.
   vec3 base = vec3(0.003, 0.008, 0.014); // ~#01030a
-  vec3 jade = vec3(0.122, 0.776, 0.561); // ~#1fc68f
-  vec3 mint = vec3(0.369, 0.917, 0.788); // ~#5eead4
-  vec3 gold = vec3(0.83, 0.72, 0.42);    // single warm thread
+  vec3 jade = vec3(0.09, 0.42, 0.34);
 
   vec3 col = base;
-  col += jade * chi * 0.60;
-  float peak = smoothstep(0.62, 0.95, chi);
-  col += mint * peak * 0.40;
-  // Faint warm-gold thread, only on the very brightest ridge.
-  float thread = smoothstep(0.86, 0.99, chi) * smoothstep(0.35, 0.8, field * 0.5 + 0.5);
-  col = mix(col, gold, thread * 0.18);
+  col += jade * chi * 0.85;
 
-  // Subtle jade shimmer: low-amplitude pulse only where chi is present.
-  float shimmer = sin(t * 4.2 + p.x * 3.0 + r.y * 5.0) * 0.5 + 0.5;
-  col.g += chi * shimmer * 0.05;
-  col.b += chi * shimmer * 0.02;
-
-  // Bottom edge glow — pulled down so it never competes with the form.
-  float glow = pow(max(0.0, 0.18 - uv.y), 2.0) * 0.12;
+  // Bottom edge stays nearly black so the form is not a second light source.
+  float glow = pow(max(0.0, 0.12 - uv.y), 2.0) * 0.04;
   col += jade * glow;
 
   // Darken the hero column centre so copy reads on ink.

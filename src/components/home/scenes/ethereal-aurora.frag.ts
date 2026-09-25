@@ -67,18 +67,14 @@ void main() {
   float b2 = ribbon(p, -0.04 + cos(t * 0.17) * 0.06, 0.13, t, 4.7);
   float b3 = ribbon(p, -0.30 + sin(t * 0.13 + 1.1) * 0.04, 0.19, t, 9.3);
 
-  vec3 pink   = vec3(0.984, 0.812, 0.906); // #fbcfe8
-  vec3 violet = vec3(0.655, 0.545, 0.980); // #a78bfa
-  vec3 cyan   = vec3(0.482, 0.910, 0.961); // #7be7f5
+  vec3 peach = vec3(0.86, 0.70, 0.52);
+  vec3 steel = vec3(0.55, 0.64, 0.74);
+  vec3 dusk  = vec3(0.42, 0.36, 0.48);
 
   vec3 col = base;
-  col += pink   * b1 * 0.55;
-  col += violet * b2 * 0.50;
-  col += cyan   * b3 * 0.45;
-
-  // Very sparse cool highlight — only where a ribbon is already bright.
-  float glint = smoothstep(0.82, 0.98, snoise(p * 3.0 + t * 0.15));
-  col += vec3(0.80, 0.90, 1.0) * glint * max(b1, max(b2, b3)) * 0.10;
+  col += peach * b1 * 0.28;
+  col += steel * b2 * 0.22;
+  col += dusk  * b3 * 0.12;
 
   // Darken the middle third slightly so copy stays readable.
   float mid = smoothstep(0.30, 0.0, abs(uv.y - 0.5)) * smoothstep(0.55, 0.0, abs(p.x));
