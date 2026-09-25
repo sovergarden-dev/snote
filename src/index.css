@@ -535,6 +535,38 @@ html.zen-mode {
   --home-mask-bottom: linear-gradient(to top, hsl(var(--background) / 0.7), transparent);
   --home-mono-family: ui-sans-serif, system-ui, sans-serif;
   --home-title-grad: linear-gradient(135deg, hsl(var(--foreground)), hsl(var(--foreground) / 0.6));
+  /* Scene "system" tokens — neutral defaults match the no-scene look. Only
+     the three full-system scenes (Jade Chi, Ethereal Aurora, Obsidian Ink)
+     override these; the rules consuming them are scoped to those scenes. */
+  --home-display-family: inherit;
+  --home-ui-family: inherit;
+  --home-section-family: var(--home-mono-family);
+  --home-title-tracking: -0.025em;
+  --home-title-weight: 600;
+  --home-title-style: normal;
+  --home-lead-tracking: normal;
+  --home-section-tracking: 0.05em;
+  --home-main-max: 36rem;
+  --home-main-py: 3rem;
+  --home-stack-gap: 2rem;
+  --home-control-radius: calc(var(--radius) - 2px);
+  --home-btn-radius: calc(var(--radius) - 2px);
+  --home-btn-tracking: normal;
+  --home-btn-transform: none;
+  --home-btn-bg: hsl(var(--primary));
+  --home-btn-fg: hsl(var(--primary-foreground));
+  --home-btn-border: transparent;
+  --home-btn-shadow: none;
+  --home-btn-quiet-bg: hsl(var(--background));
+  --home-btn-quiet-fg: hsl(var(--foreground));
+  --home-btn-quiet-border: hsl(var(--input));
+  --home-icon-btn-bg: transparent;
+  --home-icon-btn-fg: hsl(var(--foreground));
+  --home-icon-btn-border: transparent;
+  --home-icon-btn-hover: hsl(var(--accent));
+  --home-kbd-bg: hsl(var(--muted));
+  --home-kbd-fg: hsl(var(--foreground));
+  --home-kbd-border: hsl(var(--border));
 }
 
 [data-app-root][data-scene="cyber-linh-khi"] {
@@ -595,6 +627,206 @@ html.zen-mode {
   --home-mask-bottom: linear-gradient(to top, hsl(38 30% 96% / 0.75), transparent);
   --home-mono-family: 'Iowan Old Style', 'Palatino Linotype', 'Georgia', serif;
   --home-title-grad: linear-gradient(135deg, hsl(25 30% 15%), hsl(25 22% 28%), hsl(25 18% 42%));
+}
+
+/* ============ Full visual systems: Jade Chi / Aurora / Ink ============
+   Token overrides + consuming rules. Every consumer is scoped to these three
+   scenes, so `none` and the other scenes render exactly as before. */
+[data-app-root][data-scene="cyber-linh-khi"] {
+  --home-chrome-bg: hsl(168 30% 4% / 0.55);
+  --home-chrome-border: hsl(166 55% 42% / 0.45);
+  --home-display-family: 'Syne', ui-sans-serif, system-ui, sans-serif;
+  --home-ui-family: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+  --home-section-family: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+  --home-title-weight: 650;
+  --home-title-tracking: 0.04em;
+  --home-title-style: normal;
+  --home-lead-tracking: 0.01em;
+  --home-section-tracking: 0.16em;
+  --home-main-max: 32rem;
+  --home-main-py: 4.5rem;
+  --home-stack-gap: 2rem;
+  --home-control-radius: 2px;
+  --home-btn-radius: 2px;
+  --home-btn-tracking: 0.08em;
+  --home-btn-transform: uppercase;
+  --home-btn-bg: #0c2f2a;
+  --home-btn-fg: #d7fff4;
+  --home-btn-border: hsl(166 55% 32% / 0.8);
+  --home-btn-shadow: none;
+  --home-btn-quiet-bg: transparent;
+  --home-btn-quiet-fg: hsl(166 70% 82%);
+  --home-btn-quiet-border: hsl(172 45% 42% / 0.55);
+  --home-icon-btn-bg: transparent;
+  --home-icon-btn-fg: hsl(166 70% 84%);
+  --home-icon-btn-border: hsl(172 45% 42% / 0.45);
+  --home-icon-btn-hover: hsl(166 70% 45% / 0.08);
+  --home-kbd-bg: hsl(168 30% 6% / 0.7);
+  --home-kbd-fg: hsl(166 70% 84%);
+  --home-kbd-border: hsl(172 45% 42% / 0.45);
+}
+
+[data-app-root][data-scene="ethereal-aurora"] {
+  --home-mono-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --home-display-family: 'Fraunces', ui-serif, Georgia, serif;
+  --home-ui-family: 'Nunito Sans', ui-sans-serif, system-ui, sans-serif;
+  --home-section-family: 'Nunito Sans', ui-sans-serif, system-ui, sans-serif;
+  --home-title-weight: 560;
+  --home-title-tracking: -0.02em;
+  --home-title-style: italic;
+  --home-lead-tracking: 0.005em;
+  --home-section-tracking: 0.08em;
+  --home-main-max: 40rem;
+  --home-main-py: 5.5rem;
+  --home-stack-gap: 2.5rem;
+  --home-control-radius: 999px;
+  --home-btn-radius: 999px;
+  --home-btn-tracking: 0.01em;
+  --home-btn-transform: none;
+  --home-btn-bg: hsl(320 60% 96% / 0.16);
+  --home-btn-fg: hsl(320 100% 96%);
+  --home-btn-border: hsl(320 80% 86% / 0.45);
+  --home-btn-shadow: 0 8px 28px hsl(280 60% 8% / 0.35);
+  --home-btn-quiet-bg: transparent;
+  --home-btn-quiet-fg: hsl(290 90% 92%);
+  --home-btn-quiet-border: hsl(275 70% 80% / 0.45);
+  --home-icon-btn-bg: hsl(275 40% 90% / 0.08);
+  --home-icon-btn-fg: hsl(320 100% 95%);
+  --home-icon-btn-border: hsl(320 80% 86% / 0.40);
+  --home-icon-btn-hover: hsl(320 80% 90% / 0.16);
+  --home-kbd-bg: hsl(275 40% 90% / 0.10);
+  --home-kbd-fg: hsl(320 100% 95%);
+  --home-kbd-border: hsl(320 80% 86% / 0.40);
+}
+
+[data-app-root][data-scene="obsidian-ink"] {
+  --home-chrome-bg: hsl(38 33% 96% / 0.88);
+  --home-chrome-border: hsl(30 20% 12% / 0.35);
+  --home-mono-family: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+  --home-title-grad: linear-gradient(hsl(25 30% 10%), hsl(25 30% 10%));
+  --home-display-family: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+  --home-ui-family: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  --home-section-family: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  --home-title-weight: 500;
+  --home-title-tracking: 0.01em;
+  --home-title-style: normal;
+  --home-lead-tracking: 0;
+  --home-section-tracking: 0.18em;
+  --home-main-max: 34rem;
+  --home-main-py: 5rem;
+  --home-stack-gap: 2rem;
+  --home-control-radius: 0;
+  --home-btn-radius: 0;
+  --home-btn-tracking: 0.12em;
+  --home-btn-transform: uppercase;
+  --home-btn-bg: #1a1410;
+  --home-btn-fg: #f4efe4;
+  --home-btn-border: #1a1410;
+  --home-btn-shadow: none;
+  --home-btn-quiet-bg: transparent;
+  --home-btn-quiet-fg: #1a1410;
+  --home-btn-quiet-border: #1a1410;
+  --home-icon-btn-bg: hsl(38 33% 97%);
+  --home-icon-btn-fg: #1a1410;
+  --home-icon-btn-border: hsl(30 20% 12% / 0.55);
+  --home-icon-btn-hover: hsl(34 25% 88%);
+  --home-kbd-bg: hsl(38 33% 97%);
+  --home-kbd-fg: #1a1410;
+  --home-kbd-border: hsl(30 20% 12% / 0.45);
+}
+
+:is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"]) {
+  & [data-scene-main] {
+    max-width: var(--home-main-max);
+    padding-top: var(--home-main-py);
+    padding-bottom: var(--home-main-py);
+  }
+  & [data-scene-main] > form { margin-top: var(--home-stack-gap); }
+  & [data-scene-type="wordmark"] {
+    font-family: var(--home-display-family);
+    letter-spacing: var(--home-title-tracking);
+    font-weight: var(--home-title-weight);
+  }
+  & [data-scene-type="title"] {
+    font-family: var(--home-display-family);
+    font-weight: var(--home-title-weight);
+    letter-spacing: var(--home-title-tracking);
+    font-style: var(--home-title-style);
+    line-height: 1.15;
+    padding-bottom: 0.08em; /* keep italic/serif descenders inside bg-clip */
+  }
+  & [data-scene-type="ui"],
+  & [data-scene-main] :is(label, button, select) {
+    font-family: var(--home-ui-family);
+    letter-spacing: var(--home-lead-tracking);
+  }
+  & [data-scene-type="section"] {
+    font-family: var(--home-section-family);
+    letter-spacing: var(--home-section-tracking);
+  }
+  & [data-scene-slug] { font-family: var(--home-mono-family); }
+  & [data-scene-control],
+  & select[data-scene-btn="picker"] { border-radius: var(--home-control-radius); }
+
+  & [data-scene-btn="primary"] {
+    font-family: var(--home-ui-family);
+    border-radius: var(--home-btn-radius);
+    letter-spacing: var(--home-btn-tracking);
+    text-transform: var(--home-btn-transform);
+    background: var(--home-btn-bg);
+    color: var(--home-btn-fg);
+    border: 1px solid var(--home-btn-border);
+    box-shadow: var(--home-btn-shadow);
+  }
+  & [data-scene-btn="primary"]:hover:not(:disabled) { filter: brightness(1.12); }
+  & :is([data-scene-btn="quiet"], select[data-scene-btn="picker"]) {
+    font-family: var(--home-ui-family);
+    border-radius: var(--home-btn-radius);
+    background: var(--home-btn-quiet-bg);
+    color: var(--home-btn-quiet-fg);
+    border: 1px solid var(--home-btn-quiet-border);
+  }
+  & [data-scene-btn="quiet"] {
+    letter-spacing: var(--home-btn-tracking);
+    text-transform: var(--home-btn-transform);
+  }
+  & :is([data-scene-btn="quiet"], select[data-scene-btn="picker"]):hover { background: var(--home-icon-btn-hover); }
+  & [data-scene-kbd] {
+    background: var(--home-kbd-bg);
+    color: var(--home-kbd-fg);
+    border-color: var(--home-kbd-border);
+    border-radius: var(--home-control-radius);
+  }
+  /* Top-bar controls only (Home header + Note/Split/Share top bars). */
+  & [data-scene-chrome] button {
+    border-radius: var(--home-btn-radius);
+    color: var(--home-icon-btn-fg);
+    background-color: var(--home-icon-btn-bg);
+    box-shadow: inset 0 0 0 1px var(--home-icon-btn-border);
+  }
+  & [data-scene-chrome] button:hover { background-color: var(--home-icon-btn-hover); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :is([data-app-root][data-scene="cyber-linh-khi"], [data-app-root][data-scene="ethereal-aurora"], [data-app-root][data-scene="obsidian-ink"])
+    :is([data-scene-btn], [data-scene-chrome] button) {
+    transition: background-color 150ms ease, filter 150ms ease, border-color 150ms ease;
+  }
+}
+
+[data-app-root][data-scene="ethereal-aurora"] [data-scene-slug] { letter-spacing: 0.03em; }
+[data-app-root][data-scene="ethereal-aurora"] [data-scene-type="section"] { text-transform: none; }
+[data-app-root][data-scene="cyber-linh-khi"] [data-scene-type="section"] { text-transform: uppercase; font-size: 0.6875rem; }
+[data-app-root][data-scene="cyber-linh-khi"] [data-scene-btn="primary"] { font-weight: 500; }
+[data-app-root][data-scene="obsidian-ink"] [data-scene-type="section"] {
+  text-transform: none;
+  font-variant-caps: all-small-caps;
+  font-size: 0.8125rem;
+}
+[data-app-root][data-scene="obsidian-ink"] [data-scene-btn="primary"] { font-size: 0.75rem; }
+[data-app-root][data-scene="obsidian-ink"] [data-scene-chrome] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 [data-app-root][data-scene="digital-constellation"] {
