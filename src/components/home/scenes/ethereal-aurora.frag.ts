@@ -55,34 +55,27 @@ float ribbon(vec2 p, float yc, float s, float t, float wobble) {
 }
 
 void main() {
-  vec2 uv = gl_FragCoord.xy / u_resolution.xy;
   vec2 p  = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / min(u_resolution.x, u_resolution.y);
 
   float t = u_time * 0.55;
 
-  // Deep midnight base — slight purple shift toward the top.
-  vec3 base = mix(vec3(0.020, 0.012, 0.040), vec3(0.046, 0.020, 0.071), uv.y);
+  vec3 base = vec3(0.05, 0.055, 0.07);
 
-  float b1 = ribbon(p, 0.20 + sin(t * 0.21) * 0.05, 0.16, t, 0.0);
-  float b2 = ribbon(p, -0.04 + cos(t * 0.17) * 0.06, 0.13, t, 4.7);
-  float b3 = ribbon(p, -0.30 + sin(t * 0.13 + 1.1) * 0.04, 0.19, t, 9.3);
+  float b1 = ribbon(p, 0.12 + sin(t * 0.21) * 0.04, 0.11, t, 0.0);
+  float b2 = ribbon(p, -0.22 + cos(t * 0.17) * 0.04, 0.09, t, 4.7);
 
-  vec3 peach = vec3(0.86, 0.70, 0.52);
-  vec3 steel = vec3(0.55, 0.64, 0.74);
-  vec3 dusk  = vec3(0.42, 0.36, 0.48);
+  vec3 peach = vec3(0.95, 0.78, 0.58);
+  vec3 steel = vec3(0.62, 0.74, 0.86);
 
   vec3 col = base;
-  col += peach * b1 * 0.28;
-  col += steel * b2 * 0.22;
-  col += dusk  * b3 * 0.12;
+  col += peach * b1 * 0.55;
+  col += steel * b2 * 0.40;
 
-  // Darken the middle third slightly so copy stays readable.
-  float mid = smoothstep(0.30, 0.0, abs(uv.y - 0.5)) * smoothstep(0.55, 0.0, abs(p.x));
-  col *= 1.0 - 0.28 * mid;
+  float mid = smoothstep(0.42, 0.0, length(p * vec2(0.8, 1.0)));
+  col = mix(col, base, mid * 0.35);
 
-  // Vignette.
-  float vig = smoothstep(1.20, 0.30, length(p));
-  col *= mix(0.55, 1.0, vig);
+  float vig = smoothstep(1.15, 0.4, length(p));
+  col *= mix(0.72, 1.0, vig);
 
   gl_FragColor = vec4(col, 1.0);
 }

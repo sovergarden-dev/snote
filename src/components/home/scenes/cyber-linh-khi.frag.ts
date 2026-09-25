@@ -55,46 +55,28 @@ float fbm(vec2 p) {
 }
 
 void main() {
-  vec2 uv = gl_FragCoord.xy / u_resolution.xy;
   vec2 p  = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / min(u_resolution.x, u_resolution.y);
 
-  float t = u_time * 0.18; // very slow drift — chi flows, doesn't rush.
+  float t = u_time * 0.18;
 
-  // 2-pass domain warp: bend the field into long ribbons instead of blobs.
-  vec2 q  = vec2(fbm(p * 0.9 + vec2(0.0, t)),
-                 fbm(p * 0.9 + vec2(5.2, -t)));
-  vec2 r  = vec2(fbm(p * 0.9 + 1.6 * q + vec2(1.7, 9.2) + 0.15 * t),
-                 fbm(p * 0.9 + 1.6 * q + vec2(8.3, 2.8) - 0.13 * t));
-  float field = fbm(p * 0.9 + 1.4 * r);
+  // Two long ribbons. Noise only bends their path; it is not the picture.
+  float n1 = fbm(vec2(p.x * 0.55 + t * 0.15, 2.0));
+  float n2 = fbm(vec2(p.x * 0.40 - t * 0.10, 8.0));
+  float y1 = 0.08 + n1 * 0.22 + 0.06 * sin(p.x * 1.4 + t);
+  float y2 = -0.34 + n2 * 0.16 + 0.05 * sin(p.x * 0.8 - t * 0.7);
+  float b1 = exp(-pow((p.y - y1) / 0.055, 2.0));
+  float b2 = exp(-pow((p.y - y2) / 0.042, 2.0));
+  float chi = b1 + b2 * 0.7;
 
-  // 2–3 long curling bands: a sharper ridge profile (not a wide fog wash),
-  // warped by the field so each band curls as it crosses the canvas.
-  float wave = p.y * 1.25 + r.x * 1.6 + 0.35 * sin(p.x * 1.3 + t * 0.4) + t * 0.5;
-  float band = 1.0 - abs(sin(wave));
-  band = pow(band, 8.0);
+  vec3 base = vec3(0.012, 0.016, 0.015);
+  vec3 jade = vec3(0.22, 0.62, 0.48);
+  vec3 col = base + jade * chi * 0.85;
 
-  // Chi only blooms where field peaks AND a band passes.
-  float chi = smoothstep(-0.15, 0.75, field * 0.5 + 0.5) * band;
-  chi = pow(chi, 1.15);
+  float centre = exp(-(p.x * p.x) * 3.5) * smoothstep(0.45, 0.0, abs(p.y));
+  col = mix(col, base, centre * 0.45);
 
-  // Palette — deep void → jade peak.
-  vec3 base = vec3(0.003, 0.008, 0.014); // ~#01030a
-  vec3 jade = vec3(0.09, 0.42, 0.34);
-
-  vec3 col = base;
-  col += jade * chi * 0.85;
-
-  // Bottom edge stays nearly black so the form is not a second light source.
-  float glow = pow(max(0.0, 0.12 - uv.y), 2.0) * 0.04;
-  col += jade * glow;
-
-  // Darken the hero column centre so copy reads on ink.
-  float centre = exp(-(p.x * p.x) * 5.0) * smoothstep(0.55, 0.0, abs(p.y - 0.05));
-  col *= 1.0 - 0.55 * centre;
-
-  // Vignette — pull edges to void.
-  float vig = smoothstep(1.20, 0.28, length(p));
-  col *= mix(0.42, 1.0, vig);
+  float vig = smoothstep(1.15, 0.35, length(p));
+  col *= mix(0.55, 1.0, vig);
 
   // Dither / grain to kill banding on OLED.
   float grain = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);

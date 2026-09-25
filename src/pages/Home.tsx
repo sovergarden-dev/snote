@@ -315,10 +315,13 @@ export default function Home() {
       <main data-scene-main className="relative z-10 mx-auto w-full max-w-xl px-4 py-12 md:py-20">
         <h1
           data-scene-type="title"
-          className="bg-clip-text text-3xl font-semibold tracking-tight text-transparent md:text-4xl motion-safe:animate-[fade-in_500ms_ease-out] motion-reduce:animate-none"
+          className={cn(
+            "text-3xl font-semibold tracking-tight md:text-4xl motion-safe:animate-[fade-in_500ms_ease-out] motion-reduce:animate-none",
+            hasScene ? "" : "bg-clip-text text-transparent",
+          )}
           style={
             hasScene
-              ? { backgroundImage: "var(--home-title-grad)" }
+              ? undefined
               : { backgroundImage: "linear-gradient(135deg, hsl(var(--foreground)), hsl(var(--foreground) / 0.6))" }
           }
         >
@@ -326,7 +329,7 @@ export default function Home() {
         </h1>
         <p data-scene-type="ui" className="mt-3 text-muted-foreground motion-safe:animate-[fade-in_500ms_ease-out_80ms_both] motion-reduce:animate-none">
           {t("home.intro_prefix")}
-          <code className="rounded bg-muted px-1.5 py-0.5 text-sm text-foreground">/hello</code>
+          <code data-scene-chip className="rounded bg-muted px-1.5 py-0.5 text-sm text-foreground">/hello</code>
           {t("home.intro_suffix")}
         </p>
 
