@@ -64,6 +64,15 @@ const en = {
     "lang.label": "Language",
     "lang.choose": "Choose language",
 
+    "footer.aria": "Company and contact information",
+    "footer.links": "Footer links",
+    "footer.made_by": "Syrin Notes is made by Syrin · Ho Chi Minh City, Vietnam",
+    "footer.privacy": "Privacy",
+    "footer.privacy_title": "Read the privacy policy",
+    "footer.email": "syringa@syrin.online",
+    "footer.email_title": "Email Syrin Notes",
+    "footer.copyright": "© 2026 Syrin",
+
     // Topbar brand
     "brand.home": "Home",
     "brand.copy_url": "Copy URL",

@@ -4,9 +4,12 @@
 
 Syrin Notes lets anyone create a markdown note at a memorable URL (e.g. /my-note), edit it with autosave, and sync it in realtime across devices. Notes can be optionally encrypted with a passphrase and shared via revocable share links.
 
+Made by Syrin, Ho Chi Minh City, Vietnam. Contact: syringa@syrin.online
+
 ## Pages
 
 - [Home](/): Create a new note or open an existing one by URL.
+- [Privacy](/privacy): Privacy policy.
 
 ## Optional
 

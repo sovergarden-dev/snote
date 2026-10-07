@@ -66,6 +66,15 @@ const vi: Dictionary = {
     "lang.label": "Ngôn ngữ",
     "lang.choose": "Chọn ngôn ngữ",
 
+    "footer.aria": "Thông tin công ty và liên hệ",
+    "footer.links": "Liên kết cuối trang",
+    "footer.made_by": "Syrin Notes được phát triển bởi Syrin · TP. Hồ Chí Minh, Việt Nam",
+    "footer.privacy": "Quyền riêng tư",
+    "footer.privacy_title": "Đọc chính sách quyền riêng tư",
+    "footer.email": "syringa@syrin.online",
+    "footer.email_title": "Gửi email cho Syrin Notes",
+    "footer.copyright": "© 2026 Syrin",
+
     "brand.home": "Trang chủ",
     "brand.copy_url": "Copy URL",
     "brand.copy_content": "Sao chép nội dung",

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { ArrowRight, Check, Loader2, Shuffle, Star, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CompanyFooter } from "@/components/CompanyFooter";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SceneToggle } from "@/components/SceneToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -636,6 +637,7 @@ export default function Home() {
             </div>
           </section>
         ) : null}
+        <CompanyFooter />
       </main>
     </div>
   );
