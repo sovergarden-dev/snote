@@ -100,7 +100,7 @@ describe("CI toolchain contract", () => {
         /"[^"]*brace-expansion": \["brace-expansion@([^"]+)"/g,
       ),
     ].map((match) => match[1]);
-    expect(new Set(resolvedBraceExpansionVersions)).toEqual(new Set(["5.0.9"]));
+    expect(new Set(resolvedBraceExpansionVersions)).toEqual(new Set(["5.0.12"]));
   });
 
   it("records why Vite 5 cannot receive the required security fix", () => {

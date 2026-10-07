@@ -2353,8 +2353,8 @@ to the patched `minimatch` line. Because this graph contains one `filelist`
 instance and the repository's Node floor satisfies its engine requirement, a
 narrowly pinned `filelist@2.0.2` override removes that final build-only path
 without globally replacing `glob`, `minimatch`, or `brace-expansion`. The full
-audit remains mandatory in both CI workflows; no advisory suppression or audit
-exception is granted.
+`bun audit --audit-level=high` remains mandatory in both CI workflows. At the
+time of this entry, no advisory suppression or audit exception was granted.
 
 ### Resolved dependency-audit blocker (2026-08 refresh)
 
@@ -2379,6 +2379,18 @@ ranges, so no new override or direct dependency was introduced.
 A 2026-09-01 lockfile bump of `browserslist` `4.28.2` → `4.28.7` (official registry integrity; `update-browserslist-db` unchanged) clears [GHSA-c83g-rgw3-j3cx](https://github.com/advisories/GHSA-c83g-rgw3-j3cx) and [GHSA-73wf-gq98-2v4g](https://github.com/advisories/GHSA-73wf-gq98-2v4g); still no override.
 A 2026-09-02 `package.json` override of `fast-uri` `^3.1.6` (resolved `3.1.7`, official registry integrity) clears [GHSA-5jgf-p345-68v8](https://github.com/advisories/GHSA-5jgf-p345-68v8), [GHSA-f65p-4m7j-42xc](https://github.com/advisories/GHSA-f65p-4m7j-42xc), [GHSA-fph4-wmhf-6fwf](https://github.com/advisories/GHSA-fph4-wmhf-6fwf), [GHSA-jqff-g426-hqxp](https://github.com/advisories/GHSA-jqff-g426-hqxp), [GHSA-qw65-cvwx-89v3](https://github.com/advisories/GHSA-qw65-cvwx-89v3), and [GHSA-58mr-gqgx-xq4g](https://github.com/advisories/GHSA-58mr-gqgx-xq4g). The override is the durable floor; the lockfile must not resolve below `3.1.6`.
 A 2026-09-15 `package.json` override of `smol-toml` `^1.7.1` (knip path; resolved `1.8.0`, official registry integrity) clears [GHSA-7w5x-hrqm-74c2](https://github.com/advisories/GHSA-7w5x-hrqm-74c2). The override is the durable floor; the lockfile must not resolve `<=1.7.0`.
+
+### Temporary audit exception for unpatched `braces` (2026-10-08)
+
+The `braces` advisory [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
+has no patched release available yet. The affected dependency is reached through
+the Tailwind build/development graph (`tailwindcss` → `fast-glob` → `micromatch`
+→ `braces`), not by adding a new direct dependency. Until a patched release can
+be resolved, `scripts/retry-bun-audit.sh` passes Bun's `--ignore` option with
+this exact GHSA identifier; the CVE code is not accepted by Bun for this
+exception. This does not mark the finding as fixed: the ignore is limited to
+this one advisory, all other high/critical findings still fail CI, and the
+exception must be removed once a patched `braces` release is available.
 
 ## Scan triage rule
 
