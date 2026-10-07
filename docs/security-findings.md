@@ -2380,13 +2380,19 @@ A 2026-09-01 lockfile bump of `browserslist` `4.28.2` → `4.28.7` (official reg
 A 2026-09-02 `package.json` override of `fast-uri` `^3.1.6` (resolved `3.1.7`, official registry integrity) clears [GHSA-5jgf-p345-68v8](https://github.com/advisories/GHSA-5jgf-p345-68v8), [GHSA-f65p-4m7j-42xc](https://github.com/advisories/GHSA-f65p-4m7j-42xc), [GHSA-fph4-wmhf-6fwf](https://github.com/advisories/GHSA-fph4-wmhf-6fwf), [GHSA-jqff-g426-hqxp](https://github.com/advisories/GHSA-jqff-g426-hqxp), [GHSA-qw65-cvwx-89v3](https://github.com/advisories/GHSA-qw65-cvwx-89v3), and [GHSA-58mr-gqgx-xq4g](https://github.com/advisories/GHSA-58mr-gqgx-xq4g). The override is the durable floor; the lockfile must not resolve below `3.1.6`.
 A 2026-09-15 `package.json` override of `smol-toml` `^1.7.1` (knip path; resolved `1.8.0`, official registry integrity) clears [GHSA-7w5x-hrqm-74c2](https://github.com/advisories/GHSA-7w5x-hrqm-74c2). The override is the durable floor; the lockfile must not resolve `<=1.7.0`.
 
+### Resolved dependency-audit findings (2026-10-08)
+
+A 2026-10-08 `package.json` override of `tinypool` `^2.2.0` (Vitest path; resolved `2.2.0`) clears [GHSA-5gmw-xhrv-c9v3](https://github.com/advisories/GHSA-5gmw-xhrv-c9v3) and [GHSA-85c8-ppgw-ccpr](https://github.com/advisories/GHSA-85c8-ppgw-ccpr). The override is the durable floor.
+A 2026-10-08 lockfile bump of `brace-expansion` `5.0.9` → `5.0.12` clears [GHSA-qhr7-859c-m2p7](https://github.com/advisories/GHSA-qhr7-859c-m2p7), [GHSA-6j4f-fj2g-mc7p](https://github.com/advisories/GHSA-6j4f-fj2g-mc7p), and [GHSA-q2hr-2g5m-vwhr](https://github.com/advisories/GHSA-q2hr-2g5m-vwhr).
+A 2026-10-08 lockfile bump of `source-map-js` `1.2.1` → `1.2.2` clears [GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q).
+
 ### Temporary audit exception for unpatched `braces` (2026-10-08)
 
 The `braces` advisory [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
 has no patched release available yet. The affected dependency is reached through
-the Tailwind build/development graph (`tailwindcss` → `fast-glob` → `micromatch`
-→ `braces`), not by adding a new direct dependency. Until a patched release can
-be resolved, `scripts/retry-bun-audit.sh` passes Bun's `--ignore` option with
+the Tailwind build/development graph (`tailwindcss` → `micromatch` / `fast-glob` /
+`chokidar` → `braces`), not by adding a new direct dependency. Until a patched
+release can be resolved, `scripts/retry-bun-audit.sh` passes Bun's `--ignore` option with
 this exact GHSA identifier; the CVE code is not accepted by Bun for this
 exception. This does not mark the finding as fixed: the ignore is limited to
 this one advisory, all other high/critical findings still fail CI, and the
