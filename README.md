@@ -197,7 +197,16 @@ Carry then: MEDIUM 1 (`provider.connect` non-idempotent); LOW 3 (dual Topbar
 self-dot, ownWindowEvents freeze, yCollab cursor); evidence
 `sentinel-qa-pr161-live/`. Atlas parked risks at that attest: connect
 idempotency, dual Topbar (echo Sentinel carry). Do **not** claim plain READY.
-#159 selection-match/scroll remains on this line. Current live origin `4e23fe22` / Pages `b53b133a`: Atlas named
+#159 selection-match/scroll remains on this line. Current live origin `8f2d4b48` / Pages `e336dd16`: Notion AI verified on 2026-10-08. `version.json` reports
+`deployedSha` `8f2d4b48ad038a854a4f5aaec736e29a3e914cbb` (#168),
+`capabilityRoutesEnabled` true, `buildId` `1791432749515-3nlbtvog`, and
+`builtAt` `2026-10-08T04:12:49.277Z`. Cloudflare Pages project
+`snote-g4-origin`, deployment `e336dd16`
+(`e336dd16-e5f4-46e8-8952-9695b7269af9`). Syringa uploaded the build through
+the dashboard, so Cloudflare records no commit for this deployment. PWA update
+smoke PASS (run `37727592798`).
+
+Prior live origin `4e23fe22` / Pages `b53b133a`: Atlas named
 #163 Origin SPA ship to Cloudflare Pages `snote-g4-origin` /
 note.syrin.online (canary ON). Independent Sentinel `version.json`:
 `deployedSha` `4e23fe22346394155fc365f7cbca540a5c9242cb`,
