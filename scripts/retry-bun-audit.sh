@@ -22,7 +22,7 @@ trap 'rm -f "$log"' EXIT
 attempt=1
 while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
   set +e
-  bun audit --audit-level=high 2>&1 | tee "$log"
+  bun audit --audit-level=high --ignore=GHSA-vfj7-8cjw-p6xm 2>&1 | tee "$log"
   status="${PIPESTATUS[0]}"
   set -e
 

@@ -86,7 +86,7 @@ printf '%s\\n' "$n" > "__ATTEMPTS__"
 `;
 
 const REQUIRE_AUDIT_ARGS = `
-if [[ "$1" != "audit" || "$*" != "audit --audit-level=high" ]]; then
+if [[ "$1" != "audit" || "$*" != "audit --audit-level=high --ignore=GHSA-vfj7-8cjw-p6xm" ]]; then
   printf 'unexpected bun invocation: %s\\n' "$*" >&2
   exit 99
 fi

@@ -131,6 +131,7 @@
     "undici": "7.28.0",
     "filelist": "2.0.2",
     "test-exclude": "8.0.0",
+    "tinypool": "^2.2.0",
     "smol-toml": "^1.7.1"
   }
 }
