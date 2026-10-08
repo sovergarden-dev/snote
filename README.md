@@ -13,6 +13,10 @@ Production: [note.syrin.online](https://note.syrin.online/)
 #159 selection-match cap 4000 + nested-overflow scroll feel;
 #161 same-note split via tab-scoped note-host;
 #163 provider.connect() idempotent latch (MEDIUM-2 CLOSED);
+#166 company identity & contact (footer, `/privacy` contact, Organization metadata);
+#167 CI restore on main (Google Fonts removed; home scenes use system fonts);
+#168 passphrase rejection sampling + `.env` key-shape guard test;
+home-scene polish (Jade Chi / Ethereal Aurora / Obsidian Ink) pushed directly to `main` without PR, through `2caf90fb`;
 prior #130/#131 W1 convert-on-write as product default is **superseded**)
 canary-on `CutoverNotePage` → editable `NotePage` for plain `/<slug>` and
 SplitView panes (no forced convert, no `#owner=` required to edit; Phase C
@@ -44,7 +48,7 @@ Encrypt stays active on the owner path (#123); A′ (#126) RO default is
 **superseded**; Duplicate securely (#128) remains enabled on Legacy RO only
 (Edge `note-session` `import-legacy`); W2 + A3 + Go C (#145 LNO-wins) remain
 on this line; #151 create-bare remains on this line; #153 FAB UX remains on
-this line; #155 remains on this line; #157 remains on this line; #159 remains on this line; #161 remains on this line; #163 live on origin `4e23fe22`;
+this line; #155 remains on this line; #157 remains on this line; #159 remains on this line; #161 remains on this line; #163 remains on this line; #166–#168 live on origin `8f2d4b48`;
 Pixel IDLE+UPDATE PASS (no Sonner on home) remains on this line; findings §3e / §3k / §3l / §3m / §3n / §3o / §3p / §3q): `capabilityRoutesEnabled` true. Plain slug URLs persist via Edge
 `plain-upsert` (free-edit for anyone with the link). Home create always uses
 bare `seedAndOpen` (no default mint / no `#owner=`). Prior Home mint
@@ -197,25 +201,38 @@ Carry then: MEDIUM 1 (`provider.connect` non-idempotent); LOW 3 (dual Topbar
 self-dot, ownWindowEvents freeze, yCollab cursor); evidence
 `sentinel-qa-pr161-live/`. Atlas parked risks at that attest: connect
 idempotency, dual Topbar (echo Sentinel carry). Do **not** claim plain READY.
-#159 selection-match/scroll remains on this line. Current live origin `4e23fe22` / Pages `b53b133a`: Atlas named
+#159 selection-match/scroll remains on this line. Current live origin `8f2d4b48` / Pages `e336dd16`: Notion AI verified on 2026-10-08. `version.json` reports
+`deployedSha` `8f2d4b48ad038a854a4f5aaec736e29a3e914cbb` (#168),
+`capabilityRoutesEnabled` true, `buildId` `1791432749515-3nlbtvog`, and
+`builtAt` `2026-10-08T04:12:49.277Z`. Cloudflare Pages project
+`snote-g4-origin`, deployment `e336dd16`
+(`e336dd16-e5f4-46e8-8952-9695b7269af9`). Notion AI built it from a clean
+checkout of `8f2d4b48` (`build:release`, Bun 1.3.14); Syringa uploaded it
+through the dashboard, so Cloudflare records no commit for this deployment.
+PWA update smoke PASS (run `37727592798`). Carried from the #164 attest, not
+re-tested: LOW sticky `connectWork` after soft-fail; #161 LOWs; Edge XOR
+PARKED / NOT VERIFIED live. Known: production CSP blocks the inline theme
+script (backlog; same before this deploy).
+
+Prior live origin `4e23fe22` / Pages `b53b133a` (#164 attest): Atlas named
 #163 Origin SPA ship to Cloudflare Pages `snote-g4-origin` /
-note.syrin.online (canary ON). Independent Sentinel `version.json`:
-`deployedSha` `4e23fe22346394155fc365f7cbca540a5c9242cb`,
+note.syrin.online (canary ON). Independent Sentinel `version.json` at that
+attest: `deployedSha` `4e23fe22346394155fc365f7cbca540a5c9242cb`,
 `capabilityRoutesEnabled` true, `buildId` `1790270578761-qdexmj04`,
 `builtAt` `2026-09-24T17:23:16.683Z` (Pages preview `b53b133a`; full UUID not
-supplied — not invented). Git tip of the shipped SPA is #163 `4e23fe22`
+supplied — not invented). Git tip of the shipped SPA was #163 `4e23fe22`
 (`fix: make provider.connect() idempotent (MEDIUM-2 / #161)`).
-Pixel **READY WITH KNOWN RISKS** live; Sentinel **READY WITH KNOWN RISKS**
-live. Pulse ship PASS (`/workspace/pulse-ship-4e23fe22/`; Pages
-`snote-g4-origin`; PWA update smoke PASS run 36033841796). PASSED: tip latch
+Pixel **READY WITH KNOWN RISKS** at that attest; Sentinel **READY WITH KNOWN
+RISKS** at that attest. Pulse ship PASS (`/workspace/pulse-ship-4e23fe22/`; Pages
+`snote-g4-origin`; PWA update smoke PASS run 36033841796). PASSED then: tip latch
 `4e23fe22`; MEDIUM-2 `provider.connect()` idempotent latch PASS; URL
 `/{slug}+{slug}` stays (no redirect); dual EditorView; sync scroll default
 OFF; one Awareness self (F1); cross-pane type sync. Pixel A1/C1/E1/E2 PASS;
-KNOWN LOW dual Topbar self-dot carry #161 (evidence
+KNOWN then: LOW dual Topbar self-dot carry #161 (evidence
 `/workspace/pixel-qa/same-note-split/pr163-live/`). Sentinel GitHub QA #163
 @ `dd5c98ad`: MEDIUM-2 CLOSED; LOW sticky `connectWork` after soft-fail
-early-return. Sentinel live: no redirect; dual EditorView; Sync OFF;
-cross-pane sync; F1 one Awareness self PASS. Carry: LOW sticky `connectWork`
+early-return. Sentinel then: no redirect; dual EditorView; Sync OFF;
+cross-pane sync; F1 one Awareness self PASS. Carry then: LOW sticky `connectWork`
 after soft-fail (retry needs destroy+recreate); #161 Pixel/Sentinel LOWs
 (dual Topbar self-dot / yCollab / ownWindowEvents); Edge XOR PARKED /
 in-repo only / NOT VERIFIED live. Do **not** claim Edge XOR live PASS. Do
@@ -314,7 +331,9 @@ Ko-fi FAB dismiss 24h remains on this line (prior origin `3b4ea9f9` / Pages
 scroll feel remains on this line (prior origin `08c25172` / Pages `1db84523`).
 #161 same-note split via tab-scoped note-host remains on this line (prior origin
 `a6756188` / Pages `cf94d1b2`). #163 `provider.connect()` idempotent latch
-(MEDIUM-2 CLOSED) is live on origin `4e23fe22` / Pages `b53b133a`. W1 convert-on-write as product
+(MEDIUM-2 CLOSED) remains on this line (prior origin `4e23fe22` / Pages `b53b133a`).
+#166 company identity & contact, #167 CI restore and #168 passphrase/`.env`
+hygiene are live on origin `8f2d4b48` / Pages `e336dd16`. W1 convert-on-write as product
 default is **superseded**. A′ (#126) Cutover/LNO RO default is
 **superseded**. `#owner=`/`#edit=` still render `NotePage`. `?legacyRo=1`
 still RO + banner. Canary stays on. SQL 240 already applied; W2 SQL
