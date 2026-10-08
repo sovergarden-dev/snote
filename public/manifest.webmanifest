@@ -1,7 +1,7 @@
 {
   "name": "Syrin Notes — Realtime markdown notes",
   "short_name": "Syrin Notes",
-  "description": "Syrin Notes — tạo và chia sẻ note markdown qua URL. Tự động lưu, đồng bộ realtime giữa các thiết bị, hoạt động cả khi offline.",
+  "description": "Syrin Notes — create and share markdown notes by URL. Autosave, realtime sync across devices, offline support, and optional client-side encryption.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

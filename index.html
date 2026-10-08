@@ -7,7 +7,7 @@
     <meta name="referrer" content="no-referrer" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Syrin Notes — Realtime markdown notes by URL</title>
-    <meta name="description" content="Syrin Notes — tạo và chia sẻ note markdown qua URL. Tự động lưu, đồng bộ realtime giữa các thiết bị, hoạt động cả khi offline.">
+    <meta name="description" content="Syrin Notes — create and share markdown notes by URL. Autosave, realtime sync across devices, offline support, and optional client-side encryption.">
     <meta name="author" content="Syrin Notes" />
     <link rel="canonical" href="https://note.syrin.online/" />
 
@@ -38,12 +38,14 @@
   
   
   
-  <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/612b5d23-78f8-4a95-a824-8a2667fdea89/id-preview-45f9d3a3--cf32dc79-9c60-414b-b4e3-c720f81a5079.lovable.app-1776865936529.png">
-  <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/612b5d23-78f8-4a95-a824-8a2667fdea89/id-preview-45f9d3a3--cf32dc79-9c60-414b-b4e3-c720f81a5079.lovable.app-1776865936529.png">
+  <meta property="og:image" content="https://note.syrin.online/icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta name="twitter:image" content="https://note.syrin.online/icon-512.png">
   <meta property="og:title" content="Syrin Notes — Realtime markdown notes by URL">
   <meta name="twitter:title" content="Syrin Notes — Realtime markdown notes by URL">
-  <meta property="og:description" content="Syrin Notes — tạo và chia sẻ note markdown qua URL. Tự động lưu, đồng bộ realtime giữa các thiết bị, hoạt động cả khi offline.">
-  <meta name="twitter:description" content="Syrin Notes — tạo và chia sẻ note markdown qua URL. Tự động lưu, đồng bộ realtime giữa các thiết bị, hoạt động cả khi offline.">
+  <meta property="og:description" content="Syrin Notes — create and share markdown notes by URL. Autosave, realtime sync across devices, offline support, and optional client-side encryption.">
+  <meta name="twitter:description" content="Syrin Notes — create and share markdown notes by URL. Autosave, realtime sync across devices, offline support, and optional client-side encryption.">
   <meta property="og:url" content="https://note.syrin.online/">
   <script type="application/ld+json">
   {
@@ -51,13 +53,22 @@
     "@graph": [
       {
         "@type": "Organization",
-        "name": "Syrin Notes",
-        "url": "https://note.syrin.online/"
+        "@id": "https://note.syrin.online/#organization",
+        "name": "Syrin",
+        "url": "https://note.syrin.online/",
+        "email": "syringa@syrin.online",
+        "logo": "https://note.syrin.online/icon-512.png",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Ho Chi Minh City",
+          "addressCountry": "VN"
+        }
       },
       {
         "@type": "WebSite",
         "name": "Syrin Notes",
-        "url": "https://note.syrin.online/"
+        "url": "https://note.syrin.online/",
+        "publisher": { "@id": "https://note.syrin.online/#organization" }
       },
       {
         "@type": "SoftwareApplication",
@@ -65,7 +76,8 @@
         "applicationCategory": "Productivity",
         "operatingSystem": "Web",
         "url": "https://note.syrin.online/",
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "publisher": { "@id": "https://note.syrin.online/#organization" }
       }
     ]
   }
@@ -94,6 +106,11 @@
         } catch (e) {}
       })();
     </script>
+    <noscript>
+      <h1>Syrin Notes — realtime markdown notes by URL</h1>
+      <p>Create and share markdown notes at a memorable URL. Autosave, realtime sync across devices, offline support, and optional client-side AES-256 encryption. No account required.</p>
+      <p>Syrin Notes is made by Syrin, Ho Chi Minh City, Vietnam. Contact: <a href="mailto:syringa@syrin.online">syringa@syrin.online</a> · <a href="/privacy">Privacy</a></p>
+    </noscript>
     <div id="root">
       <!-- Initial loader: visible before React hydrates so the screen isn't blank.
            Colors track the theme set by the script above (.dark on <html>) so the

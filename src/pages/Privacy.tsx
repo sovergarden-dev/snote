@@ -1,16 +1,19 @@
 // Static privacy policy for the web app and Chrome side-panel extension.
+import { CompanyFooter } from "@/components/CompanyFooter";
+
 export default function Privacy() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-12 text-foreground">
       <h1 className="text-2xl font-semibold tracking-tight">Privacy Policy</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Last updated: July 19, 2026
+        Last updated: October 8, 2026
       </p>
 
       <section className="mt-8 space-y-3">
         <h2 className="text-lg font-medium">Scope</h2>
         <p>
-          This policy covers the Syrin Note web app at{" "}
+          Syrin Notes is operated by Syrin, based in Ho Chi Minh City, Vietnam.{" "}
+          This policy covers the Syrin Notes web app at{" "}
           <a href="https://note.syrin.online" className="underline">
             note.syrin.online
           </a>{" "}
@@ -23,7 +26,7 @@ export default function Privacy() {
       <section className="mt-8 space-y-3">
         <h2 className="text-lg font-medium">Data the service handles</h2>
         <p>
-          Syrin Note does not require an account. The app handles note content,
+          Syrin Notes does not require an account. The app handles note content,
           note locators, encryption metadata, and the settings needed to edit,
           sync, share, and recover notes. Unless you enable client-side
           encryption, note content is sent to the backend as plaintext. With
@@ -42,7 +45,7 @@ export default function Privacy() {
         <p>The extension requests two Chrome permissions:</p>
         <ul className="list-disc space-y-2 pl-6">
           <li>
-            <strong>sidePanel</strong> — opens Syrin Note in Chrome's side
+            <strong>sidePanel</strong> — opens Syrin Notes in Chrome's side
             panel.
           </li>
           <li>
@@ -128,14 +131,13 @@ export default function Privacy() {
         <h2 className="text-lg font-medium">Changes and contact</h2>
         <p>
           Material changes will update the date above and be published here.
-          Questions can be filed in the project repository or through the
-          contact link on{" "}
-          <a href="https://note.syrin.online" className="underline">
-            note.syrin.online
+          {" "}Questions or privacy requests:{" "}
+          <a href="mailto:syringa@syrin.online" className="underline">
+            syringa@syrin.online
           </a>
-          .
         </p>
       </section>
+      <CompanyFooter />
     </main>
   );
 }
