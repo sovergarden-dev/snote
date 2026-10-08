@@ -185,6 +185,15 @@ describe("CI toolchain contract", () => {
     expect(ci).toContain("bun run build:check");
   });
 
+  it("pins all six workflow jobs to Ubuntu 24.04", () => {
+    const runnerValues = [...allWorkflows.matchAll(/^\s*runs-on:\s*(.*?)\s*$/gm)]
+      .map((match) => match[1]);
+
+    expect(runnerValues).toHaveLength(6);
+    expect(runnerValues).toEqual(Array(6).fill("ubuntu-24.04"));
+    expect(allWorkflows).not.toContain("ubuntu-latest");
+  });
+
   it("keeps one stable PR E2E check context without blanket retries", () => {
     const e2ePrWorkflows = [...workflows]
       .filter(([, workflow]) => workflow.includes("\n  e2e-pr:\n"))
