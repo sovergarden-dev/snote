@@ -1,9 +1,8 @@
-# Cloudflare Pages / Netlify-style headers config.
-#
-# SOURCE OF TRUTH FOR PROD: vercel.json. This file is only honoured by
-# Cloudflare Pages / Netlify — the production host is Vercel + Cloudflare,
-# which ignores _headers. Keep both in sync (esp. the CSP frame-ancestors
-# entry that lets the Chrome extension embed the app in its side panel).
+# Cloudflare Pages applies these rules on direct requests to the pages.dev origin.
+# Requests to note.syrin.online pass through the syrin-prerender Worker, which
+# sets or overwrites the production CSP, Permissions-Policy, nosniff, and /s/*
+# private/no-store policy. HSTS on note.syrin.online comes from the zone's
+# Transform Rule; vercel.json is not on the production request path.
 #
 # Lighthouse Speed report: "Use efficient cache lifetimes" (~754 KiB savings).
 # Vite's hashed asset filenames (e.g. index-BHPmQ4m1.js) are content-addressed
