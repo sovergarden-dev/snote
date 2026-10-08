@@ -121,9 +121,20 @@ export async function fingerprint(text: string): Promise<string> {
 export function generatePassphrase(length = 24): string {
   const alphabet =
     "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-  const buf = new Uint8Array(length);
-  crypto.getRandomValues(buf);
-  let out = "";
-  for (let i = 0; i < length; i++) out += alphabet[buf[i] % alphabet.length];
-  return out;
+  const acceptBelow = 256 - (256 % alphabet.length);
+  const output = new Uint8Array(length);
+  let generated = 0;
+
+  while (generated < output.length) {
+    const randomBytes = new Uint8Array(output.length - generated);
+    crypto.getRandomValues(randomBytes);
+
+    for (const byte of randomBytes) {
+      if (byte >= acceptBelow) continue;
+      output[generated++] = alphabet.charCodeAt(byte % alphabet.length);
+      if (generated === output.length) break;
+    }
+  }
+
+  return Array.from(output, (code) => String.fromCharCode(code)).join("");
 }
