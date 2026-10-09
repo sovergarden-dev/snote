@@ -2346,7 +2346,7 @@ it("commits state vector with snapshot, bumps generation on replacement, and che
     });
 
     await db.exec("SET ROLE service_role");
-    expect(await save(1, 1, 0, "Yg==", "stale revision", Buffer.from([3]), false))
+    expect(await save(1, 1, 0, "Yg==", "stale revision", Buffer.from([3]), false, false))
       .toMatchObject({ status: "version_conflict", revision: 2, generation: 1 });
     const replaced = await save(2, 1, 0, "Yw==", "replace", Buffer.from([4, 5, 6]), true);
     expect(replaced).toMatchObject({ status: "ok", revision: 3, generation: 2, stateVectorHex: "040506" });

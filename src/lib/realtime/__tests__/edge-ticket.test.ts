@@ -177,7 +177,7 @@ describe("Edge realtime ticket and saved-ack signing", () => {
     expect(response.savedAck).toBeTruthy();
     const payload = await verifyProtocolJws(response.savedAck!, {
       tokenType: "saved-ack",
-      nowSeconds: NOW,
+      nowSeconds: NOW + 86_400,
       pinnedKeys: {
         ticketAndProbe: await pin(ticketPair, signing.ticketKid),
         savedAck: await pin(ackPair, signing.savedAckKid),
@@ -194,6 +194,7 @@ describe("Edge realtime ticket and saved-ack signing", () => {
       state_vector: encodeBase64Url(vector),
       state_vector_hash: encodeBase64Url(vectorHash),
     });
+    expect(payload).not.toHaveProperty("exp");
   });
 
   it("never signs an ACK for any non-committed CAS result", async () => {

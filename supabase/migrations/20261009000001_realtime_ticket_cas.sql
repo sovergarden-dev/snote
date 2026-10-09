@@ -366,7 +366,7 @@ DECLARE
   v_old_force_generation text;
 BEGIN
   -- Ordering is contractual: authenticated user -> current edit permission ->
-  -- permission epoch -> MAC -> existing atomic CAS.
+  -- permission epoch -> MAC -> generation/revision CAS -> state-vector check.
   IF p_auth_user_id IS NULL THEN
     RETURN jsonb_build_object('status', 'unauthorized');
   END IF;
@@ -404,6 +404,26 @@ BEGIN
     OR p_expected_mac IS DISTINCT FROM p_presented_mac
   THEN
     RETURN jsonb_build_object('status', 'invalid_mac');
+  END IF;
+  -- The row remains locked by capability_note_plain_row_access. Give a stale
+  -- client the CAS conflict before comparing its vector with a newer snapshot.
+  IF p_generation IS DISTINCT FROM v_generation THEN
+    RETURN jsonb_build_object(
+      'status', 'generation_conflict',
+      'noteId', v_note_id,
+      'revision', v_revision,
+      'generation', v_generation,
+      'permissionEpoch', v_permission_epoch
+    );
+  END IF;
+  IF p_expected_revision IS DISTINCT FROM v_revision THEN
+    RETURN jsonb_build_object(
+      'status', 'version_conflict',
+      'noteId', v_note_id,
+      'revision', v_revision,
+      'generation', v_generation,
+      'permissionEpoch', v_permission_epoch
+    );
   END IF;
   IF p_state_vector IS NULL OR p_state_vector_matches IS DISTINCT FROM true
     OR p_replace_generation IS NULL
@@ -472,6 +492,6 @@ COMMENT ON FUNCTION public.capability_note_realtime_save(
   text, uuid, bigint, bigint, bigint, text, text, integer, text[], boolean,
   text, text, integer, bytea, bytea, bytea, boolean, boolean
 ) IS
-  'Service-role-only authenticated legacy-slug CAS wrapper. Under a row lock checks current legacy edit eligibility, permission epoch, MAC, then delegates snapshot CAS; state vector is committed by the same update trigger.';
+  'Service-role-only authenticated legacy-slug CAS wrapper. Under a row lock checks current legacy edit eligibility, permission epoch, MAC, generation/revision conflict, then state vector before delegating snapshot CAS; state vector is committed by the same update trigger.';
 
 COMMIT;

@@ -342,7 +342,6 @@ export async function createSavedAck(
   return signJws({
     purpose: "syrin:saved-ack:v1",
     iat: nowSeconds,
-    exp: nowSeconds + MAX_TICKET_TTL_SECONDS,
     room_id: input.roomId,
     generation: input.generation,
     revision: input.revision,
