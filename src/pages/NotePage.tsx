@@ -15,6 +15,8 @@ import { useWordGoal, consumeGoalReached } from "@/hooks/use-word-goal";
 import { toast } from "@/hooks/use-toast";
 import { OutlineSidebar } from "@/components/note/OutlineSidebar";
 import { SupabaseYjsProvider, type Encryption, type YjsProviderLike } from "@/lib/yjs/provider";
+import { RealtimeYjsProvider } from "@/lib/yjs/realtime-provider";
+import { prepareRealtimeNoteSafely, realtimeSyncFeatureEnabled, type RealtimePrelude } from "@/lib/realtime/client-sync";
 import type { NoteSession } from "@/lib/capability/client";
 import { parseCapabilityLocation, readEncryptionSecret, type CapabilityAccess } from "@/lib/capability/url";
 import { getIdentity } from "@/lib/yjs/identity";
@@ -93,8 +95,16 @@ type EncGateTarget = {
 
 type NoteResources = EncGateTarget & {
   providerEpoch: number;
+  generationKey: string;
+  realtimeGeneration: number | null;
   doc: Y.Doc;
   provider: YjsProviderLike;
+};
+
+type RealtimePreludeGate = {
+  slug: string;
+  status: "loading" | "ready" | "fallback";
+  prelude?: RealtimePrelude;
 };
 
 type CapabilityAdmission = {
@@ -320,17 +330,45 @@ export default function NotePage({
   // so sibling panes of the same note-identity share one revision (F2).
   const metaVersion = gate.metaVersion;
   const resolvedEncTarget = gate.resolvedEncTarget;
+  const encTargetIsCurrent = resolvedEncTarget?.slug === slug
+    && resolvedEncTarget.metaVersion === metaVersion;
+  const hubSyncEligible = realtimeSyncFeatureEnabled()
+    && !legacyOnly
+    && !embedSlug
+    && !capabilityAccess
+    && !encMeta.isEncrypted;
+  const [realtimePreludeGate, setRealtimePreludeGate] = useState<RealtimePreludeGate | null>(null);
+  useEffect(() => {
+    if (!hubSyncEligible || encPhase !== "ready" || !encTargetIsCurrent) return;
+    const targetSlug = slug;
+    let cancelled = false;
+    setRealtimePreludeGate({ slug: targetSlug, status: "loading" });
+    void prepareRealtimeNoteSafely(targetSlug).then((result) => {
+      if (cancelled) return;
+      setRealtimePreludeGate(result.status === "ready"
+        ? { slug: targetSlug, status: "ready", prelude: result.prelude }
+        : { slug: targetSlug, status: "fallback" });
+    });
+    return () => { cancelled = true; };
+  }, [hubSyncEligible, slug, encPhase, encTargetIsCurrent, metaVersion]);
+  const currentPreludeGate = realtimePreludeGate?.slug === slug ? realtimePreludeGate : null;
+  const realtimePrelude = hubSyncEligible && currentPreludeGate?.status === "ready"
+    ? currentPreludeGate.prelude ?? null
+    : null;
+  const realtimePreflightPending = hubSyncEligible
+    && (!currentPreludeGate || currentPreludeGate.status === "loading");
+  const realtimeGeneration = realtimePrelude?.ticket.generation ?? null;
   const [resources, setResources] = useState<NoteResources | null>(null);
   const currentEncTargetRef = useRef<EncGateTarget>({ slug, metaVersion });
   const routerTarget = `${location.key}\u0000${location.pathname}\u0000${location.search}\u0000${location.hash}`;
   const routerTargetRef = useRef(routerTarget);
-  const encTargetIsCurrent = resolvedEncTarget?.slug === slug
-    && resolvedEncTarget.metaVersion === metaVersion;
   const resourcesAreCurrent = encPhase === "ready"
     && encTargetIsCurrent
+    && !realtimePreflightPending
     && resources?.slug === slug
     && resources.metaVersion === metaVersion
-    && resources.providerEpoch === providerEpoch;
+    && resources.providerEpoch === providerEpoch
+    && resources.realtimeGeneration === realtimeGeneration;
   const doc = resourcesAreCurrent ? resources.doc : null;
   const provider = resourcesAreCurrent ? resources.provider : null;
   const [writeFenced, setWriteFenced] = useState(false);
@@ -479,6 +517,7 @@ export default function NotePage({
       || !hostKey
       || encPhase !== "ready"
       || !encTargetIsCurrent
+      || realtimePreflightPending
       || (capabilityAccess && !admittedCapability)
       || (convertError === "converted" && !capabilityAccess)
       || (
@@ -492,7 +531,9 @@ export default function NotePage({
     if (!live) return;
     const docCacheKey = admittedCapability
       ? `capability:${admittedCapability.session.noteId}:${admittedCapability.session.scope}:${admittedCapability.session.generation}`
-      : slug;
+      : realtimePrelude
+        ? `realtime:${slug}:${realtimePrelude.ticket.generation}`
+        : slug;
     const generation = `${docCacheKey}:${metaVersion}:${providerEpoch}`;
     const bound = live.bindResources(generation, () => {
       const ownedDoc = acquireDoc(docCacheKey);
@@ -506,7 +547,9 @@ export default function NotePage({
             ownedDoc,
             { pollingOnly: true },
           )
-        : plainProviderCtor && !legacyOnly
+        : realtimePrelude
+          ? new RealtimeYjsProvider(slug, ownedDoc, { prelude: realtimePrelude })
+          : plainProviderCtor && !legacyOnly
           ? new plainProviderCtor(
               slug,
               ownedDoc,
@@ -534,6 +577,8 @@ export default function NotePage({
       slug,
       metaVersion,
       providerEpoch,
+      generationKey: generation,
+      realtimeGeneration,
       doc: bound.doc as Y.Doc,
       provider: bound.provider as YjsProviderLike,
     });
@@ -546,6 +591,9 @@ export default function NotePage({
     hostKey,
     metaVersion,
     providerEpoch,
+    realtimeGeneration,
+    realtimePrelude,
+    realtimePreflightPending,
     encPhase,
     encTargetIsCurrent,
     capabilityAccess,
@@ -964,7 +1012,7 @@ export default function NotePage({
   // Host startSync owns IDB/connect/awareness-local/snapshots so a second pane
   // cannot admit a ghost self (F1) or a second IndexedDB persistence.
   useEffect(() => {
-    if (!validSlug || !hostKey || !doc || !provider || encPhase !== "ready" || !encTargetIsCurrent) return;
+    if (!validSlug || !hostKey || !doc || !provider || encPhase !== "ready" || !encTargetIsCurrent || realtimePreflightPending) return;
     const live = getNoteHost(hostKey);
     if (!live) return;
     provider.setEncryption(encryption);
@@ -976,10 +1024,15 @@ export default function NotePage({
     void hydrateNoteIndex();
 
     const indexDurable = !encMeta.isEncrypted && !capabilityAccess;
-    const generation = `${slug}:${metaVersion}:${providerEpoch}`;
+    const generation = resources?.generationKey ?? `${slug}:${metaVersion}:${providerEpoch}`;
     const stopSync = live.startSync(generation, () => {
       const idb = !capabilityAccess && !encMeta.isEncrypted
-        ? new IndexeddbPersistence(`note:${slug}`, doc)
+        ? new IndexeddbPersistence(
+            provider instanceof RealtimeYjsProvider
+              ? `note:${slug}:realtime:g${provider.generation}`
+              : `note:${slug}`,
+            doc,
+          )
         : null;
       let disposed = false;
       const unsubSync = provider.onSyncEvent((ev) => {
@@ -1121,6 +1174,8 @@ export default function NotePage({
     encMeta.rowExists,
     metaVersion,
     providerEpoch,
+    resources?.generationKey,
+    realtimePreflightPending,
     capabilityAccess,
     capabilityToken,
     plainProviderCtor,

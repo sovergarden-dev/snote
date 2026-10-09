@@ -80,6 +80,7 @@ describe("Edge realtime ticket and saved-ack signing", () => {
       generation: 4,
       permissionEpoch: 7,
       permission: "edit",
+      sessionId: "session-01",
       nowSeconds: NOW,
     }, signing);
     const payload = await verifyProtocolJws(issued.ticket, {
@@ -104,6 +105,7 @@ describe("Edge realtime ticket and saved-ack signing", () => {
       permissions: ["read", "write"],
       iat: NOW,
       exp: NOW + 300,
+      session_id: "session-01",
     });
     expect(decodeBase64Url(payload.jti as string)).toHaveLength(16);
     expect(issued.write_mac_key).toBeTruthy();
@@ -117,9 +119,39 @@ describe("Edge realtime ticket and saved-ack signing", () => {
       generation: 2,
       permissionEpoch: 3,
       permission: "read",
+      sessionId: "session-01",
       nowSeconds: NOW,
     }, signing);
     expect(Object.hasOwn(ticket, "write_mac_key")).toBe(false);
+  });
+
+  it("validates the client session binding before signing", async () => {
+    const { signing } = await config();
+    await expect(issueRealtimeTicket({
+      roomId: "room-session",
+      generation: 1,
+      permissionEpoch: 0,
+      permission: "read",
+      sessionId: "short",
+      nowSeconds: NOW,
+    }, signing)).rejects.toThrow("session ID");
+  });
+
+  it("returns ticket context metadata alongside the ticket", async () => {
+    const { signing } = await config();
+    const result = await issueRealtimeTicketFromContext({
+      status: "ok",
+      noteId: "note-uuid-1",
+      revision: 12,
+      generation: 4,
+      permissionEpoch: 7,
+      ydocState: "AQID",
+      sessionId: "session-01",
+    }, signing, NOW);
+    expect(result).toMatchObject({ ok: true, ticket: {
+      noteId: "note-uuid-1", revision: 12, generation: 4,
+      permissionEpoch: 7, ydocState: "AQID",
+    } });
   });
 
   it("does not issue any ticket when the slug context is invalid or absent", async () => {

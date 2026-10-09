@@ -12,6 +12,7 @@ const MAX_TICKET_TTL_SECONDS = 300;
 const WRITE_MAC_HKDF_SALT = utf8.encode("syrin:realtime:write-mac-key:salt:v1");
 const WRITE_MAC_HKDF_LABEL = "syrin:realtime:write-mac-key:v1";
 const ROOM_ID_LABEL = "syrin:realtime:opaque-room-id:v1";
+const VALID_SESSION_ID = /^[A-Za-z0-9_-]{8,128}$/u;
 
 export type RealtimePermission = "read" | "edit";
 
@@ -40,14 +41,22 @@ export interface RealtimeConfigInput {
 export interface RealtimeTicketContext {
   status: string;
   noteId?: string;
+  revision?: number;
   generation?: number;
   permissionEpoch?: number;
+  ydocState?: string;
+  sessionId?: string;
 }
 
 export interface RealtimeTicket {
   ticket: string;
   roomId: string;
   write_mac_key?: string;
+  noteId?: string;
+  revision?: number;
+  generation?: number;
+  permissionEpoch?: number;
+  ydocState?: string;
 }
 
 export interface YDocLike {
@@ -246,12 +255,14 @@ export async function issueRealtimeTicket(
     generation: number;
     permissionEpoch: number;
     permission: RealtimePermission;
+    sessionId: string;
     nowSeconds?: number;
     ttlSeconds?: number;
   },
   config: RealtimeSigningConfig,
 ): Promise<RealtimeTicket> {
   assertNonEmptyString(input.roomId, "room ID");
+  if (typeof input.sessionId !== "string" || !VALID_SESSION_ID.test(input.sessionId)) fail("Invalid session ID");
   assertSafePositiveInteger(input.generation, "generation");
   assertSafeNonNegativeInteger(input.permissionEpoch, "permission epoch");
   if (input.permission !== "read" && input.permission !== "edit") fail("Invalid realtime permission");
@@ -277,6 +288,7 @@ export async function issueRealtimeTicket(
     permission_epoch: input.permissionEpoch,
     permission: input.permission,
     permissions,
+    session_id: input.sessionId,
   };
   const ticket = await signJws(payload, config.ticketPrivateKey, config.ticketKid, "syrin-ticket+jwt");
   if (input.permission === "read") return { ticket, roomId: input.roomId };
@@ -303,8 +315,12 @@ export async function issueRealtimeTicketFromContext(
   if (context.status !== "ok") return { ok: false, status: context.status };
   if (
     typeof context.noteId !== "string"
+    || typeof context.revision !== "number"
     || typeof context.generation !== "number"
     || typeof context.permissionEpoch !== "number"
+    || typeof context.ydocState !== "string"
+    || typeof context.sessionId !== "string"
+    || !VALID_SESSION_ID.test(context.sessionId)
   ) return { ok: false, status: "unavailable" };
   const roomId = await deriveOpaqueRoomId(config.roomHmacKey, context.noteId, context.generation);
   const ticket = await issueRealtimeTicket({
@@ -312,9 +328,17 @@ export async function issueRealtimeTicketFromContext(
     generation: context.generation,
     permissionEpoch: context.permissionEpoch,
     permission: "edit",
+    sessionId: context.sessionId,
     ...(nowSeconds === undefined ? {} : { nowSeconds }),
   }, config);
-  return { ok: true, ticket };
+  return { ok: true, ticket: {
+    ...ticket,
+    noteId: context.noteId,
+    revision: context.revision,
+    generation: context.generation,
+    permissionEpoch: context.permissionEpoch,
+    ydocState: context.ydocState,
+  } };
 }
 
 export async function createSavedAck(

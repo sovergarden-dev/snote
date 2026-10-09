@@ -30,6 +30,7 @@ import {
 import { isUsableSlug } from "../_shared/slug.ts";
 const UPDATE_ID_RE = /^[a-f0-9]{64}$/;
 const PAYLOAD_RE = /^[A-Za-z0-9_-]+$/;
+const SESSION_ID_RE = /^[A-Za-z0-9_-]{8,128}$/;
 const MAX_ENCODED_PAYLOAD_CHARS = 5_592_406;
 
 function realtimeSigningConfig(): Promise<RealtimeSigningConfig> {
@@ -62,7 +63,8 @@ Deno.serve(async (req) => {
 
     if (body?.action === "realtime-ticket") {
       const slug = typeof body?.slug === "string" ? body.slug.trim() : "";
-      if (!isUsableSlug(slug)) return realtimeFailure("invalid");
+      const sessionId = typeof body?.session_id === "string" ? body.session_id : "";
+      if (!isUsableSlug(slug) || !SESSION_ID_RE.test(sessionId)) return realtimeFailure("invalid");
       const auth = await verifyRealtimeAuth(req, environment);
       if (auth.mode === "unavailable") return capabilityFailure("unavailable");
       if (auth.mode !== "private-realtime") return realtimeFailure("unauthorized");
@@ -75,7 +77,7 @@ Deno.serve(async (req) => {
       if (rpcStatus(context) !== "ok") return realtimeFailure(rpcStatus(context));
 
       const config = await realtimeSigningConfig();
-      const issued = await issueRealtimeTicketFromContext(context, config);
+      const issued = await issueRealtimeTicketFromContext({ ...context, sessionId }, config);
       if (!issued.ok) return realtimeFailure(issued.status);
       return capabilityJson(issued.ticket, 200);
     }

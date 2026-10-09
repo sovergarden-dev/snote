@@ -16,6 +16,7 @@ const EXPECTED_APP_E2E = [
   "pwa-update-no-url-v-param.spec.ts",
   "pwa-update-sw-stall.spec.ts",
   "pwa-update-throttle.spec.ts",
+  "realtime-client-sync.spec.ts",
   "split-view-malformed-persistence.spec.ts",
   "split-view-same-note.spec.ts",
   "theme-toggle-direct.spec.ts",

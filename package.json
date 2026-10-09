@@ -23,6 +23,7 @@
     "typecheck:edge": "deno check --frozen supabase/functions/*/index.ts",
     "cutover:verify": "bun run scripts/verify-capability-cutover.ts",
     "test:e2e": "bash scripts/run-playwright.sh test",
+    "e2e:realtime": "bun run scripts/run-realtime-e2e.ts",
     "theme:isolation": "bun run scripts/check-home-theme-isolation.ts",
     "i18n:check": "bun run scripts/i18n-coverage.ts",
     "i18n:audit": "bun run scripts/i18n-audit.ts",

@@ -504,7 +504,7 @@ for (const [adapterName, createHarness] of adapterFactories) {
         expect(event.text.includes("ticket")).toBe(false);
       }
       const unauthenticated = await harness.open();
-      await unauthenticated.send(relayFrame("presence", { ciphertext: "AAECAw" }));
+      await unauthenticated.send(relayFrame("presence", { ciphertext: "AAECAw", sender_id: "session-01", session_id: "session-01", counter: 1 }));
       const rejected = await unauthenticated.nextEvent();
       expect(rejected.type).toBe("close");
       if (rejected.type === "close") expect(rejected.code).toBe(1008);
@@ -563,7 +563,7 @@ for (const [adapterName, createHarness] of adapterFactories) {
       })));
       expect((await expiring.nextEvent()).type).toBe("message");
       harness.clock.advanceMilliseconds(1_000);
-      await expiring.send(relayFrame("presence", { ciphertext: "AAECAw" }));
+      await expiring.send(relayFrame("presence", { ciphertext: "AAECAw", sender_id: "session-01", session_id: "session-01", counter: 1 }));
       const expiredSocket = await expiring.nextEvent();
       expect(expiredSocket.type).toBe("close");
       if (expiredSocket.type === "close") expect(expiredSocket.code).toBe(1008);
@@ -571,6 +571,7 @@ for (const [adapterName, createHarness] of adapterFactories) {
       const renewable = await harness.open();
       await renewable.send(authFrame(await keys.signTicket({
         jti: "renewable-adapter-ticket",
+        session_id: "session-02",
         iat: currentSeconds + 1,
         exp: currentSeconds + 2,
       }), "session-02"));
@@ -578,6 +579,7 @@ for (const [adapterName, createHarness] of adapterFactories) {
       harness.clock.advanceMilliseconds(1_000);
       const freshTicket = await keys.signTicket({
         jti: "fresh-adapter-renewal-ticket",
+        session_id: "session-02",
         iat: currentSeconds + 2,
         exp: currentSeconds + 302,
       });
@@ -594,9 +596,9 @@ for (const [adapterName, createHarness] of adapterFactories) {
     it("relays the shared ciphertext vector byte-for-byte and ignores client role/slug fields", async () => run(async (harness, keys) => {
       const editor = await harness.open();
       const viewer = await harness.open();
-      await editor.send(authFrame(await keys.signTicket({ permission: "edit", permissions: ["read", "write"] }), "session-01"));
+      await editor.send(authFrame(await keys.signTicket({ permission: "edit", permissions: ["read", "write"], session_id: "sender-01" }), "sender-01"));
       await editor.nextEvent();
-      await viewer.send(authFrame(await keys.signTicket({ permission: "read", permissions: ["read"] }), "session-02"));
+      await viewer.send(authFrame(await keys.signTicket({ permission: "read", permissions: ["read"], session_id: "session-02" }), "session-02"));
       await viewer.nextEvent();
 
       await editor.send(FRAME_VECTOR.wireText);
@@ -608,7 +610,7 @@ for (const [adapterName, createHarness] of adapterFactories) {
       const viewer = await harness.open();
       await viewer.send(authFrame(await keys.signTicket({ permission: "read", permissions: ["read"] })));
       await viewer.nextEvent();
-      await viewer.send(relayFrame("y-update", { ciphertext: "AAECAw", role: "edit" }));
+      await viewer.send(relayFrame("y-update", { ciphertext: "AAECAw", sender_id: "session-01", session_id: "session-01", counter: 1, role: "edit" }));
       expect((await viewer.nextEvent()).type).toBe("close");
 
       const saveViewer = await harness.open();
@@ -619,9 +621,9 @@ for (const [adapterName, createHarness] of adapterFactories) {
 
       const ackSender = await harness.open();
       const recipient = await harness.open();
-      await ackSender.send(authFrame(await keys.signTicket({ permission: "read", permissions: ["read"] }), "session-03"));
+      await ackSender.send(authFrame(await keys.signTicket({ permission: "read", permissions: ["read"], session_id: "session-03" }), "session-03"));
       await ackSender.nextEvent();
-      await recipient.send(authFrame(await keys.signTicket({ permission: "read", permissions: ["read"] }), "session-04"));
+      await recipient.send(authFrame(await keys.signTicket({ permission: "read", permissions: ["read"], session_id: "session-04" }), "session-04"));
       await recipient.nextEvent();
       const validAck = await keys.signSavedAck();
       const validAckFrame = relayFrame("saved-ack", { savedAck: validAck });
@@ -634,7 +636,7 @@ for (const [adapterName, createHarness] of adapterFactories) {
     }));
 
     it("renews on the same socket with the next counter/session and does not consume renewal JTI", async () => run(async (harness, keys) => {
-      const renewalTicket = await keys.signTicket({ jti: "renewal-jti-remains-usable", permission_epoch: 8 });
+      const renewalTicket = await keys.signTicket({ jti: "renewal-jti-remains-usable", permission_epoch: 8, session_id: "session-01" });
       const client = await harness.open();
       await client.send(authFrame(await keys.signTicket({ jti: "initial-ticket-jti-renewal-test" }), "session-01"));
       await client.nextEvent();
@@ -648,14 +650,22 @@ for (const [adapterName, createHarness] of adapterFactories) {
       expect(renewed.type).toBe("message");
       if (renewed.type === "message") expect(JSON.parse(renewed.text).message_type).toBe("ticket-renewed");
 
+      const mismatchedClaim = await harness.open();
+      await mismatchedClaim.send(authFrame(await keys.signTicket({ session_id: "session-01", jti: "mismatch-initial-jti" }), "session-01"));
+      await mismatchedClaim.nextEvent();
+      await mismatchedClaim.send(relayFrame("ticket-renewal", {
+        ticket: await keys.signTicket({ session_id: "session-02", jti: "mismatch-renewal-claim-jti" }),
+        session_id: "session-01", counter: 1,
+      }));
+      expect((await mismatchedClaim.nextEvent()).type).toBe("close");
       const reusedAsInitial = await harness.open();
-      await reusedAsInitial.send(authFrame(renewalTicket, "session-02"));
+      await reusedAsInitial.send(authFrame(renewalTicket, "session-01"));
       const accepted = await reusedAsInitial.nextEvent();
       expect(accepted.type).toBe("message");
       if (accepted.type === "message") expect(JSON.parse(accepted.text).message_type).toBe("hub-ready");
 
       const wrongSession = await harness.open();
-      await wrongSession.send(authFrame(await keys.signTicket({ jti: "initial-ticket-jti-wrong-session" }), "session-03"));
+      await wrongSession.send(authFrame(await keys.signTicket({ jti: "initial-ticket-jti-wrong-session", session_id: "session-03" }), "session-03"));
       await wrongSession.nextEvent();
       await wrongSession.send(relayFrame("ticket-renewal", {
         ticket: await keys.signTicket({ jti: "wrong-session-renewal-jti" }),
@@ -677,6 +687,8 @@ for (const [adapterName, createHarness] of adapterFactories) {
         exp: TEST_NOW_SECONDS - 170,
       }))).toBe(404);
       expect(await harness.health(await keys.signProbe({ exp: TEST_NOW_SECONDS + 31 }))).toBe(404);
+      expect(await harness.health(await keys.signProbe({ room_id: null }))).toBe(404);
+      expect(await harness.health(await keys.signProbe({ room_id: TEST_ROOM_ID }))).toBe(404);
       const freshProbe = await keys.signProbe();
       const healthyStatus = await harness.health(freshProbe);
       expect(healthyStatus).toBe(200);

@@ -127,6 +127,9 @@ jobs:
       - run: bunx playwright install --with-deps ${{ matrix.browser }}
       - name: Run full browser suite
         run: bunx playwright test --project=${{ matrix.browser }} --retries=0
+      - name: Run PR #182 loopback-only realtime sync E2E
+        if: matrix.browser == 'chromium'
+        run: bun run e2e:realtime
       - name: Upload failure evidence
         if: failure()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0

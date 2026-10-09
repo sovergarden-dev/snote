@@ -16,6 +16,7 @@ export async function verifyHubProbe(
       expectedAudience: hubId,
       nowSeconds: now,
     });
+    if (Object.prototype.hasOwnProperty.call(claims, "room_id")) return false;
     return Number.isSafeInteger(claims.iat)
       && Number.isSafeInteger(claims.exp)
       && (claims.exp as number) > now
