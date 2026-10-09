@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// This dedicated config is used only by the PR #182 loopback E2E runner.
+// Dedicated config for the isolated loopback realtime E2E runner.
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
 export default defineConfig({

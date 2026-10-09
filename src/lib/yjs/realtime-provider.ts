@@ -26,6 +26,7 @@ import {
   createRealtimeEdgeApi,
   createRealtimeSessionId,
   isEd25519Unsupported,
+  realtimeHubConfigForTicket,
   RealtimeEdgeApiError,
   verifyRealtimeTicket,
   type RealtimeEdgeApi,
@@ -287,10 +288,11 @@ export class RealtimeYjsProvider implements YjsProviderLike {
     ticket: RealtimePrelude["ticket"],
     sessionId: string,
   ): Promise<RealtimePrelude> {
+    const config = realtimeHubConfigForTicket(this.prelude.config, ticket.hub_id);
     const claims = await verifyRealtimeTicket(
       ticket,
       sessionId,
-      this.prelude.config,
+      config,
       this.prelude.pinnedKeys,
     );
     const writeMacKey = await crypto.subtle.importKey(
@@ -301,7 +303,7 @@ export class RealtimeYjsProvider implements YjsProviderLike {
       ["sign", "verify"],
     );
     const relayKey = await importRelayKey(decodeBase64Url(ticket.relay_key));
-    return { ...this.prelude, sessionId, ticket, claims, writeMacKey, relayKey };
+    return { ...this.prelude, sessionId, ticket, claims, config, writeMacKey, relayKey };
   }
 
   async flushCasFallback(): Promise<void> {
@@ -482,6 +484,21 @@ export class RealtimeYjsProvider implements YjsProviderLike {
     if (this.writeExpected === true || this.encryption) return;
     this.socketOpening = true;
     let prelude = this.prelude;
+    let socketOpened = false;
+    let hubReportPromise: Promise<void> | null = null;
+    const reportUnreachable = (): Promise<void> => {
+      if (socketOpened || !prelude.ticket.hub_id || !this.api.reportHubUnreachable) {
+        return Promise.resolve();
+      }
+      if (!hubReportPromise) {
+        hubReportPromise = this.api.reportHubUnreachable(
+          this.slug,
+          prelude.sessionId,
+          prelude.ticket.ticket,
+        ).then(() => undefined).catch(() => undefined);
+      }
+      return hubReportPromise;
+    };
     try {
       if (reconnecting) {
         const sessionId = createRealtimeSessionId();
@@ -505,6 +522,7 @@ export class RealtimeYjsProvider implements YjsProviderLike {
       this.socket = socket;
       socket.addEventListener("open", () => {
         if (this.destroyed || socket !== this.socket) return;
+        socketOpened = true;
         try {
           socket.send(new TextDecoder().decode(encodeRealtimeFrame({
             v: CURRENT_PROTOCOL_VERSION,
@@ -528,10 +546,19 @@ export class RealtimeYjsProvider implements YjsProviderLike {
         this.senderId = null;
         this.sentUpdateIds.clear();
         this.emit({ type: "offline" });
-        this.scheduleReconnect();
+        void (async () => {
+          await Promise.race([
+            reportUnreachable(),
+            new Promise<void>((resolve) => setTimeout(resolve, 6_000)),
+          ]);
+          if (!this.destroyed) this.scheduleReconnect();
+        })();
       });
       socket.addEventListener("error", () => {
-        if (socket === this.socket) this.emit({ type: "offline" });
+        if (socket === this.socket) {
+          this.emit({ type: "offline" });
+          if (!socketOpened) void reportUnreachable();
+        }
       });
     } catch (error) {
       this.socketOpening = false;

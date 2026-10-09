@@ -16,6 +16,7 @@ import {
   resolveMaterialization,
   rpcStatus,
   verifyRealtimeAuth,
+  type CapabilityEnvironment,
 } from "../_shared/capability-edge.ts";
 import {
   deriveOpaqueRoomId,
@@ -27,11 +28,21 @@ import {
   handleRealtimeCasRequest,
   realtimeFailure as mapRealtimeFailure,
 } from "./realtime-cas-handler.ts";
+import {
+  handleRealtimeHubReport,
+  issueRoutedRealtimeTicketFromContext,
+  unavailableHubBudgetMetricsProvider,
+  type RealtimeHubRpcName,
+} from "./realtime-hub-edge.ts";
 import { isUsableSlug } from "../_shared/slug.ts";
 const UPDATE_ID_RE = /^[a-f0-9]{64}$/;
 const PAYLOAD_RE = /^[A-Za-z0-9_-]+$/;
 const SESSION_ID_RE = /^[A-Za-z0-9_-]{8,128}$/;
 const MAX_ENCODED_PAYLOAD_CHARS = 5_592_406;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 function realtimeSigningConfig(): Promise<RealtimeSigningConfig> {
   return loadRealtimeSigningConfig({
@@ -46,6 +57,28 @@ function realtimeSigningConfig(): Promise<RealtimeSigningConfig> {
     relayMasterKey: Deno.env.get("SNOTE_REALTIME_RELAY_MASTER_KEY") ?? "",
     relayKeyKid: Deno.env.get("SNOTE_REALTIME_RELAY_KEY_KID") ?? "",
   });
+}
+
+function realtimeHubRoutingEnabled(): boolean {
+  return Deno.env.get("SNOTE_REALTIME_HUB_ROUTING_ENABLED") === "true";
+}
+
+function realtimeHubEdgeDependencies(environment: CapabilityEnvironment) {
+  return {
+    rpc: async (name: RealtimeHubRpcName, args: Record<string, unknown>) => {
+      const { data, error } = await environment.client.rpc(name, args as never);
+      return { data, error };
+    },
+    // No live budget API is called in this PR. Until an explicit provider is
+    // injected, Hub 2 admission fails closed on stale/unavailable metrics.
+    metricsProvider: unavailableHubBudgetMetricsProvider,
+    healthUrl: (hubId: "rt1" | "rt2") => {
+      const variable = hubId === "rt1"
+        ? "SNOTE_REALTIME_HUB_RT1_HEALTH_URL"
+        : "SNOTE_REALTIME_HUB_RT2_HEALTH_URL";
+      return Deno.env.get(variable) ?? null;
+    },
+  };
 }
 
 function realtimeFailure(status: string): Response {
@@ -79,9 +112,79 @@ Deno.serve(async (req) => {
       if (rpcStatus(context) !== "ok") return realtimeFailure(rpcStatus(context));
 
       const config = await realtimeSigningConfig();
+      if (realtimeHubRoutingEnabled()) {
+        const routed = await issueRoutedRealtimeTicketFromContext(
+          context,
+          sessionId,
+          config,
+          realtimeHubEdgeDependencies(environment),
+        );
+        if (!routed.ok) {
+          const statusCode = routed.status === "invalid" ? 400
+            : routed.status === "assignment_conflict" || routed.status === "stale_epoch" ? 409
+            : 503;
+          return capabilityJson({
+            status: routed.syncTransport ?? routed.status,
+            code: routed.status,
+            ...(routed.hubId ? { hub_id: routed.hubId } : {}),
+            ...(routed.assignmentEpoch === undefined ? {} : { assignment_epoch: routed.assignmentEpoch }),
+            ...(routed.topologyEpoch === undefined ? {} : { topology_epoch: routed.topologyEpoch }),
+          }, statusCode);
+        }
+        return capabilityJson(routed.ticket, 200);
+      }
       const issued = await issueRealtimeTicketFromContext({ ...context, sessionId }, config);
       if (!issued.ok) return realtimeFailure(issued.status);
       return capabilityJson(issued.ticket, 200);
+    }
+
+    if (body?.action === "realtime-hub-report") {
+      if (!realtimeHubRoutingEnabled()) {
+        return capabilityJson({ status: "feature_disabled" }, 404);
+      }
+      const slug = typeof body?.slug === "string" ? body.slug.trim() : "";
+      const sessionId = typeof body?.session_id === "string" ? body.session_id : "";
+      const ticket = typeof body?.ticket === "string" ? body.ticket : "";
+      if (
+        !isUsableSlug(slug)
+        || !SESSION_ID_RE.test(sessionId)
+        || ticket.length === 0
+        || ticket.length > 8_192
+        || body?.report !== "hub_unreachable"
+      ) return realtimeFailure("invalid");
+
+      const auth = await verifyRealtimeAuth(req, environment);
+      if (auth.mode === "unavailable") return capabilityFailure("unavailable");
+      if (auth.mode !== "private-realtime" || typeof auth.userId !== "string") {
+        return realtimeFailure("unauthorized");
+      }
+      const { data: context, error: contextError } = await environment.client.rpc(
+        "capability_note_realtime_ticket_context",
+        { p_slug: slug, p_auth_user_id: auth.userId },
+      );
+      if (contextError) return capabilityFailure("unavailable");
+      if (rpcStatus(context) !== "ok") return realtimeFailure(rpcStatus(context));
+
+      const config = await realtimeSigningConfig();
+      const report = await handleRealtimeHubReport(
+        { ...body, ticket, session_id: sessionId },
+        isRecord(context) ? { ...context, sessionId } : context,
+        config,
+        realtimeHubEdgeDependencies(environment),
+      );
+      const statusCode = report.status === "invalid" || report.status === "invalid_report" ? 400
+        : report.status === "expired" || report.status === "session_or_ticket_mismatch" ? 401
+        : report.status === "stale_epoch" ? 409
+        : ["ok", "hub-change", "slow_sync", "healthy_cached", "health_cached", "down_cached", "lease_held", "probe_disabled"].includes(report.status) ? 200
+        : 503;
+      return capabilityJson({
+        status: report.status,
+        ...(report.hubId ? { hub_id: report.hubId } : {}),
+        ...(report.probeSucceeded === undefined ? {} : { probe_succeeded: report.probeSucceeded }),
+        ...(report.assignmentEpoch === undefined ? {} : { assignment_epoch: report.assignmentEpoch }),
+        ...(report.topologyEpoch === undefined ? {} : { topology_epoch: report.topologyEpoch }),
+        ...(report.ticket ? { ticket: report.ticket } : {}),
+      }, statusCode);
     }
 
     if (body?.action === "realtime-cas-save" || body?.action === "realtime-replace") {

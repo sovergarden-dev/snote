@@ -18,6 +18,7 @@ const encoder = new TextEncoder();
 export type RealtimeHubConfig = {
   hubId: string;
   hubUrl: string;
+  hubUrls?: Record<string, string>;
 };
 
 export type RealtimeTicketBundle = {
@@ -31,6 +32,9 @@ export type RealtimeTicketBundle = {
   generation: number;
   permissionEpoch: number;
   ydocState: string;
+  hub_id?: string;
+  assignment_epoch?: number;
+  topology_epoch?: number;
 };
 
 export type CasSaveRequest = {
@@ -56,6 +60,7 @@ export type CasSaveResponse = {
 
 export interface RealtimeEdgeApi {
   issueTicket(slug: string, sessionId: string): Promise<RealtimeTicketBundle>;
+  reportHubUnreachable?(slug: string, sessionId: string, ticket: string): Promise<string>;
   casSave(request: CasSaveRequest): Promise<CasSaveResponse>;
 }
 
@@ -122,6 +127,30 @@ export async function realtimeAuthNamespace(slug: string): Promise<string> {
 }
 
 function parseHubConfig(env: Record<string, unknown>): RealtimeHubConfig | null {
+  const hubsRaw = env.VITE_REALTIME_HUBS_JSON;
+  if (hubsRaw !== undefined && hubsRaw !== "") {
+    if (typeof hubsRaw !== "string" || hubsRaw.length > 4_096) return null;
+    try {
+      const mapValue: unknown = JSON.parse(hubsRaw);
+      if (!isRecord(mapValue) || Object.keys(mapValue).length < 1 || Object.keys(mapValue).length > 2) return null;
+      const hubUrls: Record<string, string> = {};
+      for (const [mappedHubId, mappedUrl] of Object.entries(mapValue)) {
+        if (!/^(rt1|rt2)$/u.test(mappedHubId) || typeof mappedUrl !== "string" || mappedUrl.length > 512) return null;
+        const mapped = new URL(mappedUrl);
+        if (
+          !["wss:", "ws:"].includes(mapped.protocol)
+          || mapped.username || mapped.password || mapped.search || mapped.hash
+          || (mapped.protocol === "ws:" && !["localhost", "127.0.0.1", "[::1]"].includes(mapped.hostname))
+        ) return null;
+        hubUrls[mappedHubId] = mapped.toString();
+      }
+      const hubId = Object.hasOwn(hubUrls, "rt1") ? "rt1" : "rt2";
+      return { hubId, hubUrl: hubUrls[hubId]!, hubUrls };
+    } catch {
+      return null;
+    }
+  }
+
   const hubId = env.VITE_REALTIME_HUB_ID;
   const hubUrl = env.VITE_REALTIME_HUB_URL;
   if (
@@ -140,6 +169,21 @@ function parseHubConfig(env: Record<string, unknown>): RealtimeHubConfig | null 
   } catch {
     return null;
   }
+}
+
+export function realtimeHubConfigForTicket(
+  config: RealtimeHubConfig,
+  ticketHubId: string | undefined,
+): RealtimeHubConfig {
+  if (ticketHubId === undefined) {
+    if (config.hubUrls) throw new Error("realtime ticket hub is missing");
+    return config;
+  }
+  if (ticketHubId === config.hubId) return config;
+  if (!/^(rt1|rt2)$/u.test(ticketHubId)) throw new Error("invalid realtime ticket hub");
+  const hubUrl = config.hubUrls?.[ticketHubId];
+  if (!hubUrl) throw new Error("realtime ticket hub URL is not configured");
+  return { ...config, hubId: ticketHubId, hubUrl };
 }
 
 export function realtimeSyncFeatureEnabled(env: Record<string, unknown> = import.meta.env): boolean {
@@ -260,7 +304,47 @@ export function createRealtimeEdgeApi(options: RealtimeClientOptions = {}): Real
       assertInteger(data.revision, 1, "revision");
       assertInteger(data.generation, 1, "generation");
       assertInteger(data.permissionEpoch, 0, "permission epoch");
-      return data as unknown as RealtimeTicketBundle;
+      if (data.hub_id !== undefined) {
+        if (typeof data.hub_id !== "string" || !/^(rt1|rt2)$/u.test(data.hub_id)) {
+          throw new Error("invalid realtime ticket hub");
+        }
+        assertInteger(data.assignment_epoch, 1, "assignment epoch");
+        assertInteger(data.topology_epoch, 1, "topology epoch");
+      } else if (data.assignment_epoch !== undefined || data.topology_epoch !== undefined) {
+        throw new Error("invalid realtime ticket routing metadata");
+      }
+      return {
+        ticket: data.ticket as string,
+        roomId: data.roomId as string,
+        write_mac_key: data.write_mac_key as string,
+        relay_key: data.relay_key as string,
+        relay_key_kid: data.relay_key_kid as string,
+        noteId: data.noteId as string,
+        revision: data.revision as number,
+        generation: data.generation as number,
+        permissionEpoch: data.permissionEpoch as number,
+        ydocState: data.ydocState as string,
+        ...(data.hub_id !== undefined ? {
+          hub_id: data.hub_id as string,
+          assignment_epoch: data.assignment_epoch as number,
+          topology_epoch: data.topology_epoch as number,
+        } : {}),
+      };
+    },
+
+    async reportHubUnreachable(slug, sessionId, ticket) {
+      if (!isSessionId(sessionId) || ticket.length === 0 || ticket.length > 8_192) {
+        throw new Error("invalid realtime hub report");
+      }
+      const data = await post(slug, {
+        action: "realtime-hub-report",
+        slug,
+        session_id: sessionId,
+        ticket,
+        report: "hub_unreachable",
+      });
+      if (typeof data.status !== "string") throw new Error("invalid realtime hub report response");
+      return data.status;
     },
 
     async casSave(request) {
@@ -302,6 +386,11 @@ export async function verifyRealtimeTicket(
     || claims.relay_key_kid !== ticket.relay_key_kid
     || claims.permission !== "edit"
   ) throw new Error("realtime ticket claims do not match Edge metadata");
+  if (ticket.hub_id !== undefined && (
+    claims.hub_id !== ticket.hub_id
+    || claims.assignment_epoch !== ticket.assignment_epoch
+    || claims.topology_epoch !== ticket.topology_epoch
+  )) throw new Error("realtime ticket routing claims do not match Edge metadata");
   const macKey = decodeBase64Url(ticket.write_mac_key);
   if (macKey.byteLength !== 32) throw new Error("invalid realtime write MAC key");
   if (!KEY_ID_RE.test(ticket.relay_key_kid) || decodeBase64Url(ticket.relay_key).byteLength !== 32) {
@@ -334,7 +423,8 @@ export async function prepareRealtimeNote(
   const api = options.api ?? createRealtimeEdgeApi();
   const pinnedKeys = options.pinnedKeys ?? await (options.loadKeys ?? loadRealtimePinnedKeys)();
   const ticket = await api.issueTicket(slug, sessionId);
-  const claims = await verifyRealtimeTicket(ticket, sessionId, config, pinnedKeys);
+  const configForTicket = realtimeHubConfigForTicket(config, ticket.hub_id);
+  const claims = await verifyRealtimeTicket(ticket, sessionId, configForTicket, pinnedKeys);
   const rawWriteMacKey = decodeBase64Url(ticket.write_mac_key);
   const rawRelayKey = decodeBase64Url(ticket.relay_key);
   const writeMacKey = await crypto.subtle.importKey(
@@ -345,7 +435,7 @@ export async function prepareRealtimeNote(
     ["sign", "verify"],
   );
   const relayKey = await importRelayKey(rawRelayKey);
-  return { slug, sessionId, ticket, claims, config, pinnedKeys, writeMacKey, relayKey };
+  return { slug, sessionId, ticket, claims, config: configForTicket, pinnedKeys, writeMacKey, relayKey };
 }
 
 export type SafeRealtimePreparation =

@@ -11,6 +11,7 @@ interface ImportMetaEnv {
   readonly VITE_REALTIME_HUB_SYNC_ENABLED?: string;
   readonly VITE_REALTIME_HUB_ID?: string;
   readonly VITE_REALTIME_HUB_URL?: string;
+  readonly VITE_REALTIME_HUBS_JSON?: string;
   readonly VITE_REALTIME_TICKET_PUBLIC_KEYS_JSON?: string;
   readonly VITE_REALTIME_SAVED_ACK_PUBLIC_KEYS_JSON?: string;
 }
