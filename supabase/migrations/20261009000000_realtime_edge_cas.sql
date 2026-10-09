@@ -34,6 +34,7 @@ BEGIN
     OR OLD.enc_salt IS DISTINCT FROM NEW.enc_salt
     OR OLD.enc_check IS DISTINCT FROM NEW.enc_check
     OR OLD.enc_iterations IS DISTINCT FROM NEW.enc_iterations
+    OR OLD.encryption_version IS DISTINCT FROM NEW.encryption_version
   THEN
     NEW.revision := OLD.revision + 1;
   ELSE
@@ -42,6 +43,10 @@ BEGIN
 
   IF OLD.is_encrypted IS DISTINCT FROM NEW.is_encrypted
     OR OLD.capability_managed IS DISTINCT FROM NEW.capability_managed
+    OR OLD.enc_salt IS DISTINCT FROM NEW.enc_salt
+    OR OLD.enc_check IS DISTINCT FROM NEW.enc_check
+    OR OLD.enc_iterations IS DISTINCT FROM NEW.enc_iterations
+    OR OLD.encryption_version IS DISTINCT FROM NEW.encryption_version
   THEN
     NEW.generation := OLD.generation + 1;
   ELSE

@@ -1914,6 +1914,78 @@ it("scopes bulk disable-secure by p_slugs; empty array is no-op; NULL is fleet",
 }, 30_000);
 
 
+it("bumps generation for encryption metadata changes but not content-only saves", async () => {
+  const db = await createCapabilityFixture();
+  try {
+    await applyCapabilityMigrations(db, capabilityMigrationPaths);
+    await db.exec("SET ROLE service_role");
+    await rpc(db, "capability_runtime_set", [true, true]);
+    await db.exec("RESET ROLE");
+    const upsertTypes = ["", "", "", "::integer", "::text[]", "", "", "", "::integer"];
+    const plainUpsert = async (values: unknown[]) => {
+      await db.exec("SET ROLE service_role");
+      try {
+        return await rpc<{ status: string; created?: boolean }>(
+          db,
+          "capability_note_plain_upsert",
+          values,
+          upsertTypes,
+        );
+      } finally {
+        await db.exec("RESET ROLE");
+      }
+    };
+    const version = async (slug: string) => (await db.query<{
+      revision: number;
+      generation: number;
+    }>("SELECT revision, generation FROM public.notes WHERE slug = $1", [slug])).rows[0];
+
+    expect(await plainUpsert([
+      "encrypted-rotation", "encrypted-state", "", 0, [], true,
+      "s".repeat(16), "c".repeat(16), 100000,
+    ])).toMatchObject({ status: "ok", created: true });
+    const beforeSaltRotation = await version("encrypted-rotation");
+    expect(await plainUpsert([
+      "encrypted-rotation", "encrypted-state", "", 0, [], true,
+      "t".repeat(16), "c".repeat(16), 100000,
+    ])).toMatchObject({ status: "ok", created: false });
+    const afterSaltRotation = await version("encrypted-rotation");
+    expect(afterSaltRotation.revision).toBe(beforeSaltRotation.revision + 1);
+    expect(afterSaltRotation.generation).toBe(beforeSaltRotation.generation + 1);
+
+    expect(await plainUpsert([
+      "ordinary-save", "plain-state", "before", 6, [], false, null, null, null,
+    ])).toMatchObject({ status: "ok", created: true });
+
+    for (const { column, value } of [
+      { column: "enc_check", value: "d".repeat(16) },
+      { column: "enc_iterations", value: 200000 },
+      { column: "encryption_version", value: 2 },
+    ] as const) {
+      const before = await version("encrypted-rotation");
+      await db.query(
+        `UPDATE public.notes SET ${column} = $1 WHERE slug = $2`,
+        [value, "encrypted-rotation"],
+      );
+      const after = await version("encrypted-rotation");
+      expect(after.revision).toBe(before.revision + 1);
+      expect(after.generation).toBe(before.generation + 1);
+    }
+
+    const beforeContentSave = await version("ordinary-save");
+    await db.query(
+      "UPDATE public.notes SET content = $1 WHERE slug = $2",
+      ["after", "ordinary-save"],
+    );
+    const afterContentSave = await version("ordinary-save");
+    expect(afterContentSave.revision).toBe(beforeContentSave.revision + 1);
+    expect(afterContentSave.generation).toBe(beforeContentSave.generation);
+  } finally {
+    await db.close();
+  }
+}, 30_000);
+
+
 it("enforces additive note revision, generation, permission epoch, and service-only CAS", async () => {
   const db = await createCapabilityFixture();
   try {
