@@ -1306,6 +1306,7 @@ export default function NotePage({
           encryption={encryption}
           capabilityAccess={capabilityAccess}
           allowEncryptionTransitions={allowEncryptionTransitions}
+          historyReadOnly={encryptedOrdinaryNote}
           legacyOn={!!capabilityAccess}
           onLegacyEnable={!capabilityAccess && !legacyOnly ? () => { void runConvert(); } : undefined}
           onLegacyDisable={capabilityAccess?.scope === "owner" ? () => { void runDisable(); } : undefined}
@@ -1396,6 +1397,7 @@ export default function NotePage({
         encryption={encryption}
         capabilityAccess={capabilityAccess}
         allowEncryptionTransitions={allowEncryptionTransitions}
+        historyReadOnly={encryptedOrdinaryNote}
         legacyOn={!!capabilityAccess}
         onLegacyEnable={!capabilityAccess && !legacyOnly ? () => { void runConvert(); } : undefined}
         onLegacyDisable={capabilityAccess?.scope === "owner" ? () => { void runDisable(); } : undefined}

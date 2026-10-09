@@ -950,7 +950,10 @@ describe("NotePage encryption gate", () => {
     expect(harness.providerSaveRequest).not.toHaveBeenCalled();
     expect(harness.providerConnect).toHaveBeenCalledWith("secret");
     expect(harness.topbarProps).toHaveBeenLastCalledWith(
-      expect.objectContaining({ allowEncryptionTransitions: false }),
+      expect.objectContaining({
+        allowEncryptionTransitions: false,
+        historyReadOnly: true,
+      }),
     );
   });
 
@@ -1424,7 +1427,7 @@ describe("NotePage encryption gate", () => {
     expect(harness.disableSecureNote).toHaveBeenCalledOnce();
     expect(localStorage.getItem("snote:legacy-secure:secret")).toBeNull();
     expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
-    expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
+    await waitFor(() => expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner="));
     await waitFor(() => expect(harness.providerConstruct).toHaveBeenCalledWith("secret"));
     expect(screen.getByTestId("editor")).toBeInTheDocument();
     expect(screen.queryByText("security.legacy_secure_reopen_banner")).not.toBeInTheDocument();

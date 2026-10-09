@@ -34,6 +34,7 @@ interface HistoryDialogProps {
   onOpenChange?: (open: boolean) => void;
   trigger?: boolean;
   snapshotProtection?: SnapshotProtection | null;
+  readOnly?: boolean;
 }
 
 function formatTs(ts: number) {
@@ -47,6 +48,7 @@ export function HistoryDialog({
   onOpenChange,
   trigger = true,
   snapshotProtection = null,
+  readOnly = false,
 }: HistoryDialogProps) {
   const { t } = useI18n();
   const [openInternal, setOpenInternal] = useState(false);
@@ -94,6 +96,7 @@ export function HistoryDialog({
   );
 
   const handleClear = async () => {
+    if (readOnly) return;
     const ok = window.confirm(t("history.confirm_clear", { n: items.length }));
     if (!ok) return;
     await clearSnapshots(slug);
@@ -113,6 +116,7 @@ export function HistoryDialog({
   }, [open, slug, snapshotProtection]);
 
   const restore = (snap: Snapshot) => {
+    if (readOnly) return;
     const ok = window.confirm(
       t("history.confirm_restore", { ts: formatTs(snap.ts), chars: snap.charCount }),
     );
@@ -139,7 +143,7 @@ export function HistoryDialog({
   const a = getContentFor(diffA);
   const b = getContentFor(diffB);
   const chars = t("history.chars_short");
-  const canRestoreHunks = diffB === "__current__";
+  const canRestoreHunks = !readOnly && diffB === "__current__";
   const hunks = useMemo(() => diffHunks(a.text, b.text), [a.text, b.text]);
 
   useEffect(() => {
@@ -213,7 +217,7 @@ export function HistoryDialog({
               </pre>
             </ScrollArea>
             <div className="flex justify-end">
-              <Button onClick={() => restore(viewing)}>
+              <Button onClick={() => restore(viewing)} disabled={readOnly}>
                 <RotateCcw className="h-4 w-4" />
                 {t("history.restore_btn")}
               </Button>
@@ -267,6 +271,7 @@ export function HistoryDialog({
                   variant="ghost"
                   size="sm"
                   onClick={handleClear}
+                  disabled={readOnly}
                   className="text-destructive hover:text-destructive"
                   data-history-clear
                 >
@@ -319,7 +324,7 @@ export function HistoryDialog({
                                 <Eye className="h-3.5 w-3.5" />
                                 {t("history.view")}
                               </Button>
-                              <Button variant="outline" size="sm" onClick={() => restore(snap)}>
+                              <Button variant="outline" size="sm" onClick={() => restore(snap)} disabled={readOnly}>
                                 <RotateCcw className="h-3.5 w-3.5" />
                                 {t("history.restore")}
                               </Button>

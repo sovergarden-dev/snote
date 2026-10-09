@@ -159,7 +159,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         // Empty slot — Vim extension is appended later via Compartment so
         // the heavy `@replit/codemirror-vim` chunk only loads on demand.
         vimCompartment.of([]),
-        editableCompartment.of(EditorView.editable.of(initialEditableRef.current)),
+        editableCompartment.of([
+          EditorView.editable.of(initialEditableRef.current),
+          EditorState.readOnly.of(!initialEditableRef.current),
+        ]),
         EditorView.theme({
           "&": {
             height: "100%",
@@ -236,7 +239,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
   useEffect(() => {
     viewRef.current?.dispatch({
-      effects: editableCompartment.reconfigure(EditorView.editable.of(editable)),
+      effects: editableCompartment.reconfigure([
+        EditorView.editable.of(editable),
+        EditorState.readOnly.of(!editable),
+      ]),
     });
   }, [editable, editableCompartment]);
 
