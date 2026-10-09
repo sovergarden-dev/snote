@@ -8,6 +8,10 @@
 
 **Implementation plan:** `docs/superpowers/plans/2026-07-24-lovable-managed-realtime-auth.md`
 
+## Historical note (2026-10-09)
+
+Approach 3 below (replacing Supabase Realtime with a custom Cloudflare relay) has been superseded by the approved Realtime hub v2 design in `docs/superpowers/specs/2026-10-09-realtime-hub-v2-design.md`. This document and its original approach analysis are retained as historical context; the replaced approach is not the active PR 5 design.
+
 ## Context
 
 Snote is hosted on Lovable Cloud. Its database, Auth, Realtime, storage, and Edge
