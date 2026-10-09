@@ -212,6 +212,7 @@ describe("Realtime hub v2 shared protocol vectors", () => {
         "expected_revision",
         "payload_sha256",
         "permission_epoch",
+        "state_vector_sha256",
       ]);
       const input = await buildCasSaveMacInput({
         opaqueRoomId: CAS_SAVE_MAC_VECTOR.roomId,
@@ -219,6 +220,7 @@ describe("Realtime hub v2 shared protocol vectors", () => {
         expectedRevision: CAS_SAVE_MAC_VECTOR.expectedRevision,
         payload: CAS_SAVE_MAC_VECTOR.payload,
         permissionEpoch: CAS_SAVE_MAC_VECTOR.permissionEpoch,
+        stateVector: CAS_SAVE_MAC_VECTOR.stateVector,
       });
       expect(hex(input)).toBe(CAS_SAVE_MAC_VECTOR.expectedTupleHex);
       const key = await importHmacSha256Key(CAS_SAVE_MAC_VECTOR.key);
@@ -232,9 +234,23 @@ describe("Realtime hub v2 shared protocol vectors", () => {
         expectedRevision: CAS_SAVE_MAC_VECTOR.expectedRevision,
         payload: CAS_SAVE_MAC_VECTOR.payload,
         permissionEpoch: CAS_SAVE_MAC_VECTOR.permissionEpoch + 1,
+        stateVector: CAS_SAVE_MAC_VECTOR.stateVector,
       });
       expect(await verifyHmacSha256(key, mac, changedEpochInput)).toBe(false);
       expect(base64url(await computeHmacSha256(key, changedEpochInput))).not.toBe(
+        CAS_SAVE_MAC_VECTOR.expectedMacBase64Url,
+      );
+
+      const changedStateVectorInput = await buildCasSaveMacInput({
+        opaqueRoomId: CAS_SAVE_MAC_VECTOR.roomId,
+        generation: CAS_SAVE_MAC_VECTOR.generation,
+        expectedRevision: CAS_SAVE_MAC_VECTOR.expectedRevision,
+        payload: CAS_SAVE_MAC_VECTOR.payload,
+        permissionEpoch: CAS_SAVE_MAC_VECTOR.permissionEpoch,
+        stateVector: new Uint8Array([1, 2, 1]),
+      });
+      expect(await verifyHmacSha256(key, mac, changedStateVectorInput)).toBe(false);
+      expect(base64url(await computeHmacSha256(key, changedStateVectorInput))).not.toBe(
         CAS_SAVE_MAC_VECTOR.expectedMacBase64Url,
       );
     });

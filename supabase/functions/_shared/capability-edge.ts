@@ -111,6 +111,33 @@ type CapabilityDatabase = {
         };
         Returns: CapabilityRpcResponse;
       };
+      capability_note_realtime_ticket_context: {
+        Args: { p_slug: string; p_auth_user_id: string };
+        Returns: CapabilityRpcResponse;
+      };
+      capability_note_realtime_save: {
+        Args: {
+          p_slug: string;
+          p_auth_user_id: string;
+          p_expected_revision: number;
+          p_generation: number;
+          p_permission_epoch: number;
+          p_ydoc_state: string;
+          p_content: string;
+          p_char_count: number;
+          p_tags: string[];
+          p_is_encrypted: boolean;
+          p_salt: string | null;
+          p_check: string | null;
+          p_iterations: number | null;
+          p_expected_mac: string;
+          p_presented_mac: string;
+          p_state_vector: string;
+          p_state_vector_matches: boolean;
+          p_replace_generation: boolean;
+        };
+        Returns: CapabilityRpcResponse;
+      };
       capability_note_disable_secure: {
         Args: {
           p_owner_token_hash: string;

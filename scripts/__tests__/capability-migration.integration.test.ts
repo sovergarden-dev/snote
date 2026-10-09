@@ -43,6 +43,7 @@ const capabilityMigrationPaths = [
   "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql",
   "supabase/migrations/20260922000000_capability_note_bulk_disable_secure_p_slugs.sql",
   "supabase/migrations/20261009000000_realtime_edge_cas.sql",
+  "supabase/migrations/20261009000001_realtime_ticket_cas.sql",
 ] as const;
 
 async function applyCapabilityMigrations(
@@ -2110,6 +2111,379 @@ it("enforces additive note revision, generation, permission epoch, and service-o
         "YQ==", "x", 1, [], true, "s".repeat(16), "c".repeat(16), 100000],
     )).rejects.toMatchObject({ code: "42501" });
     await db.exec("RESET ROLE");
+  } finally {
+    await db.close();
+  }
+}, 30_000);
+
+it("issues context only for existing legacy slugs and rechecks deleted/managed permission at CAS lock", async () => {
+  const db = await createCapabilityFixture();
+  try {
+    await applyCapabilityMigrations(db, capabilityMigrationPaths);
+    await db.exec("SET ROLE service_role");
+    await rpc(db, "capability_runtime_set", [true, true]);
+
+    const upsertTypes = ["", "", "", "::integer", "::text[]", "", "", "", "::integer"];
+    const upsert = async (slug: string) => rpc(db, "capability_note_plain_upsert", [
+      slug, "YQ==", "before", 6, [], false, null, null, null,
+    ], upsertTypes);
+    const ticketContext = (slug: string, userId = "11111111-1111-4111-8111-111111111111") => rpc<{
+      status: string;
+      noteId?: string;
+      generation?: number;
+      permissionEpoch?: number;
+      revision?: number;
+      syncStatus?: string;
+    }>(db, "capability_note_realtime_ticket_context", [
+      slug,
+      userId,
+    ], ["", "::uuid"]);
+    const saveTypes = [
+      "", "::uuid", "::bigint", "::bigint", "::bigint", "", "", "::integer",
+      "::text[]", "", "", "", "::integer", "::bytea", "::bytea", "::bytea", "", "",
+    ];
+    const attemptSave = (slug: string, context: { generation: number; permissionEpoch: number }) => {
+      const mac = Buffer.alloc(32, 7);
+      return rpc<{ status: string }>(db, "capability_note_realtime_save", [
+        slug,
+        "11111111-1111-4111-8111-111111111111",
+        1,
+        context.generation,
+        context.permissionEpoch,
+        "Yg==",
+        "after",
+        5,
+        [],
+        false,
+        null,
+        null,
+        null,
+        mac,
+        mac,
+        Buffer.from([1, 2, 3]),
+        true,
+        false,
+      ], saveTypes);
+    };
+
+    await upsert("ticket-delete-race");
+    const deletedContext = await ticketContext("ticket-delete-race");
+    expect(deletedContext).toMatchObject({ status: "ok", syncStatus: "legacy" });
+    await db.exec("RESET ROLE");
+    const missingAuthUserId = (await db.query<{ id: string }>(`
+      WITH candidate AS (SELECT gen_random_uuid() AS id)
+      SELECT candidate.id::text AS id
+      FROM candidate
+      WHERE NOT EXISTS (SELECT 1 FROM auth.users AS u WHERE u.id = candidate.id)
+    `)).rows[0].id;
+    await db.exec("SET ROLE service_role");
+    expect((await ticketContext("ticket-delete-race", missingAuthUserId)).status)
+      .toBe("unauthorized");
+    expect((await ticketContext("invalid slug!")).status).toBe("invalid");
+    expect((await ticketContext("ticket-missing")).status).toBe("not_found");
+    expect((await ticketContext("ticket-delete-race")).generation).toBe(1);
+    await db.exec("RESET ROLE");
+    await db.query(
+      "UPDATE public.notes SET deleted_at = statement_timestamp(), sync_status = 'deleted' WHERE slug = $1",
+      ["ticket-delete-race"],
+    );
+    await db.exec("SET ROLE service_role");
+    expect(await attemptSave("ticket-delete-race", {
+      generation: deletedContext.generation!,
+      permissionEpoch: deletedContext.permissionEpoch!,
+    })).toMatchObject({ status: "not_found" });
+    await db.exec("RESET ROLE");
+    expect((await db.query<{ content: string }>(
+      "SELECT content FROM public.notes WHERE slug = $1",
+      ["ticket-delete-race"],
+    )).rows[0].content).toBe("before");
+    await db.exec("SET ROLE service_role");
+
+    await upsert("ticket-capability-race");
+    const managedContext = await ticketContext("ticket-capability-race");
+    expect(managedContext.status).toBe("ok");
+    const checkpoint = Buffer.alloc(60, 31);
+    const converted = await rpc(db, "capability_note_convert_legacy", [
+      "ticket-capability-race",
+      tokenHash("a"),
+      tokenHash("b"),
+      tokenHash("c"),
+      createHash("sha256").update(checkpoint).digest("hex"),
+      checkpoint.toString("base64url"),
+      false,
+      null,
+      null,
+      null,
+    ], ["", "", "", "", "", "", "", "", "", "::integer"]);
+    expect(converted.status).toBe("ok");
+    expect(await attemptSave("ticket-capability-race", {
+      generation: managedContext.generation!,
+      permissionEpoch: managedContext.permissionEpoch!,
+    })).toMatchObject({ status: "capability_managed" });
+    await db.exec("RESET ROLE");
+    expect((await db.query<{ content: string; managed: boolean }>(`
+      SELECT content, capability_managed AS managed
+      FROM public.notes WHERE slug = 'ticket-capability-race'
+    `)).rows[0]).toMatchObject({ managed: true });
+  } finally {
+    await db.close();
+  }
+}, 30_000);
+
+it("commits state vector with snapshot, bumps generation on replacement, and checks epoch before MAC", async () => {
+  const db = await createCapabilityFixture();
+  try {
+    await applyCapabilityMigrations(db, capabilityMigrationPaths);
+    await db.exec("SET ROLE service_role");
+    await rpc(db, "capability_runtime_set", [true, true]);
+    await rpc(db, "capability_note_plain_upsert", [
+      "realtime-save",
+      "YQ==",
+      "old",
+      3,
+      [],
+      false,
+      null,
+      null,
+      null,
+    ], ["", "", "", "::integer", "::text[]", "", "", "", "::integer"]);
+
+    const authUserId = "11111111-1111-4111-8111-111111111111";
+    const context = await rpc<{
+      status: string;
+      noteId: string;
+      revision: number;
+      generation: number;
+      permissionEpoch: number;
+    }>(db, "capability_note_realtime_ticket_context", ["realtime-save", authUserId], ["", "::uuid"]);
+    expect(context).toMatchObject({ status: "ok", revision: 1, generation: 1, permissionEpoch: 0 });
+
+    const types = [
+      "", "::uuid", "::bigint", "::bigint", "::bigint", "", "", "::integer",
+      "::text[]", "", "", "", "::integer", "::bytea", "::bytea", "::bytea", "", "",
+    ];
+    const mac = Buffer.alloc(32, 9);
+    const save = (expectedRevision: number, generation: number, permissionEpoch: number,
+      payload: string, content: string, stateVector: Uint8Array, replace: boolean,
+      stateVectorMatches = true) =>
+      rpc<{
+        status: string;
+        revision?: number;
+        generation?: number;
+        permissionEpoch?: number;
+        stateVectorHex?: string;
+      }>(db, "capability_note_realtime_save", [
+        "realtime-save",
+        authUserId,
+        expectedRevision,
+        generation,
+        permissionEpoch,
+        payload,
+        content,
+        content.length,
+        [],
+        false,
+        null,
+        null,
+        null,
+        mac,
+        mac,
+        stateVector,
+        stateVectorMatches,
+        replace,
+      ], types);
+
+    const invalidMac = Buffer.alloc(32, 8);
+    const rejectedMac = await rpc<{ status: string }>(db, "capability_note_realtime_save", [
+      "realtime-save", authUserId, 1, 1, 0, "Yg==", "bad mac", 7, [], false,
+      null, null, null, mac, invalidMac, Buffer.from([1, 2, 3]), true, false,
+    ], types);
+    expect(rejectedMac.status).toBe("invalid_mac");
+    const missingMac = await rpc<{ status: string }>(db, "capability_note_realtime_save", [
+      "realtime-save", authUserId, 1, 1, 0, "Yg==", "missing mac", 11, [], false,
+      null, null, null, mac, null, Buffer.from([1, 2, 3]), true, false,
+    ], types);
+    expect(missingMac.status).toBe("invalid_mac");
+
+    const mismatchedVector = await save(
+      1, 1, 0, "Yg==", "must not persist", Buffer.from([9, 9, 9]), false, false,
+    );
+    expect(mismatchedVector).toMatchObject({ status: "invalid_state_vector" });
+    await db.exec("RESET ROLE");
+    expect((await db.query<{
+      ydoc_state: string;
+      revision: number;
+      state_vector_hex: string | null;
+    }>(`
+      SELECT ydoc_state, revision, encode(realtime_state_vector, 'hex') AS state_vector_hex
+      FROM public.notes WHERE slug = 'realtime-save'
+    `)).rows[0]).toEqual({ ydoc_state: "YQ==", revision: 1, state_vector_hex: null });
+    await db.exec("SET ROLE service_role");
+
+    const saved = await save(1, 1, 0, "Yg==", "new", Buffer.from([1, 2, 3]), false);
+    expect(saved).toMatchObject({
+      status: "ok",
+      revision: 2,
+      generation: 1,
+      permissionEpoch: 0,
+      stateVectorHex: "010203",
+    });
+    await db.exec("RESET ROLE");
+    expect((await db.query<{
+      ydoc_state: string;
+      state_vector_hex: string;
+      revision: number;
+      generation: number;
+    }>(`
+      SELECT ydoc_state, encode(realtime_state_vector, 'hex') AS state_vector_hex,
+             revision, generation
+      FROM public.notes WHERE slug = 'realtime-save'
+    `)).rows[0]).toEqual({
+      ydoc_state: "Yg==",
+      state_vector_hex: "010203",
+      revision: 2,
+      generation: 1,
+    });
+
+    await db.exec("SET ROLE service_role");
+    expect(await save(1, 1, 0, "Yg==", "stale revision", Buffer.from([3]), false))
+      .toMatchObject({ status: "version_conflict", revision: 2, generation: 1 });
+    const replaced = await save(2, 1, 0, "Yw==", "replace", Buffer.from([4, 5, 6]), true);
+    expect(replaced).toMatchObject({ status: "ok", revision: 3, generation: 2, stateVectorHex: "040506" });
+    expect(await save(3, 1, 0, "ZA==", "stale generation", Buffer.from([6]), false))
+      .toMatchObject({ status: "generation_conflict", generation: 2 });
+
+    await db.exec("RESET ROLE");
+    await db.query(`
+      INSERT INTO public.note_capabilities(note_id, scope, token_hash, generation)
+      VALUES ($1, 'owner', repeat('d', 64), 2)
+    `, [context.noteId]);
+    const beforeStaleAttempt = (await db.query<{
+      ydoc_state: string;
+      revision: number;
+      generation: number;
+      permission_epoch: number;
+      state_vector_hex: string;
+    }>(`
+      SELECT ydoc_state, revision, generation, permission_epoch,
+             encode(realtime_state_vector, 'hex') AS state_vector_hex
+      FROM public.notes WHERE slug = 'realtime-save'
+    `)).rows[0];
+    await db.exec("SET ROLE service_role");
+    const mismatchedMac = Buffer.alloc(32, 8);
+    const stale = await rpc<{ status: string; permissionEpoch?: number }>(
+      db,
+      "capability_note_realtime_save",
+      [
+        "realtime-save", authUserId, beforeStaleAttempt.revision, beforeStaleAttempt.generation,
+        0, "ZA==", "no-write", 8, [], false, null, null, null,
+        mismatchedMac, mac, Buffer.from([7, 8, 9]), true, false,
+      ],
+      types,
+    );
+    expect(stale).toMatchObject({ status: "stale_permission_epoch", permissionEpoch: 1 });
+    await db.exec("RESET ROLE");
+    expect((await db.query<{
+      ydoc_state: string;
+      revision: number;
+      generation: number;
+      permission_epoch: number;
+      state_vector_hex: string;
+    }>(`
+      SELECT ydoc_state, revision, generation, permission_epoch,
+             encode(realtime_state_vector, 'hex') AS state_vector_hex
+      FROM public.notes WHERE slug = 'realtime-save'
+    `)).rows[0]).toEqual(beforeStaleAttempt);
+  } finally {
+    await db.close();
+  }
+}, 30_000);
+
+it("commits the supplied vector with an encrypted snapshot without decrypting it", async () => {
+  const db = await createCapabilityFixture();
+  try {
+    await applyCapabilityMigrations(db, capabilityMigrationPaths);
+    await db.exec("SET ROLE service_role");
+    await rpc(db, "capability_runtime_set", [true, true]);
+    await rpc(db, "capability_note_plain_upsert", [
+      "encrypted-realtime",
+      "YQ==",
+      "",
+      0,
+      [],
+      true,
+      "s".repeat(16),
+      "c".repeat(16),
+      100000,
+    ], ["", "", "", "::integer", "::text[]", "", "", "", "::integer"]);
+
+    const authUserId = "11111111-1111-4111-8111-111111111111";
+    const context = await rpc<{ status: string; revision: number; generation: number; permissionEpoch: number }>(
+      db,
+      "capability_note_realtime_ticket_context",
+      ["encrypted-realtime", authUserId],
+      ["", "::uuid"],
+    );
+    expect(context).toMatchObject({ status: "ok", revision: 1, generation: 1, permissionEpoch: 0 });
+
+    const mac = Buffer.alloc(32, 13);
+    const stateVector = Buffer.from([0x81, 0x02, 0x03]);
+    const result = await rpc<{
+      status: string;
+      revision: number;
+      generation: number;
+      stateVectorHex: string;
+    }>(db, "capability_note_realtime_save", [
+      "encrypted-realtime",
+      authUserId,
+      1,
+      1,
+      0,
+      "Yg==",
+      "",
+      0,
+      [],
+      true,
+      "s".repeat(16),
+      "c".repeat(16),
+      100000,
+      mac,
+      mac,
+      stateVector,
+      true,
+      false,
+    ], [
+      "", "::uuid", "::bigint", "::bigint", "::bigint", "", "", "::integer",
+      "::text[]", "", "", "", "::integer", "::bytea", "::bytea", "::bytea", "", "",
+    ]);
+    expect(result).toMatchObject({
+      status: "ok",
+      revision: 2,
+      generation: 1,
+      stateVectorHex: "810203",
+    });
+
+    await db.exec("RESET ROLE");
+    expect((await db.query<{
+      ydoc_state: string;
+      content: string;
+      is_encrypted: boolean;
+      state_vector_hex: string;
+      revision: number;
+      generation: number;
+    }>(`
+      SELECT ydoc_state, content, is_encrypted,
+             encode(realtime_state_vector, 'hex') AS state_vector_hex,
+             revision, generation
+      FROM public.notes WHERE slug = 'encrypted-realtime'
+    `)).rows[0]).toEqual({
+      ydoc_state: "Yg==",
+      content: "",
+      is_encrypted: true,
+      state_vector_hex: "810203",
+      revision: 2,
+      generation: 1,
+    });
   } finally {
     await db.close();
   }

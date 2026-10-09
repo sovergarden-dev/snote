@@ -307,6 +307,7 @@ export interface CasSaveMacInput {
   expectedRevision: number;
   payload: Uint8Array;
   permissionEpoch: number;
+  stateVector: Uint8Array;
 }
 
 export async function buildCasSaveMacInput(input: CasSaveMacInput): Promise<Uint8Array> {
@@ -315,13 +316,15 @@ export async function buildCasSaveMacInput(input: CasSaveMacInput): Promise<Uint
   assertNonNegativeSafeInteger(input.expectedRevision, "expected revision");
   assertNonNegativeSafeInteger(input.permissionEpoch, "permission epoch");
   if (!isByteArray(input.payload)) fail("CAS payload must be raw bytes");
-  // Canonical field order (L): room, generation, expected revision, SHA-256 payload hash, permission_epoch.
+  if (!isByteArray(input.stateVector)) fail("CAS state vector must be raw bytes");
+  // Canonical field order (L): room, generation, expected revision, payload hash, permission_epoch, state-vector hash.
   return encodeCanonicalTuple("syrin:realtime:cas-save-mac:v1", [
     input.opaqueRoomId,
     input.generation,
     input.expectedRevision,
     await sha256(input.payload),
     input.permissionEpoch,
+    await sha256(input.stateVector),
   ]);
 }
 
