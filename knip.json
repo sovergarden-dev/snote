@@ -11,6 +11,8 @@
     "chrome-extension/options.js!",
     "chrome-extension/sidepanel.js!",
     "supabase/functions/*/index.ts!",
+    "src/lib/realtime/hub/node-adapter.ts!",
+    "src/lib/realtime/hub/durable-object-worker.ts!",
     "supabase/functions/old-slug-cleanup-status/index.test.ts",
     "scripts/build-extension-zip.ts",
     "scripts/check-bundle-size.ts",
@@ -38,10 +40,13 @@
   ],
   "ignore": [
     "src/integrations/supabase/types.ts",
-    "src/lib/yjs/local-convert-provider.ts"
+    "src/lib/yjs/local-convert-provider.ts",
+    "src/lib/realtime/hub/cloudflare-workers.d.ts",
+    "src/lib/realtime/hub/__tests__/bun-sqlite.d.ts"
   ],
   "ignoreDependencies": [
     "@vitest/coverage-v8",
+    "cloudflare",
     "turndown-plugin-gfm"
   ]
 }
