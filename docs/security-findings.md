@@ -2386,6 +2386,15 @@ A 2026-10-08 `package.json` override of `tinypool` `^2.2.0` (Vitest path; resolv
 A 2026-10-08 lockfile bump of `brace-expansion` `5.0.9` → `5.0.12` clears [GHSA-qhr7-859c-m2p7](https://github.com/advisories/GHSA-qhr7-859c-m2p7), [GHSA-6j4f-fj2g-mc7p](https://github.com/advisories/GHSA-6j4f-fj2g-mc7p), and [GHSA-q2hr-2g5m-vwhr](https://github.com/advisories/GHSA-q2hr-2g5m-vwhr).
 A 2026-10-08 lockfile bump of `source-map-js` `1.2.1` → `1.2.2` clears [GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q).
 
+### Resolved dependency-audit findings (2026-10-10)
+
+`dompurify` is raised to `3.4.16` in both the direct dependency and override, clearing [GHSA-p98j-92pf-mc4p](https://github.com/advisories/GHSA-p98j-92pf-mc4p) and [GHSA-6688-9rhm-gjv2](https://github.com/advisories/GHSA-6688-9rhm-gjv2); current call sites use ordinary `sanitize()` and do not enable `IN_PLACE`.
+`katex` is raised to `^0.18.2` and overridden across transitive consumers (resolved `0.18.11`, including Mermaid), clearing [GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7). The preview uses `renderToString()` on note math and inserts the generated markup into the DOM.
+`vitest` and `@vitest/mocker` are resolved to `4.1.11`, the first fixed stable line for [GHSA-82fw-gwwq-j7x9](https://github.com/advisories/GHSA-82fw-gwwq-j7x9); `@vitest/coverage-v8` is aligned to `4.1.11`. These packages are test/development tooling, not product runtime dependencies.
+The `postcss-selector-parser` override is `7.1.6`, clearing [GHSA-rj75-hqrm-r3gf](https://github.com/advisories/GHSA-rj75-hqrm-r3gf) and [GHSA-w9m9-85wc-3x92](https://github.com/advisories/GHSA-w9m9-85wc-3x92); the prior `6.0.10` resolution came through Tailwind tooling.
+Transitive overrides resolve `baseline-browser-mapping` to `2.11.0` for [GHSA-w5vr-8v7q-w6rv](https://github.com/advisories/GHSA-w5vr-8v7q-w6rv), `fast-uri` to `3.1.8` for [GHSA-hrr3-gc8f-f4qj](https://github.com/advisories/GHSA-hrr3-gc8f-f4qj), and `smol-toml` to `1.9.1` for [GHSA-r4xh-jqrq-34v2](https://github.com/advisories/GHSA-r4xh-jqrq-34v2). The canonical `smol-toml` ID uses `jqrq`; the previous Notion task had a typo. In the lock graph these are tooling-only paths (`browserslist`, `ajv`, and `knip`, respectively); application source has no direct imports of them.
+After the upgrades, Bun 1.3.14 reports none of the 10 requested low/moderate advisory entries; only the separate unpatched `braces` high finding remains.
+
 ### Temporary audit exception for unpatched `braces` (2026-10-08)
 
 The `braces` advisory [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
@@ -2397,6 +2406,10 @@ this exact GHSA identifier; the CVE code is not accepted by Bun for this
 exception. This does not mark the finding as fixed: the ignore is limited to
 this one advisory, all other high/critical findings still fail CI, and the
 exception must be removed once a patched `braces` release is available.
+Rechecked 2026-10-10: the official advisory still lists no patched versions, the
+upstream issue reports that `3.0.3` remains the latest published package, and
+the upstream Releases page has no releases. Keep the existing exact ignore; the
+finding remains unresolved and is not represented as fixed.
 
 ## Scan triage rule
 

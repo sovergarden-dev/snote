@@ -91,11 +91,15 @@ describe("CI toolchain contract", () => {
   });
 
   it("keeps patched Vitest and its coverage provider aligned", () => {
-    expect(packageJson.devDependencies.vitest).toBe("3.2.6");
-    expect(packageJson.devDependencies["@vitest/coverage-v8"]).toBe("3.2.6");
+    expect(packageJson.devDependencies.vitest).toBe("4.1.11");
+    expect(packageJson.devDependencies["@vitest/coverage-v8"]).toBe("4.1.11");
     expect(packageJson.scripts["test:coverage"]).toBe("vitest run --coverage");
+  });
+
+  it("keeps the test-exclude floor without locking an unused package", () => {
     expect(packageJson.overrides?.["test-exclude"]).toBe("8.0.0");
-    expect(bunLock).toContain('"test-exclude": ["test-exclude@8.0.0"');
+    expect(bunLock).toContain('"test-exclude": "8.0.0"');
+    expect(bunLock).not.toContain('"test-exclude": ["test-exclude@');
   });
 
   it("keeps the Workbox-only EJS build chain on the patched FileList line", () => {
@@ -122,11 +126,12 @@ describe("CI toolchain contract", () => {
     expect(packageJson.overrides?.postcss).toBe("8.5.23");
   });
 
-  it("keeps knip's smol-toml on the GHSA-7w5x-hrqm-74c2 floor", () => {
-    expect(packageJson.overrides?.["smol-toml"]).toBe("^1.7.1");
-    expect(bunLock).toContain('"smol-toml": "^1.7.1"');
+  it("keeps smol-toml on the current security floor", () => {
+    expect(packageJson.overrides?.["smol-toml"]).toBe("^1.9.0");
+    expect(bunLock).toContain('"smol-toml": "^1.9.0"');
     expect(bunLock).not.toContain('"smol-toml": ["smol-toml@1.6.1"');
     expect(bunLock).not.toContain('"smol-toml": ["smol-toml@1.7.0"');
+    expect(bunLock).not.toContain('"smol-toml": ["smol-toml@1.8.0"');
   });
 
   it("runs explicit app, node, tools, and edge TypeScript gates", () => {
