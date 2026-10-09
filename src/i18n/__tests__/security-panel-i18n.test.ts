@@ -6,6 +6,7 @@ const SECURITY_KEYS = [
   "security.panel_title",
   "security.encrypt_label",
   "security.encrypt_helper",
+  "security.encrypted_note_readonly",
   "security.encrypt_helper_unavailable",
   "security.encrypt_helper_mutex",
   "security.advanced",
@@ -63,6 +64,12 @@ describe("Note security panel i18n", () => {
     expect(dict.vi["security.panel_title"]).toBe("Bảo mật note");
     expect(dict.en["security.encrypt_label"]).toBe("Encrypt note");
     expect(dict.vi["security.encrypt_label"]).toBe("Mã hóa note");
+    expect(dict.en["security.encrypted_note_readonly"]).toBe(
+      "This encrypted note is read-only; edits won't be saved. To keep the content, remove encryption or copy it into a new note.",
+    );
+    expect(dict.vi["security.encrypted_note_readonly"]).toBe(
+      "Note đã mã hóa này ở chế độ chỉ đọc; thay đổi sẽ không được lưu. Để giữ nội dung, hãy gỡ mã hóa hoặc chép nội dung sang note mới.",
+    );
     expect(dict.en["security.encrypt_helper_unavailable"]).toBe(
       "Encryption isn’t available on this note type. Use an owner link to encrypt.",
     );

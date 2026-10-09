@@ -278,6 +278,7 @@ const pt: Dictionary = {
     "security.panel_title": "Segurança da nota",
     "security.encrypt_label": "Cifrar nota",
     "security.encrypt_helper": "Cifra esta nota no browser com AES-256. Partilhe o URL com #key para que outros possam ler.",
+    "security.encrypted_note_readonly": "Esta nota cifrada é só de leitura; as alterações não serão guardadas. Para preservar o conteúdo, remova a cifra ou copie-o para uma nota nova.",
     "security.encrypt_helper_unavailable": "A cifra não está disponível neste tipo de nota. Use um link de owner para cifrar.",
     "security.encrypt_helper_mutex": "Desative o Legacy antes de ativar a cifra.",
     "security.advanced": "Avançado",

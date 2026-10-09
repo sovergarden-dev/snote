@@ -287,6 +287,7 @@ const vi: Dictionary = {
     "security.panel_title": "Bảo mật note",
     "security.encrypt_label": "Mã hóa note",
     "security.encrypt_helper": "Mã hóa note này bằng AES-256 ngay trên trình duyệt. Chia sẻ URL kèm #khoá để người khác đọc được.",
+    "security.encrypted_note_readonly": "Note đã mã hóa này ở chế độ chỉ đọc; thay đổi sẽ không được lưu. Để giữ nội dung, hãy gỡ mã hóa hoặc chép nội dung sang note mới.",
     "security.encrypt_helper_unavailable": "Mã hóa chưa dùng được trên note dạng này. Dùng link owner để mã hóa.",
     "security.encrypt_helper_mutex": "Tắt Legacy trước khi bật mã hóa.",
     "security.advanced": "Nâng cao",

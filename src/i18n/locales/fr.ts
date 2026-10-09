@@ -281,6 +281,7 @@ const fr: Dictionary = {
     "security.panel_title": "Sécurité de la note",
     "security.encrypt_label": "Chiffrer la note",
     "security.encrypt_helper": "Chiffre cette note dans le navigateur avec AES-256. Partagez l’URL avec #key pour que d’autres puissent la lire.",
+    "security.encrypted_note_readonly": "Cette note chiffrée est en lecture seule ; les modifications ne seront pas enregistrées. Pour conserver le contenu, retirez le chiffrement ou copiez-le dans une nouvelle note.",
     "security.encrypt_helper_unavailable": "Le chiffrement n’est pas disponible pour ce type de note. Utilisez un lien owner pour chiffrer.",
     "security.encrypt_helper_mutex": "Désactivez Legacy avant d’activer le chiffrement.",
     "security.advanced": "Avancé",
