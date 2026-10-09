@@ -26,7 +26,7 @@ describe("preview-worker-client", () => {
 
   beforeEach(async () => {
     workers = [];
-    WorkerConstructor = vi.fn(() => {
+    WorkerConstructor = vi.fn(function () {
       const mockWorker = createMockWorker();
       workers.push(mockWorker);
       return mockWorker;
@@ -98,10 +98,10 @@ describe("preview-worker-client", () => {
   it("returns a rejected promise when worker construction fails and retries next call", async () => {
     const { renderInWorker } = await loadClient();
     WorkerConstructor
-      .mockImplementationOnce(() => {
+      .mockImplementationOnce(function () {
         throw new Error("workers unavailable");
       })
-      .mockImplementationOnce(() => {
+      .mockImplementationOnce(function () {
         const mockWorker = createMockWorker();
         workers.push(mockWorker);
         return mockWorker;
@@ -117,7 +117,7 @@ describe("preview-worker-client", () => {
 
   it("rejects every affected request when postMessage throws and retries with a fresh worker", async () => {
     const { renderInWorker } = await loadClient();
-    WorkerConstructor.mockImplementationOnce(() => {
+    WorkerConstructor.mockImplementationOnce(function () {
       const mockWorker = createMockWorker();
       mockWorker.postMessage.mockImplementationOnce(() => {
         throw new Error("postMessage failed");
