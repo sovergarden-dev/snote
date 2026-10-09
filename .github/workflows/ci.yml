@@ -58,6 +58,7 @@ jobs:
       - run: bunx tsc --noEmit -p tsconfig.tools.json
       - run: bun run typecheck:edge
       - run: bun run test:coverage
+      - run: bun run test:hub-runtime
       - name: Verify ordinary build manifest
         run: |
           bun run build:check
