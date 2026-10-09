@@ -1,0 +1,9 @@
+7335fadce1dc96ee5548deb2e7e75b2bbff57c40:src/test/paste-markdown.test.ts:generic-api-key:11
+4b197d271506b33ee33fc9760baee2691fcd5903:chrome-extension/__tests__/redact.test.js:stripe-access-token:89
+e5d59a830b50a4448c1da954f5008aa7bcdeaf2d:e2e-extension/redacted-export.spec.ts:stripe-access-token:43
+e5d59a830b50a4448c1da954f5008aa7bcdeaf2d:e2e-extension/redacted-export.spec.ts:stripe-access-token:63
+60faebb031e35d50eb481d5dc895a4a59faee1ca:.env.production:generic-api-key:1
+60faebb031e35d50eb481d5dc895a4a59faee1ca:.env.development:generic-api-key:1
+52799490f2b260d5c08d3a2b28bf23b252386633:.env:jwt:2
+66dda36ab5c72b79549ceca7f39ecb1dd46d6923:.env:jwt:2
+30951c1bb6c8726940d52ee2af6f2edb13e2c8ae:.env:jwt:2

@@ -18,6 +18,11 @@ const ci = workflows.get(".github/workflows/ci.yml")!;
 const extensionWorkflow = workflows.get(".github/workflows/extension-e2e.yml")!;
 const extensionAudit = readFileSync("scripts/audit-extension.sh", "utf8")
   .replaceAll("\r\n", "\n");
+const gitleaksScript = readFileSync("scripts/run-gitleaks.sh", "utf8")
+  .replaceAll("\r\n", "\n");
+const gitleaksIgnore = readFileSync(".gitleaksignore", "utf8")
+  .trim()
+  .split(/\r?\n/);
 const bunLock = readFileSync("bun.lock", "utf8");
 const securityFindings = readFileSync("docs/security-findings.md", "utf8");
 const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
@@ -185,13 +190,56 @@ describe("CI toolchain contract", () => {
     expect(ci).toContain("bun run build:check");
   });
 
-  it("pins all six workflow jobs to Ubuntu 24.04", () => {
+  it("pins all seven workflow job definitions to Ubuntu 24.04", () => {
     const runnerValues = [...allWorkflows.matchAll(/^\s*runs-on:\s*(.*?)\s*$/gm)]
       .map((match) => match[1]);
 
-    expect(runnerValues).toHaveLength(6);
-    expect(runnerValues).toEqual(Array(6).fill("ubuntu-24.04"));
+    expect(runnerValues).toHaveLength(7);
+    expect(runnerValues).toEqual(Array(7).fill("ubuntu-24.04"));
     expect(allWorkflows).not.toContain("ubuntu-latest");
+  });
+
+  it("scans complete git history with checksum-pinned Gitleaks on a weekly schedule", () => {
+    expect(ci).toContain('- cron: "17 5 * * 1"');
+    expect(ci).toContain("fetch-depth: 0");
+    expect(ci).toContain("bash scripts/run-gitleaks.sh");
+    expect(gitleaksScript).toContain('VERSION="8.30.1"');
+    expect(gitleaksScript).toContain(
+      "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+    );
+    expect(gitleaksScript).toContain("--redact");
+    expect(gitleaksScript).toContain('--log-opts="--all"');
+  });
+
+  it("allowlists only exact historical findings reviewed as benign", () => {
+    expect(gitleaksIgnore).toEqual([
+      "7335fadce1dc96ee5548deb2e7e75b2bbff57c40:src/test/paste-markdown.test.ts:generic-api-key:11",
+      "4b197d271506b33ee33fc9760baee2691fcd5903:chrome-extension/__tests__/redact.test.js:stripe-access-token:89",
+      "e5d59a830b50a4448c1da954f5008aa7bcdeaf2d:e2e-extension/redacted-export.spec.ts:stripe-access-token:43",
+      "e5d59a830b50a4448c1da954f5008aa7bcdeaf2d:e2e-extension/redacted-export.spec.ts:stripe-access-token:63",
+      "60faebb031e35d50eb481d5dc895a4a59faee1ca:.env.production:generic-api-key:1",
+      "60faebb031e35d50eb481d5dc895a4a59faee1ca:.env.development:generic-api-key:1",
+      "52799490f2b260d5c08d3a2b28bf23b252386633:.env:jwt:2",
+      "66dda36ab5c72b79549ceca7f39ecb1dd46d6923:.env:jwt:2",
+      "30951c1bb6c8726940d52ee2af6f2edb13e2c8ae:.env:jwt:2",
+    ]);
+  });
+
+  it("runs main-guard on main pushes and the weekly schedule with issue reporting access", () => {
+    const mainGuard = ci.split("  main-guard:")[1] ?? "";
+
+    expect(mainGuard).toContain("name: main-guard");
+    expect(mainGuard).toContain("github.event_name == 'push'");
+    expect(mainGuard).toContain("github.event_name == 'schedule'");
+    expect(mainGuard).toContain("github.ref == 'refs/heads/main'");
+    expect(mainGuard).toContain("bun run scripts/main-guard.ts");
+    expect(mainGuard).toContain("actions: read");
+    expect(mainGuard).toContain("contents: read");
+    expect(mainGuard).toContain("pull-requests: read");
+    expect(mainGuard).not.toMatch(/^[ \t]+needs:/m);
+    expect(ci).not.toMatch(
+      /^[ \t]+(?:actions|contents|pull-requests|checks):[ \t]*write\b/m,
+    );
   });
 
   it("keeps one stable PR E2E check context without blanket retries", () => {
