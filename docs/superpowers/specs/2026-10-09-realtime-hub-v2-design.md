@@ -115,6 +115,8 @@ Bổ sung theo yêu cầu của Syringa ngày 09/10/2026, áp dụng cho mọi P
 
 Mặc định: `rt1` 9.000, `rt2` 1.000; `probe_on_report` bật cho cả hai hub; `probe_before_assign` bật cho `rt1`, tắt cho `rt2`; `budget_profile` của `rt1` là `none`, của `rt2` là `cf_free_daily`. Cấu hình được kiểm tra trọn khối trước khi áp dụng (tổng, biên, hub tồn tại, profile hợp lệ); sai thì từ chối cả bản và giữ bản cũ. Mỗi lần Syringa đổi trọng số mục tiêu không lệch quá 2.500 điểm so với mục tiêu hiện tại, trừ khi bật cờ khẩn cấp có lý do trong audit. Edge có một truy vấn chỉ đọc để Syringa xem trọng số mục tiêu, phần hiệu lực, health, số room và tỷ lệ lỗi/reconnect theo hub, cùng số liệu guard; chỉ có số đếm, không có room ID, slug hay IP.
 
+**Cập nhật PR A (10/10/2026, Syringa duyệt):** migration schema seed ở trạng thái chưa kích hoạt: cả hai hub `enabled = false`, trọng số `0/0`, `rt2.budget_profile`, ngưỡng, đơn giá, chu kỳ hóa đơn và `max_active_rooms` để trống cho tới khi được xác minh/cấu hình. `realtime_topology_read` phải báo `hub2NewRoomAdmissionReady = false` nếu thiếu profile/ngưỡng/đơn giá/sức chứa cần thiết; dữ liệu quota, đơn giá và sức chứa thực không được tự điền. Khi cờ PR B tắt, Edge vẫn giữ hành vi một hub `SNOTE_REALTIME_HUB_ID` hiện có.
+
 **K2. Gán room ổn định khi đổi phân bố.** Mỗi room có `bucket` cố định từ 0 tới 9.999: lấy 32 bit đầu của SHA-256(`syrin:hub-bucket:v1` ‖ `opaque_room_id`) chia lấy dư cho 10.000. Mỗi hub có một phần hiệu lực: `rt2` nhận các bucket từ 0 tới ngay dưới `e(rt2)`, `rt1` nhận các bucket từ `10.000 − e(rt1)` tới 9.999; luôn có `e(rt1) + e(rt2) ≤ 10.000`; bucket nằm giữa hai phần (nếu có) ở Đồng bộ chậm. Quy tắc:
 
 - Hub không khả dụng (down, drain, `enabled = false`, guard chặn) có phần hiệu lực về 0 ngay.
