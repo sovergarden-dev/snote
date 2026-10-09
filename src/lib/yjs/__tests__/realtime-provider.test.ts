@@ -13,13 +13,15 @@ import {
 import {
   prepareRealtimeNote,
   prepareRealtimeNoteSafely,
+  RealtimeEdgeApiError,
   type RealtimeEdgeApi,
   type RealtimeHubConfig,
   type RealtimeTicketBundle,
 } from "@/lib/realtime/client-sync";
 import { RealtimeYjsProvider } from "../realtime-provider";
 import { RealtimeOutbox } from "../realtime-outbox";
-import { bytesToBase64 } from "../base64";
+import { base64ToBytes, bytesToBase64 } from "../base64";
+import { encryptRealtimePayload } from "@/lib/realtime/client-crypto";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -76,10 +78,13 @@ async function createTicketBundle(
   sessionId: string,
   generation = 7,
   snapshot = "",
+  permissionEpoch = 4,
+  roomIdOverride?: string,
 ): Promise<RealtimeTicketBundle> {
   const nowSeconds = Math.floor(Date.now() / 1000);
-  const roomId = `${ROOM_PREFIX}${generation}-${"x".repeat(24)}`;
-  const rawWriteMacKey = crypto.getRandomValues(new Uint8Array(32));
+  const roomId = roomIdOverride ?? `${ROOM_PREFIX}${generation}-${"x".repeat(24)}`;
+  const rawWriteMacKey = new Uint8Array(32).fill(23 + generation);
+  const rawRelayKey = new Uint8Array(32).fill(73 + generation);
   const ticket = await signJws({
     purpose: "syrin:ticket:v1",
     aud: HUB_ID,
@@ -90,19 +95,22 @@ async function createTicketBundle(
     assignment_epoch: "epoch-a",
     room_id: roomId,
     generation,
-    permission_epoch: 4,
+    permission_epoch: permissionEpoch,
     permission: "edit",
     permissions: ["read", "write"],
     session_id: sessionId,
+    relay_key_kid: "relay-test-kid",
   }, keys.ticketPrivate, "ticket-test-kid", "syrin-ticket+jwt");
   return {
     ticket,
     roomId,
     write_mac_key: encodeBase64Url(rawWriteMacKey),
+    relay_key: encodeBase64Url(rawRelayKey),
+    relay_key_kid: "relay-test-kid",
     noteId: NOTE_ID,
     revision: 1,
     generation,
-    permissionEpoch: 4,
+    permissionEpoch,
     ydocState: snapshot,
   };
 }
@@ -131,8 +139,8 @@ async function createPrelude(
 
 function makeAckSigner(
   keys: Awaited<ReturnType<typeof createKeyFixture>>,
-): (request: Parameters<RealtimeEdgeApi["casSave"]>[0]) => Promise<string> {
-  return async (request) => {
+): (request: Parameters<RealtimeEdgeApi["casSave"]>[0], revision?: number) => Promise<string> {
+  return async (request, revision = request.expectedRevision + 1) => {
     const stateVector = decodeBase64Url(request.stateVector);
     const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", stateVector as BufferSource));
     return signJws({
@@ -140,7 +148,7 @@ function makeAckSigner(
       iat: Math.floor(Date.now() / 1000),
       room_id: `${ROOM_PREFIX}${request.generation}-${"x".repeat(24)}`,
       generation: request.generation,
-      revision: request.expectedRevision + 1,
+      revision,
       permission_epoch: request.permissionEpoch,
       state_vector: request.stateVector,
       state_vector_hash: encodeBase64Url(hash),
@@ -238,6 +246,52 @@ async function waitForRow(outbox: RealtimeOutbox, generation = 7): Promise<void>
     await Promise.resolve();
   }
   throw new Error("timed out waiting for realtime outbox row");
+}
+
+async function expectUnsafeCasRebaseToBeRejected(options: {
+  permissionEpoch?: number;
+  roomId?: string;
+}): Promise<void> {
+  const keys = await createKeyFixture();
+  const { prelude } = await createPrelude(keys);
+  const foreignDoc = makeDoc("foreign authority snapshot");
+  const latestTicket = {
+    ...(await createTicketBundle(
+      keys,
+      SESSION_ID,
+      7,
+      bytesToBase64(Y.encodeStateAsUpdate(foreignDoc)),
+      options.permissionEpoch ?? 4,
+      options.roomId,
+    )),
+    revision: 2,
+  };
+  const issueTicket = vi.fn(async () => latestTicket);
+  const casSave = vi.fn(async () => {
+    throw new RealtimeEdgeApiError("stale revision", 409, "version_conflict");
+  });
+  const outbox = new RealtimeOutbox(`provider-unsafe-rebase-${crypto.randomUUID()}`);
+  const doc = new Y.Doc();
+  const provider = new RealtimeYjsProvider("random-test-note", doc, {
+    prelude,
+    api: { issueTicket, casSave },
+    outbox,
+    socketFactory: (url) => new FakeWebSocket(url, prelude.ticket.roomId) as unknown as WebSocket,
+  });
+  provider.setExpectedEncrypted(false);
+  await connectProvider(provider);
+  doc.getText("content").insert(0, "local edit");
+  await provider.whenOutboxPersisted();
+  await waitForRow(outbox);
+
+  await provider.flushCasFallback();
+
+  expect(casSave).toHaveBeenCalledTimes(1);
+  expect(issueTicket).toHaveBeenCalledWith("random-test-note", SESSION_ID);
+  expect(doc.getText("content").toString()).not.toContain("foreign authority snapshot");
+  expect(await outbox.list("random-test-note", 7)).toHaveLength(1);
+  await provider.destroy();
+  foreignDoc.destroy();
 }
 
 afterEach(() => {
@@ -386,6 +440,192 @@ describe("RealtimeYjsProvider durable ACK and fallback", () => {
     expect(await outbox.list("random-test-note", 7)).toHaveLength(0);
     expect(provider.getLastSnapshotAt()).toBeGreaterThan(0);
     await provider.destroy();
+  });
+
+  it("clears a raced outbox row after an idempotent CAS returns the same revision with a valid ACK", async () => {
+    const keys = await createKeyFixture();
+    const { prelude } = await createPrelude(keys);
+    const doc = new Y.Doc();
+    let injectOnNextList = false;
+    class RacingOutbox extends RealtimeOutbox {
+      override async list(slug: string, generation: number, limit = 256) {
+        const rows = await super.list(slug, generation, limit);
+        if (injectOnNextList) {
+          injectOnNextList = false;
+          const content = doc.getText("content");
+          content.insert(content.length, " raced update");
+        }
+        return rows;
+      }
+    }
+    const outbox = new RacingOutbox(`provider-cas-race-${crypto.randomUUID()}`);
+    const requests: Parameters<RealtimeEdgeApi["casSave"]>[0][] = [];
+    const ackFor = makeAckSigner(keys);
+    const casSave = vi.fn(async (request: Parameters<RealtimeEdgeApi["casSave"]>[0]) => {
+      requests.push(request);
+      const revision = requests.length === 1
+        ? request.expectedRevision + 1
+        : request.expectedRevision;
+      return {
+        savedAck: await ackFor(request, revision),
+        roomId: prelude.ticket.roomId,
+        generation: request.generation,
+        revision,
+      };
+    });
+    const provider = new RealtimeYjsProvider("random-test-note", doc, {
+      prelude,
+      api: { issueTicket: async () => prelude.ticket, casSave },
+      outbox,
+      socketFactory: (url) => new FakeWebSocket(url, prelude.ticket.roomId) as unknown as WebSocket,
+    });
+    provider.setExpectedEncrypted(false);
+    await connectProvider(provider);
+    doc.getText("content").insert(0, "first update");
+    await provider.whenOutboxPersisted();
+    await waitForRow(outbox);
+
+    // This local update arrives after the CAS outbox-ID snapshot but before
+    // its Yjs snapshot is encoded, so it is committed but not in the first ACK batch.
+    injectOnNextList = true;
+    await provider.flushCasFallback();
+    expect(casSave).toHaveBeenCalledTimes(1);
+    expect(requests[0]?.expectedRevision).toBe(1);
+    const committedDoc = new Y.Doc();
+    try {
+      Y.applyUpdate(committedDoc, base64ToBytes(requests[0]!.ydocState));
+      expect(committedDoc.getText("content").toString()).toContain("first update");
+      expect(committedDoc.getText("content").toString()).toContain("raced update");
+    } finally {
+      committedDoc.destroy();
+    }
+    expect(await outbox.list("random-test-note", 7)).toHaveLength(1);
+
+    // The state vector is already durable: the retry is an idempotent CAS.
+    // Its signed ACK may keep revision 2, but must still clear only the retained row.
+    await provider.flushCasFallback();
+    expect(casSave).toHaveBeenCalledTimes(2);
+    expect(requests.map((request) => request.expectedRevision)).toEqual([1, 2]);
+    expect(requests[1]?.stateVector).toBe(requests[0]?.stateVector);
+    expect(await outbox.list("random-test-note", 7)).toHaveLength(0);
+    expect(provider.hasUnflushedLocalChanges()).toBe(false);
+    await provider.destroy();
+  });
+
+  it("rebases a stale revision, retries CAS and clears outbox only after the valid ACK", async () => {
+    const keys = await createKeyFixture();
+    const { prelude } = await createPrelude(keys);
+    const remoteDoc = makeDoc("remote edit");
+    const snapshot = bytesToBase64(Y.encodeStateAsUpdate(remoteDoc));
+    const latestTicket = {
+      ...(await createTicketBundle(keys, SESSION_ID, 7, snapshot)),
+      revision: 2,
+    };
+    const issueTicket = vi.fn(async () => latestTicket);
+    const requests: Parameters<RealtimeEdgeApi["casSave"]>[0][] = [];
+    let mergedContent = "";
+    const ackFor = makeAckSigner(keys);
+    const casSave = vi.fn(async (request: Parameters<RealtimeEdgeApi["casSave"]>[0]) => {
+      requests.push(request);
+      if (requests.length === 1) {
+        throw new RealtimeEdgeApiError("stale revision", 409, "version_conflict");
+      }
+      const mergedDoc = new Y.Doc();
+      Y.applyUpdate(mergedDoc, base64ToBytes(request.ydocState));
+      mergedContent = mergedDoc.getText("content").toString();
+      mergedDoc.destroy();
+      return {
+        savedAck: await ackFor(request),
+        roomId: prelude.ticket.roomId,
+        generation: 7,
+        revision: 3,
+      };
+    });
+    const api: RealtimeEdgeApi = { issueTicket, casSave };
+    const database = `provider-rebase-${crypto.randomUUID()}`;
+    const outbox = new RealtimeOutbox(database);
+    const doc = new Y.Doc();
+    const provider = new RealtimeYjsProvider("random-test-note", doc, {
+      prelude,
+      api,
+      outbox,
+      socketFactory: (url) => new FakeWebSocket(url, prelude.ticket.roomId) as unknown as WebSocket,
+    });
+    provider.setExpectedEncrypted(false);
+    await connectProvider(provider);
+    doc.getText("content").insert(0, "local edit");
+    await provider.whenOutboxPersisted();
+    await waitForRow(outbox);
+
+    await provider.flushCasFallback();
+
+    expect(casSave).toHaveBeenCalledTimes(2);
+    expect(requests.map((request) => request.expectedRevision)).toEqual([1, 2]);
+    expect(issueTicket).toHaveBeenCalledWith("random-test-note", SESSION_ID);
+    expect(mergedContent).toContain("local edit");
+    expect(mergedContent).toContain("remote edit");
+    expect(doc.getText("content").toString()).toContain("remote edit");
+    expect(await outbox.list("random-test-note", 7)).toHaveLength(0);
+    await provider.destroy();
+    remoteDoc.destroy();
+  });
+
+  it("does not rebase a revision conflict into a different permission epoch", async () => {
+    await expectUnsafeCasRebaseToBeRejected({ permissionEpoch: 5 });
+  });
+
+  it("does not rebase a revision conflict into a different room", async () => {
+    await expectUnsafeCasRebaseToBeRejected({ roomId: `${ROOM_PREFIX}7-${"y".repeat(24)}` });
+  });
+
+  it("does not apply inbound y-update when its MAC is missing or invalid", async () => {
+    const keys = await createKeyFixture();
+    const { prelude } = await createPrelude(keys);
+    const doc = new Y.Doc();
+    const provider = new RealtimeYjsProvider("random-test-note", doc, {
+      prelude,
+      api: {
+        issueTicket: async () => prelude.ticket,
+        casSave: async () => { throw new Error("unexpected CAS"); },
+      },
+      outbox: new RealtimeOutbox(`provider-bad-mac-${crypto.randomUUID()}`),
+      socketFactory: (url) => new FakeWebSocket(url, prelude.ticket.roomId) as unknown as WebSocket,
+    });
+    provider.setExpectedEncrypted(false);
+    await connectProvider(provider);
+    const remote = makeDoc("must not be merged");
+    const update = Y.encodeStateAsUpdate(remote);
+    const makePayload = (counter: number) => encryptRealtimePayload(update, {
+      roomId: prelude.ticket.roomId,
+      generation: 7,
+      messageType: "y-update",
+      senderId: "sender-attacker-01",
+      sessionId: "session-attacker-01",
+      counter,
+    }, prelude.relayKey, prelude.writeMacKey);
+    const missingMac = await makePayload(1);
+    delete missingMac.mac;
+    const invalidMac = {
+      ...(await makePayload(2)),
+      mac: encodeBase64Url(new Uint8Array(32)),
+    };
+    const receiveFrame = (payload: unknown) => JSON.stringify({
+      v: CURRENT_PROTOCOL_VERSION,
+      message_type: "y-update",
+      opaque_room_id: prelude.ticket.roomId,
+      payload,
+    });
+    const receive = (provider as unknown as {
+      handleSocketMessage: (value: unknown) => Promise<void>;
+    }).handleSocketMessage.bind(provider);
+
+    await receive(receiveFrame(missingMac));
+    await receive(receiveFrame(invalidMac));
+
+    expect(doc.getText("content").toString()).toBe("");
+    expect(provider.getPendingBytes()).toBe(0);
+    await provider.destroy();
+    remote.destroy();
   });
 
   it("does not merge a new-generation snapshot after reconnect", async () => {

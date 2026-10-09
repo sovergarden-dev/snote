@@ -7,7 +7,7 @@ import {
 } from "./protocol";
 import { createDefaultCapabilityAuthSource, type CapabilityAuthSource } from "@/lib/capability/auth";
 import { isUsableSlug } from "@/lib/slug";
-import { importRelayDerivationKey } from "./client-crypto";
+import { importRelayKey } from "./client-crypto";
 
 const SESSION_ID_RE = /^[A-Za-z0-9_-]{8,128}$/u;
 const KEY_ID_RE = /^[A-Za-z0-9._-]{1,64}$/u;
@@ -24,6 +24,8 @@ export type RealtimeTicketBundle = {
   ticket: string;
   roomId: string;
   write_mac_key: string;
+  relay_key: string;
+  relay_key_kid: string;
   noteId: string;
   revision: number;
   generation: number;
@@ -77,7 +79,7 @@ export type RealtimePrelude = {
   config: RealtimeHubConfig;
   pinnedKeys: JwsPinnedKeySets;
   writeMacKey: CryptoKey;
-  relayDerivationKey: CryptoKey;
+  relayKey: CryptoKey;
 };
 
 export type RealtimeClientOptions = {
@@ -246,9 +248,15 @@ export function createRealtimeEdgeApi(options: RealtimeClientOptions = {}): Real
         typeof data.ticket !== "string" || data.ticket.length === 0 || data.ticket.length > 8192
         || typeof data.roomId !== "string" || data.roomId.length === 0
         || typeof data.write_mac_key !== "string"
+        || typeof data.relay_key !== "string"
+        || typeof data.relay_key_kid !== "string" || !KEY_ID_RE.test(data.relay_key_kid)
         || typeof data.noteId !== "string"
         || typeof data.ydocState !== "string"
       ) throw new Error("invalid realtime ticket response");
+      if (decodeBase64Url(data.relay_key).byteLength !== 32
+        || decodeBase64Url(data.write_mac_key).byteLength !== 32) {
+        throw new Error("invalid realtime ticket key material");
+      }
       assertInteger(data.revision, 1, "revision");
       assertInteger(data.generation, 1, "generation");
       assertInteger(data.permissionEpoch, 0, "permission epoch");
@@ -291,10 +299,14 @@ export async function verifyRealtimeTicket(
     || claims.session_id !== sessionId
     || claims.generation !== ticket.generation
     || claims.permission_epoch !== ticket.permissionEpoch
+    || claims.relay_key_kid !== ticket.relay_key_kid
     || claims.permission !== "edit"
   ) throw new Error("realtime ticket claims do not match Edge metadata");
   const macKey = decodeBase64Url(ticket.write_mac_key);
   if (macKey.byteLength !== 32) throw new Error("invalid realtime write MAC key");
+  if (!KEY_ID_RE.test(ticket.relay_key_kid) || decodeBase64Url(ticket.relay_key).byteLength !== 32) {
+    throw new Error("invalid realtime relay key");
+  }
   const snapshotText = ticket.ydocState;
   if (snapshotText.length > Math.ceil(MAX_SNAPSHOT_BYTES * 4 / 3) + 4) {
     throw new Error("realtime snapshot exceeds its limit");
@@ -324,6 +336,7 @@ export async function prepareRealtimeNote(
   const ticket = await api.issueTicket(slug, sessionId);
   const claims = await verifyRealtimeTicket(ticket, sessionId, config, pinnedKeys);
   const rawWriteMacKey = decodeBase64Url(ticket.write_mac_key);
+  const rawRelayKey = decodeBase64Url(ticket.relay_key);
   const writeMacKey = await crypto.subtle.importKey(
     "raw",
     rawWriteMacKey as BufferSource,
@@ -331,8 +344,8 @@ export async function prepareRealtimeNote(
     false,
     ["sign", "verify"],
   );
-  const relayDerivationKey = await importRelayDerivationKey(rawWriteMacKey);
-  return { slug, sessionId, ticket, claims, config, pinnedKeys, writeMacKey, relayDerivationKey };
+  const relayKey = await importRelayKey(rawRelayKey);
+  return { slug, sessionId, ticket, claims, config, pinnedKeys, writeMacKey, relayKey };
 }
 
 export type SafeRealtimePreparation =

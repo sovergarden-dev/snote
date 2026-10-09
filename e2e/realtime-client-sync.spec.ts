@@ -55,6 +55,11 @@ async function createIsolatedContext(
     await route.close({ code: 1008, reason: "non-loopback E2E traffic is forbidden" });
   });
   const key = await authStorageKeyFor(slug);
+  await context.addInitScript(() => {
+    const originalSetTimeout = window.setTimeout.bind(window);
+    window.setTimeout = ((handler: TimerHandler, timeout = 0, ...args: unknown[]) =>
+      originalSetTimeout(handler, timeout === 90_000 ? 1_000 : timeout, ...args)) as typeof window.setTimeout;
+  });
   await context.addInitScript(({ storageKey, now }) => {
     localStorage.setItem(storageKey, JSON.stringify({
       access_token: "fake-local-auth-token-not-a-credential",
@@ -76,7 +81,27 @@ async function createIsolatedContext(
   return page;
 }
 
-test("flagged /slug realtime sync relays edits between isolated contexts", async ({ browser }) => {
+async function outboxCount(page: Page, slug: string): Promise<number> {
+  return page.evaluate(async (noteSlug) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("snote-realtime-outbox", 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error ?? new Error("outbox database unavailable"));
+    });
+    try {
+      const rows = await new Promise<Array<{ slug?: unknown }>>((resolve, reject) => {
+        const request = db.transaction("updates", "readonly").objectStore("updates").getAll();
+        request.onsuccess = () => resolve(request.result as Array<{ slug?: unknown }>);
+        request.onerror = () => reject(request.error ?? new Error("outbox query failed"));
+      });
+      return rows.filter((row) => row.slug === noteSlug).length;
+    } finally {
+      db.close();
+    }
+  }, slug);
+}
+
+test("flagged /slug concurrent edits survive revision conflict and both contexts receive ACK", async ({ browser }) => {
   const slug = `rt-e2e-${crypto.randomUUID().slice(0, 8)}`;
   const blockedRequests: string[] = [];
   const externalWebSockets: string[] = [];
@@ -93,12 +118,50 @@ test("flagged /slug realtime sync relays edits between isolated contexts", async
     await expect(secondEditor).toBeVisible({ timeout: 20_000 });
     expect(firstPage.context()).not.toBe(secondPage.context());
 
-    const marker = `pr182-${crypto.randomUUID()}`;
-    await firstEditor.click();
-    await firstEditor.press("Control+End");
-    await firstEditor.press("Enter");
-    await firstEditor.pressSequentially(marker, { delay: 2 });
-    await expect(secondEditor).toContainText(marker, { timeout: 20_000 });
+    const firstMarker = `context-one-${crypto.randomUUID()}`;
+    const secondMarker = `context-two-${crypto.randomUUID()}`;
+    const appendMarker = async (editor: typeof firstEditor, marker: string) => {
+      await editor.click();
+      await editor.press("Control+End");
+      await editor.press("Enter");
+      await editor.pressSequentially(marker, { delay: 1 });
+    };
+    await Promise.all([
+      appendMarker(firstEditor, firstMarker),
+      appendMarker(secondEditor, secondMarker),
+    ]);
+    await expect(firstEditor).toContainText(firstMarker, { timeout: 20_000 });
+    await expect(firstEditor).toContainText(secondMarker, { timeout: 20_000 });
+    await expect(secondEditor).toContainText(firstMarker, { timeout: 20_000 });
+    await expect(secondEditor).toContainText(secondMarker, { timeout: 20_000 });
+
+    const edgeUrl = process.env.VITE_SUPABASE_URL;
+    if (!edgeUrl) throw new Error("local fake Edge URL is not set");
+    const inspectUrl = `${edgeUrl}/_test/notes/${encodeURIComponent(slug)}`;
+    await expect.poll(async () => {
+      const response = await firstContext.request.get(inspectUrl);
+      if (!response.ok()) return 0;
+      const state = await response.json() as { casAccepted: number };
+      return state.casAccepted;
+    }, { timeout: 20_000 }).toBeGreaterThanOrEqual(2);
+    const inspectResponse = await firstContext.request.get(inspectUrl);
+    const state = await inspectResponse.json() as {
+      content: string;
+      casAttempts: number;
+      casCommits: number;
+      casAccepted: number;
+      casConflicts: number;
+      expectedRevisions: number[];
+    };
+    expect(state.casAttempts).toBeGreaterThanOrEqual(3);
+    expect(state.expectedRevisions.slice(0, 3)).toEqual([1, 1, 2]);
+    expect(state.casConflicts).toBeGreaterThanOrEqual(1);
+    expect(state.casAccepted).toBeGreaterThanOrEqual(2);
+    expect(state.casCommits).toBeGreaterThanOrEqual(1);
+    expect(state.content).toContain(firstMarker);
+    expect(state.content).toContain(secondMarker);
+    await expect.poll(() => outboxCount(firstPage, slug), { timeout: 20_000 }).toBe(0);
+    await expect.poll(() => outboxCount(secondPage, slug), { timeout: 20_000 }).toBe(0);
 
     // Any attempted external HTTP(S) or WebSocket request is blocked above and
     // makes this assertion fail; only loopback fixtures are permitted here.

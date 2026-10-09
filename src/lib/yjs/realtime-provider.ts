@@ -18,7 +18,7 @@ import {
 import {
   decryptRealtimePayload,
   encryptRealtimePayload,
-  importRelayDerivationKey,
+  importRelayKey,
   verifySavedAck,
   type RealtimeCipherPayload,
 } from "@/lib/realtime/client-crypto";
@@ -26,6 +26,7 @@ import {
   createRealtimeEdgeApi,
   createRealtimeSessionId,
   isEd25519Unsupported,
+  RealtimeEdgeApiError,
   verifyRealtimeTicket,
   type RealtimeEdgeApi,
   type RealtimePrelude,
@@ -41,6 +42,7 @@ const RECONNECT_BASE_MS = 250;
 const RECONNECT_MAX_MS = 5_000;
 const SAVE_FALLBACK_MS = 90_000;
 const MAX_CAS_RETRIES = 3;
+const MAX_CAS_REBASES = 2;
 const MAX_PENDING_UPDATES = 512;
 const MAX_TEXT_BYTES = MAX_REALTIME_FRAME_BYTES - 2_048;
 const ORIGIN_HUB = "syrin-realtime-hub";
@@ -111,7 +113,13 @@ function decodeSocketFrame(eventData: unknown): RealtimeFrame | null {
 function isSameGenerationTicket(prelude: RealtimePrelude, next: RealtimePrelude): boolean {
   return next.ticket.generation === prelude.ticket.generation
     && next.ticket.roomId === prelude.ticket.roomId
-    && next.ticket.noteId === prelude.ticket.noteId;
+    && next.ticket.noteId === prelude.ticket.noteId
+    && next.ticket.permissionEpoch === prelude.ticket.permissionEpoch;
+}
+
+function isRevisionConflict(error: unknown): boolean {
+  if (!(error instanceof RealtimeEdgeApiError) || error.status !== 409) return false;
+  return ["version_conflict", "stale_revision", "revision_conflict"].includes((error.code ?? "").toLowerCase());
 }
 
 export class RealtimeYjsProvider implements YjsProviderLike {
@@ -275,6 +283,27 @@ export class RealtimeYjsProvider implements YjsProviderLike {
     await this.persistTail;
   }
 
+  private async preludeForTicket(
+    ticket: RealtimePrelude["ticket"],
+    sessionId: string,
+  ): Promise<RealtimePrelude> {
+    const claims = await verifyRealtimeTicket(
+      ticket,
+      sessionId,
+      this.prelude.config,
+      this.prelude.pinnedKeys,
+    );
+    const writeMacKey = await crypto.subtle.importKey(
+      "raw",
+      decodeBase64Url(ticket.write_mac_key) as BufferSource,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign", "verify"],
+    );
+    const relayKey = await importRelayKey(decodeBase64Url(ticket.relay_key));
+    return { ...this.prelude, sessionId, ticket, claims, writeMacKey, relayKey };
+  }
+
   async flushCasFallback(): Promise<void> {
     if (this.destroyed || this.casInFlight) return;
     this.casInFlight = true;
@@ -285,42 +314,68 @@ export class RealtimeYjsProvider implements YjsProviderLike {
         this.pendingBytes = 0;
         return;
       }
-      const update = Y.encodeStateAsUpdate(this.doc);
-      const stateVector = Y.encodeStateVector(this.doc);
-      const expectedRevision = this.prelude.ticket.revision;
-      const macInput = await buildCasSaveMacInput({
-        opaqueRoomId: this.prelude.ticket.roomId,
-        generation: this.generation,
-        expectedRevision,
-        payload: update,
-        permissionEpoch: this.prelude.ticket.permissionEpoch,
-        stateVector,
-      });
-      const mac = encodeBase64Url(await computeHmacSha256(this.prelude.writeMacKey, macInput));
-      const response = await this.api.casSave({
-        slug: this.slug,
-        expectedRevision,
-        generation: this.generation,
-        permissionEpoch: this.prelude.ticket.permissionEpoch,
-        ydocState: bytesToBase64(update),
-        stateVector: encodeBase64Url(stateVector),
-        mac,
-        isEncrypted: false,
-        salt: null,
-        check: null,
-        iterations: null,
-      });
+      let response: Awaited<ReturnType<RealtimeEdgeApi["casSave"]>> | null = null;
+      let committedStateVector: Uint8Array | null = null;
+      for (let attempt = 0; attempt <= MAX_CAS_REBASES; attempt += 1) {
+        const update = Y.encodeStateAsUpdate(this.doc);
+        const stateVector = Y.encodeStateVector(this.doc);
+        const expectedRevision = this.prelude.ticket.revision;
+        const permissionEpoch = this.prelude.ticket.permissionEpoch;
+        const macInput = await buildCasSaveMacInput({
+          opaqueRoomId: this.prelude.ticket.roomId,
+          generation: this.generation,
+          expectedRevision,
+          payload: update,
+          permissionEpoch,
+          stateVector,
+        });
+        const mac = encodeBase64Url(await computeHmacSha256(this.prelude.writeMacKey, macInput));
+        try {
+          response = await this.api.casSave({
+            slug: this.slug,
+            expectedRevision,
+            generation: this.generation,
+            permissionEpoch,
+            ydocState: bytesToBase64(update),
+            stateVector: encodeBase64Url(stateVector),
+            mac,
+            isEncrypted: false,
+            salt: null,
+            check: null,
+            iterations: null,
+          });
+          committedStateVector = stateVector;
+          break;
+        } catch (error) {
+          if (!isRevisionConflict(error) || attempt === MAX_CAS_REBASES) throw error;
+          const latestTicket = await this.api.issueTicket(this.slug, this.prelude.sessionId);
+          const latestPrelude = await this.preludeForTicket(latestTicket, this.prelude.sessionId);
+          if (!isSameGenerationTicket(this.prelude, latestPrelude)) {
+            throw new Error("realtime CAS authority changed during revision rebase");
+          }
+          const before = Y.encodeStateVector(this.doc);
+          if (latestTicket.ydocState) {
+            Y.applyUpdate(this.doc, base64ToBytes(latestTicket.ydocState), this);
+          }
+          const after = Y.encodeStateVector(this.doc);
+          if (!bytesEqual(before, after)) this.emit({ type: "recovered", bytes: after.byteLength });
+          this.prelude = latestPrelude;
+        }
+      }
+      if (!response || !committedStateVector) throw new Error("CAS retry budget exhausted");
+      // An idempotent save may leave the revision unchanged; the signed ACK
+      // below must still bind this exact state vector before any row is removed.
       if (
         response.roomId !== this.prelude.ticket.roomId
         || response.generation !== this.generation
-        || response.revision <= expectedRevision
+        || response.revision < this.prelude.ticket.revision
       ) throw new Error("CAS response authority mismatch");
       const validAck = await verifySavedAck(response.savedAck, {
         roomId: this.prelude.ticket.roomId,
         generation: this.generation,
         permissionEpoch: this.prelude.ticket.permissionEpoch,
         revision: response.revision,
-        stateVector,
+        stateVector: committedStateVector,
       }, this.prelude.pinnedKeys);
       if (!validAck) {
         this.emit({ type: "error", message: "ACK realtime không hợp lệ; hàng đợi vẫn được giữ." });
@@ -431,21 +486,7 @@ export class RealtimeYjsProvider implements YjsProviderLike {
       if (reconnecting) {
         const sessionId = createRealtimeSessionId();
         const ticket = await this.api.issueTicket(this.slug, sessionId);
-        const claims = await verifyRealtimeTicket(ticket, sessionId, this.prelude.config, this.prelude.pinnedKeys);
-        const next: RealtimePrelude = {
-          ...this.prelude,
-          sessionId,
-          ticket,
-          claims,
-          writeMacKey: await crypto.subtle.importKey(
-            "raw",
-            decodeBase64Url(ticket.write_mac_key) as BufferSource,
-            { name: "HMAC", hash: "SHA-256" },
-            false,
-            ["sign", "verify"],
-          ),
-          relayDerivationKey: await importRelayDerivationKey(decodeBase64Url(ticket.write_mac_key)),
-        };
+        const next = await this.preludeForTicket(ticket, sessionId);
         if (!isSameGenerationTicket(this.prelude, next)) {
           this.emit({ type: "conflict", bytes: this.pendingBytes });
           this.emit({ type: "error", message: "Generation của note đã đổi; bản sửa cũ được giữ riêng, không merge." });
@@ -453,7 +494,7 @@ export class RealtimeYjsProvider implements YjsProviderLike {
           return;
         }
         const before = Y.encodeStateVector(this.doc);
-        if (ticket.ydocState) Y.applyUpdate(this.doc, base64ToBytes(ticket.ydocState), ORIGIN_HUB);
+        if (ticket.ydocState) Y.applyUpdate(this.doc, base64ToBytes(ticket.ydocState), this);
         const after = Y.encodeStateVector(this.doc);
         if (!bytesEqual(before, after)) this.emit({ type: "recovered", bytes: after.byteLength });
         prelude = next;
@@ -614,7 +655,7 @@ export class RealtimeYjsProvider implements YjsProviderLike {
       senderId: this.senderId,
       sessionId: this.prelude.sessionId,
       counter: this.counter,
-    }, this.prelude.relayDerivationKey, this.prelude.writeMacKey);
+    }, this.prelude.relayKey, this.prelude.writeMacKey);
   }
 
   private sendFrame(messageType: string, payload: unknown): void {
@@ -636,7 +677,7 @@ export class RealtimeYjsProvider implements YjsProviderLike {
         roomId: this.prelude.ticket.roomId,
         generation: this.generation,
         messageType: "y-update",
-      }, this.prelude.relayDerivationKey, this.prelude.writeMacKey, this.replayCounters.get(replayKey) ?? 0);
+      }, this.prelude.relayKey, this.prelude.writeMacKey, this.replayCounters.get(replayKey) ?? 0);
       Y.applyUpdate(this.doc, decrypted.plaintext, this);
       this.replayCounters.set(replayKey, payload.counter);
       this.lastBroadcastAt = this.now();
@@ -652,7 +693,7 @@ export class RealtimeYjsProvider implements YjsProviderLike {
         roomId: this.prelude.ticket.roomId,
         generation: this.generation,
         messageType: "presence",
-      }, this.prelude.relayDerivationKey, this.prelude.writeMacKey, this.replayCounters.get(replayKey) ?? 0);
+      }, this.prelude.relayKey, this.prelude.writeMacKey, this.replayCounters.get(replayKey) ?? 0);
       applyAwarenessUpdate(this.awareness, decrypted.plaintext, this);
       this.replayCounters.set(replayKey, payload.counter);
       this.emitAwareness();
@@ -670,21 +711,7 @@ export class RealtimeYjsProvider implements YjsProviderLike {
     if (this.destroyed || !this.connected || this.renewalWaitingFor !== null) return;
     try {
       const ticket = await this.api.issueTicket(this.slug, this.prelude.sessionId);
-      const claims = await verifyRealtimeTicket(ticket, this.prelude.sessionId, this.prelude.config, this.prelude.pinnedKeys);
-      const rawWriteMacKey = decodeBase64Url(ticket.write_mac_key);
-      const nextPrelude: RealtimePrelude = {
-        ...this.prelude,
-        ticket,
-        claims,
-        writeMacKey: await crypto.subtle.importKey(
-          "raw",
-          rawWriteMacKey as BufferSource,
-          { name: "HMAC", hash: "SHA-256" },
-          false,
-          ["sign", "verify"],
-        ),
-        relayDerivationKey: await importRelayDerivationKey(rawWriteMacKey),
-      };
+      const nextPrelude = await this.preludeForTicket(ticket, this.prelude.sessionId);
       if (!isSameGenerationTicket(this.prelude, nextPrelude)) {
         this.emit({ type: "conflict", bytes: this.pendingBytes });
         this.emit({ type: "error", message: "Generation của note đã đổi; không merge qua generation." });
@@ -692,7 +719,7 @@ export class RealtimeYjsProvider implements YjsProviderLike {
         return;
       }
       const before = Y.encodeStateVector(this.doc);
-      if (ticket.ydocState) Y.applyUpdate(this.doc, base64ToBytes(ticket.ydocState), ORIGIN_HUB);
+      if (ticket.ydocState) Y.applyUpdate(this.doc, base64ToBytes(ticket.ydocState), this);
       const after = Y.encodeStateVector(this.doc);
       if (!bytesEqual(before, after)) this.emit({ type: "recovered", bytes: after.byteLength });
       const nextCounter = this.renewalCounter + 1;

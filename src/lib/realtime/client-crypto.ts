@@ -3,6 +3,7 @@ import {
   buildYUpdateMacInput,
   computeHmacSha256,
   decodeBase64Url,
+  encodeCanonicalTuple,
   encodeBase64Url,
   verifyHmacSha256,
   verifyProtocolJws,
@@ -39,9 +40,9 @@ export type SavedAckExpectation = {
   stateVector: Uint8Array;
 };
 
-export async function importRelayDerivationKey(rawWriteMacKey: Uint8Array): Promise<CryptoKey> {
-  if (rawWriteMacKey.byteLength !== 32) throw new Error("invalid realtime key material");
-  return crypto.subtle.importKey("raw", rawWriteMacKey as BufferSource, "HKDF", false, ["deriveBits"]);
+export async function importRelayKey(rawRelayKey: Uint8Array): Promise<CryptoKey> {
+  if (rawRelayKey.byteLength !== 32) throw new Error("invalid realtime relay key material");
+  return crypto.subtle.importKey("raw", rawRelayKey as BufferSource, "HKDF", false, ["deriveBits"]);
 }
 
 async function deriveKeyMaterial(
@@ -58,22 +59,17 @@ async function deriveKeyMaterial(
 }
 
 export async function deriveRealtimeSenderKey(
-  relayDerivationKey: CryptoKey,
+  relayKey: CryptoKey,
   context: Pick<RealtimeCipherContext, "roomId" | "generation" | "senderId" | "sessionId">,
 ): Promise<CryptoKey> {
-  const relaySalt = encoder.encode("syrin:realtime:relay-key-salt:v1");
-  const roomInfo = encoder.encode(`${context.roomId}\u0000${context.generation}`);
-  const relayRoot = await deriveKeyMaterial(relayDerivationKey, relaySalt, roomInfo);
-  const relayRootKey = await crypto.subtle.importKey(
-    "raw",
-    relayRoot as BufferSource,
-    "HKDF",
-    false,
-    ["deriveBits"],
-  );
   const sessionSalt = encoder.encode("syrin:realtime:sender-key-salt:v1");
-  const sessionInfo = encoder.encode(`${context.senderId}\u0000${context.sessionId}`);
-  const senderKeyBytes = await deriveKeyMaterial(relayRootKey, sessionSalt, sessionInfo);
+  const sessionInfo = encodeCanonicalTuple("syrin:realtime:sender-key:v1", [
+    context.roomId,
+    context.generation,
+    context.senderId,
+    context.sessionId,
+  ]);
+  const senderKeyBytes = await deriveKeyMaterial(relayKey, sessionSalt, sessionInfo);
   return crypto.subtle.importKey(
     "raw",
     senderKeyBytes as BufferSource,
@@ -99,12 +95,12 @@ function counterMatchesNonce(nonce: Uint8Array, counter: number): boolean {
 export async function encryptRealtimePayload(
   plaintext: Uint8Array,
   context: RealtimeCipherContext,
-  relayDerivationKey: CryptoKey,
+  relayKey: CryptoKey,
   writeMacKey: CryptoKey,
 ): Promise<RealtimeCipherPayload> {
   if (plaintext.byteLength === 0) throw new Error("empty realtime payload");
   const nonce = nonceForCounter(context.counter);
-  const senderKey = await deriveRealtimeSenderKey(relayDerivationKey, context);
+  const senderKey = await deriveRealtimeSenderKey(relayKey, context);
   const aad = buildRealtimeAad({
     opaqueRoomId: context.roomId,
     generation: context.generation,
@@ -141,7 +137,7 @@ export async function encryptRealtimePayload(
 export async function decryptRealtimePayload(
   payload: RealtimeCipherPayload,
   context: Omit<RealtimeCipherContext, "senderId" | "sessionId" | "counter">,
-  relayDerivationKey: CryptoKey,
+  relayKey: CryptoKey,
   writeMacKey: CryptoKey,
   lastAcceptedCounter: number,
 ): Promise<{ plaintext: Uint8Array; context: RealtimeCipherContext }> {
@@ -181,7 +177,7 @@ export async function decryptRealtimePayload(
       throw new Error("invalid realtime update MAC");
     }
   }
-  const senderKey = await deriveRealtimeSenderKey(relayDerivationKey, fullContext);
+  const senderKey = await deriveRealtimeSenderKey(relayKey, fullContext);
   const aad = buildRealtimeAad({
     opaqueRoomId: context.roomId,
     generation: context.generation,

@@ -39,6 +39,8 @@ describe("plain-note realtime client gate and Edge API", () => {
       ticket: "test-ticket",
       roomId: "room_test_01",
       write_mac_key: "A".repeat(43),
+      relay_key: "A".repeat(43),
+      relay_key_kid: "relay-test-v1",
       noteId: "00000000-0000-4000-8000-000000000001",
       revision: 1,
       generation: 4,
@@ -65,5 +67,27 @@ describe("plain-note realtime client gate and Edge API", () => {
     });
     expect(init.credentials).toBe("omit");
     expect((init.headers as Record<string, string>)["X-Snote-Auth"]).toBe("fake-local-token");
+  });
+
+  it("rejects a ticket response that has no relay_key", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      ticket: "test-ticket",
+      roomId: "room_test_01",
+      relay_key_kid: "relay-test-v1",
+      write_mac_key: "A".repeat(43),
+      noteId: "00000000-0000-4000-8000-000000000001",
+      revision: 1,
+      generation: 4,
+      permissionEpoch: 7,
+      ydocState: "",
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+    const api = createRealtimeEdgeApi({
+      baseUrl: "http://127.0.0.1:54321",
+      fetcher: fetcher as typeof fetch,
+      authSource: { accessTokenFor: vi.fn(async () => "fake-local-token") },
+    });
+
+    await expect(api.issueTicket("random-e2e-note", "session-id-123"))
+      .rejects.toThrow("invalid realtime ticket response");
   });
 });

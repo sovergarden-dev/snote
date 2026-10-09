@@ -53,6 +53,8 @@ async function makeSigningFixture(): Promise<{
       assignmentEpoch: "9",
       roomHmacKey: encodeBase64Url(new Uint8Array(32).fill(11)),
       writeMacMasterKey: encodeBase64Url(new Uint8Array(32).fill(23)),
+      relayMasterKey: encodeBase64Url(new Uint8Array(32).fill(37)),
+      relayKeyKid: "handler-relay-key-v1",
     }),
     ticketPair,
     ackPair,

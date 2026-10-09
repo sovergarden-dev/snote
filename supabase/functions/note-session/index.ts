@@ -43,6 +43,8 @@ function realtimeSigningConfig(): Promise<RealtimeSigningConfig> {
     assignmentEpoch: Deno.env.get("SNOTE_REALTIME_ASSIGNMENT_EPOCH") ?? "",
     roomHmacKey: Deno.env.get("SNOTE_REALTIME_ROOM_HMAC_KEY") ?? "",
     writeMacMasterKey: Deno.env.get("SNOTE_REALTIME_WRITE_MAC_MASTER_KEY") ?? "",
+    relayMasterKey: Deno.env.get("SNOTE_REALTIME_RELAY_MASTER_KEY") ?? "",
+    relayKeyKid: Deno.env.get("SNOTE_REALTIME_RELAY_KEY_KID") ?? "",
   });
 }
 

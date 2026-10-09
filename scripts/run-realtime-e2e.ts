@@ -1,7 +1,14 @@
 import type { AddressInfo } from "node:net";
+import * as Y from "yjs";
 import { createNodeHubServer } from "../src/lib/realtime/hub/node-adapter";
 import { decodeBase64Url, encodeBase64Url } from "../src/lib/realtime/protocol";
 import { createTestSigningKeys, TEST_HUB_ID } from "../src/lib/realtime/hub/__tests__/test-crypto";
+import { base64ToBytes, bytesToBase64 } from "../src/lib/yjs/base64";
+import {
+  computeCasExpectedMac,
+  deriveRelayKey,
+  deriveWriteMacKey,
+} from "../supabase/functions/_shared/realtime-edge";
 import { createServer as createViteServer } from "vite";
 
 declare const Bun: {
@@ -38,15 +45,83 @@ function roomIdForSlug(slug: string): Promise<string> {
     .then((digest) => `room_${encodeBase64Url(new Uint8Array(digest)).slice(0, 32)}`);
 }
 
+type FakeNoteState = {
+  snapshot: Uint8Array;
+  revision: number;
+  casAttempts: number;
+  casCommits: number;
+  casAccepted: number;
+  casConflicts: number;
+  expectedRevisions: number[];
+  firstPairReady: Promise<void>;
+  releaseFirstPair: () => void;
+};
+
+function createFakeNoteState(): FakeNoteState {
+  let releaseFirstPair!: () => void;
+  const firstPairReady = new Promise<void>((resolve) => { releaseFirstPair = resolve; });
+  return {
+    snapshot: new Uint8Array(),
+    revision: 1,
+    casAttempts: 0,
+    casCommits: 0,
+    casAccepted: 0,
+    casConflicts: 0,
+    expectedRevisions: [],
+    firstPairReady,
+    releaseFirstPair,
+  };
+}
+
+function bytesEqual(left: Uint8Array, right: Uint8Array): boolean {
+  if (left.byteLength !== right.byteLength) return false;
+  let difference = 0;
+  for (let index = 0; index < left.byteLength; index += 1) difference |= left[index]! ^ right[index]!;
+  return difference === 0;
+}
+
+function noteContent(snapshot: Uint8Array): string {
+  const doc = new Y.Doc();
+  try {
+    if (snapshot.byteLength > 0) Y.applyUpdate(doc, snapshot);
+    return doc.getText("content").toString();
+  } finally {
+    doc.destroy();
+  }
+}
+
 async function startLocalEdge(keys: Awaited<ReturnType<typeof createTestSigningKeys>>) {
-  const writeMacKey = encodeBase64Url(crypto.getRandomValues(new Uint8Array(32)));
-  const emptySnapshot = "";
+  const writeMacMasterKey = crypto.getRandomValues(new Uint8Array(32));
+  const relayMasterKey = crypto.getRandomValues(new Uint8Array(32));
+  const notes = new Map<string, FakeNoteState>();
+  const noteForSlug = (slug: string) => {
+    let note = notes.get(slug);
+    if (!note) {
+      note = createFakeNoteState();
+      notes.set(slug, note);
+    }
+    return note;
+  };
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
     async fetch(request) {
       const url = new URL(request.url);
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
+      if (request.method === "GET" && url.pathname.startsWith("/_test/notes/")) {
+        const slug = decodeURIComponent(url.pathname.slice("/_test/notes/".length));
+        if (!/^[a-z0-9-]{8,60}$/.test(slug)) return json({ error: "invalid_slug" }, 400);
+        const note = noteForSlug(slug);
+        return json({
+          revision: note.revision,
+          casAttempts: note.casAttempts,
+          casCommits: note.casCommits,
+          casAccepted: note.casAccepted,
+          casConflicts: note.casConflicts,
+          expectedRevisions: note.expectedRevisions,
+          content: noteContent(note.snapshot),
+        });
+      }
       if (url.pathname === "/auth/v1/user" && request.method === "GET") {
         return json({ id: "00000000-0000-4000-8000-000000000001", aud: "authenticated", role: "authenticated" });
       }
@@ -107,11 +182,14 @@ async function startLocalEdge(keys: Awaited<ReturnType<typeof createTestSigningK
         return json({ error: "missing_fake_local_auth" }, 401);
       }
       const roomId = await roomIdForSlug(slug);
+      const note = noteForSlug(slug);
 
       if (body.action === "realtime-ticket") {
         const sessionId = typeof body.session_id === "string" ? body.session_id : "";
         if (!/^[A-Za-z0-9_-]{8,128}$/.test(sessionId)) return json({ error: "invalid_session_id" }, 400);
         const now = Math.floor(Date.now() / 1_000);
+        const relayKey = await deriveRelayKey(relayMasterKey, roomId, 1);
+        const writeMacKey = await deriveWriteMacKey(writeMacMasterKey, roomId, 1);
         const ticket = await keys.signTicket({
           aud: TEST_HUB_ID,
           hub_id: TEST_HUB_ID,
@@ -122,46 +200,106 @@ async function startLocalEdge(keys: Awaited<ReturnType<typeof createTestSigningK
           permission_epoch: 1,
           permission: "edit",
           permissions: ["read", "write"],
+          relay_key_kid: "e2e-relay-v1",
           iat: now,
           exp: now + 300,
         });
         return json({
           ticket,
           roomId,
-          write_mac_key: writeMacKey,
+          write_mac_key: encodeBase64Url(writeMacKey),
+          relay_key: encodeBase64Url(relayKey),
+          relay_key_kid: "e2e-relay-v1",
           noteId: "00000000-0000-4000-8000-000000000001",
-          revision: 1,
+          revision: note.revision,
           generation: 1,
           permissionEpoch: 1,
-          ydocState: emptySnapshot,
+          ydocState: bytesToBase64(note.snapshot),
         });
       }
 
       if (body.action === "realtime-cas-save") {
         const generation = Number(body.generation);
         const permissionEpoch = Number(body.permissionEpoch);
-        const revision = Number(body.expectedRevision) + 1;
+        const expectedRevision = Number(body.expectedRevision);
+        const revision = expectedRevision + 1;
+        const snapshotText = typeof body.ydocState === "string" ? body.ydocState : "";
         const stateVectorText = typeof body.stateVector === "string" ? body.stateVector : "";
-        if (!Number.isSafeInteger(generation) || !Number.isSafeInteger(permissionEpoch) || !Number.isSafeInteger(revision)) {
+        const macText = typeof body.mac === "string" ? body.mac : "";
+        if (!Number.isSafeInteger(generation) || generation < 1
+          || !Number.isSafeInteger(permissionEpoch) || permissionEpoch < 0
+          || !Number.isSafeInteger(expectedRevision) || expectedRevision < 1
+          || !Number.isSafeInteger(revision) || snapshotText.length === 0) {
           return json({ error: "invalid_cas_metadata" }, 400);
         }
-        let stateVectorHash: string;
+        note.casAttempts += 1;
+        note.expectedRevisions.push(expectedRevision);
+        if (note.casAttempts <= 2) {
+          if (note.casAttempts === 2) note.releaseFirstPair();
+          await note.firstPairReady;
+        }
+        let incomingSnapshot: Uint8Array;
+        let stateVector: Uint8Array;
+        let presentedMac: Uint8Array;
         try {
-          const stateVector = decodeBase64Url(stateVectorText);
-          const digest = await crypto.subtle.digest("SHA-256", stateVector as BufferSource);
-          stateVectorHash = encodeBase64Url(new Uint8Array(digest));
+          incomingSnapshot = base64ToBytes(snapshotText);
+          stateVector = decodeBase64Url(stateVectorText);
+          presentedMac = decodeBase64Url(macText);
         } catch {
           return json({ error: "invalid_state_vector" }, 400);
         }
+        const writeMacKey = await deriveWriteMacKey(writeMacMasterKey, roomId, generation);
+        const expectedMac = await computeCasExpectedMac({
+          writeMacKey,
+          roomId,
+          generation,
+          expectedRevision,
+          payload: incomingSnapshot,
+          permissionEpoch,
+          stateVector,
+        });
+        if (!bytesEqual(expectedMac, presentedMac)) {
+          return json({ error: "invalid MAC", code: "INVALID_MAC" }, 401);
+        }
+        if (generation !== 1 || permissionEpoch !== 1) {
+          return json({ error: "invalid authority", code: "generation_conflict" }, 409);
+        }
+        if (expectedRevision !== note.revision) {
+          note.casConflicts += 1;
+          return json({ error: "version conflict", code: "version_conflict" }, 409);
+        }
+
+        const mergedDoc = new Y.Doc();
+        let stateChanged = false;
+        try {
+          if (note.snapshot.byteLength > 0) Y.applyUpdate(mergedDoc, note.snapshot);
+          const storedStateVector = Y.encodeStateVector(mergedDoc);
+          Y.applyUpdate(mergedDoc, incomingSnapshot);
+          const mergedStateVector = Y.encodeStateVector(mergedDoc);
+          if (!bytesEqual(mergedStateVector, stateVector)) {
+            return json({ error: "invalid state vector", code: "INVALID_STATE_VECTOR" }, 409);
+          }
+          stateChanged = !bytesEqual(storedStateVector, mergedStateVector);
+          if (stateChanged) note.snapshot = Y.encodeStateAsUpdate(mergedDoc);
+        } finally {
+          mergedDoc.destroy();
+        }
+        if (stateChanged) {
+          note.revision += 1;
+          note.casCommits += 1;
+        }
+        note.casAccepted += 1;
+        const digest = await crypto.subtle.digest("SHA-256", stateVector as BufferSource);
+        const stateVectorHash = encodeBase64Url(new Uint8Array(digest));
         const savedAck = await keys.signSavedAck({
           room_id: roomId,
           generation,
-          revision,
+          revision: note.revision,
           permission_epoch: permissionEpoch,
           state_vector: stateVectorText,
           state_vector_hash: stateVectorHash,
         });
-        return json({ status: "ok", savedAck, roomId, generation, revision });
+        return json({ status: "ok", savedAck, roomId, generation, revision: note.revision });
       }
       return json({ error: "invalid_action" }, 400);
     },

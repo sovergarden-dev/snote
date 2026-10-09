@@ -9,6 +9,7 @@ import {
 import {
   decodeStandardBase64,
   deriveOpaqueRoomId,
+  deriveRelayKey,
   deriveWriteMacKey,
   issueRealtimeTicket,
   issueRealtimeTicketFromContext,
@@ -47,6 +48,8 @@ async function makeConfigInput(): Promise<{
       assignmentEpoch: "9",
       roomHmacKey: base64url(new Uint8Array(32).fill(11)),
       writeMacMasterKey: base64url(new Uint8Array(32).fill(23)),
+      relayMasterKey: base64url(new Uint8Array(32).fill(37)),
+      relayKeyKid: "relay-test-v1",
     },
     ticketPair,
     ackPair,
@@ -72,7 +75,7 @@ async function config(): Promise<{
 }
 
 describe("Edge realtime ticket and saved-ack signing", () => {
-  it("issues an EdDSA edit ticket with a random 128-bit jti, pinned audience, current epochs and a write key", async () => {
+  it("issues an EdDSA edit ticket with a random jti, current epochs, relay key and separate write key", async () => {
     const { signing, ticketPair, ackPair } = await config();
     const roomId = await deriveOpaqueRoomId(signing.roomHmacKey, "note-uuid-1", 4);
     const issued = await issueRealtimeTicket({
@@ -106,13 +109,16 @@ describe("Edge realtime ticket and saved-ack signing", () => {
       iat: NOW,
       exp: NOW + 300,
       session_id: "session-01",
+      relay_key_kid: "relay-test-v1",
     });
     expect(decodeBase64Url(payload.jti as string)).toHaveLength(16);
+    expect(issued.relay_key_kid).toBe("relay-test-v1");
+    expect(decodeBase64Url(issued.relay_key!)).toHaveLength(32);
     expect(issued.write_mac_key).toBeTruthy();
     expect(decodeBase64Url(issued.write_mac_key!)).toHaveLength(32);
   });
 
-  it("does not return a write_mac_key for a read-only ticket", async () => {
+  it("returns relay key but no write_mac_key for a read-only ticket", async () => {
     const { signing } = await config();
     const ticket = await issueRealtimeTicket({
       roomId: "room-read-only",
@@ -122,6 +128,8 @@ describe("Edge realtime ticket and saved-ack signing", () => {
       sessionId: "session-01",
       nowSeconds: NOW,
     }, signing);
+    expect(ticket.relay_key).toBeTruthy();
+    expect(ticket.relay_key_kid).toBe("relay-test-v1");
     expect(Object.hasOwn(ticket, "write_mac_key")).toBe(false);
   });
 
@@ -185,6 +193,31 @@ describe("Edge realtime ticket and saved-ack signing", () => {
     expect(roomOne).toHaveLength(32);
     expect(roomOne).not.toEqual(roomTwo);
     expect(roomOne).not.toEqual(nextGeneration);
+  });
+
+  it("derives distinct relay keys by room and generation, independently of the write MAC key", async () => {
+    const relayMaster = new Uint8Array(32).fill(31);
+    const writeMaster = new Uint8Array(32).fill(32);
+    const [roomOne, roomTwo, nextGeneration, writeMacKey] = await Promise.all([
+      deriveRelayKey(relayMaster, "room-a", 1),
+      deriveRelayKey(relayMaster, "room-b", 1),
+      deriveRelayKey(relayMaster, "room-a", 2),
+      deriveWriteMacKey(writeMaster, "room-a", 1),
+    ]);
+    expect(roomOne).toHaveLength(32);
+    expect(roomOne).not.toEqual(roomTwo);
+    expect(roomOne).not.toEqual(nextGeneration);
+    expect(roomOne).not.toEqual(writeMacKey);
+  });
+
+  it("fails closed when the separate relay master key or key ID is missing or reused", async () => {
+    const { input } = await makeConfigInput();
+    await expect(loadRealtimeSigningConfig({ ...input, relayMasterKey: "" }))
+      .rejects.toThrow("Invalid realtime key configuration");
+    await expect(loadRealtimeSigningConfig({ ...input, relayKeyKid: "" }))
+      .rejects.toThrow("Invalid relay key ID");
+    await expect(loadRealtimeSigningConfig({ ...input, relayMasterKey: input.writeMacMasterKey }))
+      .rejects.toThrow("relay and write MAC master keys must be distinct");
   });
 
   it("rejects a shared ticket/ACK signing pair or kid", async () => {

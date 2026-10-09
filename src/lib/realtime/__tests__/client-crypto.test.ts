@@ -2,16 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   decryptRealtimePayload,
   encryptRealtimePayload,
-  importRelayDerivationKey,
+  importRelayKey,
 } from "../client-crypto";
 
 describe("encrypted realtime payloads", () => {
   async function keyFixtures() {
-    const raw = crypto.getRandomValues(new Uint8Array(32));
-    const relay = await importRelayDerivationKey(raw);
+    const relayRaw = crypto.getRandomValues(new Uint8Array(32));
+    const macRaw = crypto.getRandomValues(new Uint8Array(32));
+    const relay = await importRelayKey(relayRaw);
     const mac = await crypto.subtle.importKey(
       "raw",
-      raw as BufferSource,
+      macRaw as BufferSource,
       { name: "HMAC", hash: "SHA-256" },
       false,
       ["sign", "verify"],
