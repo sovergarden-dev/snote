@@ -27,6 +27,7 @@ export interface HubRuntimeConfig {
 
 export interface HubSocketAttachment {
   room_id: string;
+  sender_id: string;
   generation: number;
   assignment_epoch: number;
   permission_epoch: number;
@@ -61,6 +62,8 @@ function getAttachment(value: unknown): HubSocketAttachment | undefined {
   if (
     typeof value.room_id !== "string"
     || !isOpaqueRoomId(value.room_id)
+    || typeof value.sender_id !== "string"
+    || !VALID_SESSION_ID.test(value.sender_id)
     || !Number.isSafeInteger(value.generation)
     || (value.generation as number) < 1
     || !Number.isSafeInteger(value.assignment_epoch)
@@ -88,6 +91,7 @@ function getAttachment(value: unknown): HubSocketAttachment | undefined {
   }
   return {
     room_id: value.room_id,
+    sender_id: value.sender_id,
     generation: value.generation as number,
     assignment_epoch: value.assignment_epoch as number,
     permission_epoch: value.permission_epoch as number,
@@ -114,6 +118,8 @@ function validateTicketClaims(
     claims.hub_id !== hubId
     || typeof claims.room_id !== "string"
     || claims.room_id !== routeRoomId
+    || typeof claims.session_id !== "string"
+    || !VALID_SESSION_ID.test(claims.session_id)
     || !Number.isSafeInteger(claims.generation)
     || (claims.generation as number) < 1
     || !Number.isSafeInteger(claims.assignment_epoch)
@@ -139,12 +145,13 @@ function validateTicketClaims(
   }
   return {
     room_id: claims.room_id,
+    sender_id: claims.session_id,
     generation: claims.generation as number,
     assignment_epoch: claims.assignment_epoch as number,
     permission_epoch: claims.permission_epoch as number,
     permission,
     permissions: normalizedPermissions as ("read" | "write")[],
-    session_id: "",
+    session_id: claims.session_id,
     ticket_expires_at: claims.exp as number,
     renewal_counter: 0,
   };
@@ -245,6 +252,19 @@ export class RelayCore {
       sender.close(POLICY_CLOSE_CODE, "read-only socket");
       return;
     }
+    if (frame.message_type === "y-update" || frame.message_type === "presence") {
+      const payload = payloadRecord(frame);
+      if (
+        !payload
+        || payload.sender_id !== attachment.sender_id
+        || payload.session_id !== attachment.session_id
+        || !Number.isSafeInteger(payload.counter)
+        || (payload.counter as number) < 1
+      ) {
+        sender.close(POLICY_CLOSE_CODE, "sender binding mismatch");
+        return;
+      }
+    }
     if ((frame.message_type === "y-update" || frame.message_type === "save" || frame.message_type === "presence") && !isCiphertextPayload(frame.payload)) {
       sender.close(POLICY_CLOSE_CODE, "ciphertext required");
       return;
@@ -316,7 +336,10 @@ export class RelayCore {
       sender.close(POLICY_CLOSE_CODE, "ticket claims mismatch");
       return;
     }
-    attachment.session_id = payload.session_id;
+    if (attachment.session_id !== payload.session_id) {
+      sender.close(POLICY_CLOSE_CODE, "authentication session mismatch");
+      return;
+    }
 
     let consumed: boolean;
     try {
@@ -340,6 +363,7 @@ export class RelayCore {
         v: 2,
         message_type: "hub-ready",
         opaque_room_id: routeRoomId,
+        payload: { sender_id: attachment.sender_id },
       }));
     } catch {
       sender.close(INTERNAL_CLOSE_CODE, "socket state unavailable");
@@ -394,6 +418,7 @@ export class RelayCore {
       !current
       || payload.session_id !== current.session_id
       || payload.counter !== current.renewal_counter + 1
+      || next.session_id !== current.session_id
       || next.room_id !== current.room_id
       || next.generation !== current.generation
       || next.assignment_epoch !== current.assignment_epoch

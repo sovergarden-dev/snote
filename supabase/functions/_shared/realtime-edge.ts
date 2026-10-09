@@ -11,7 +11,10 @@ const utf8 = new TextEncoder();
 const MAX_TICKET_TTL_SECONDS = 300;
 const WRITE_MAC_HKDF_SALT = utf8.encode("syrin:realtime:write-mac-key:salt:v1");
 const WRITE_MAC_HKDF_LABEL = "syrin:realtime:write-mac-key:v1";
+const RELAY_HKDF_SALT = utf8.encode("syrin:realtime:relay-key:salt:v1");
+const RELAY_HKDF_LABEL = "syrin:realtime:relay-key:v1";
 const ROOM_ID_LABEL = "syrin:realtime:opaque-room-id:v1";
+const VALID_SESSION_ID = /^[A-Za-z0-9_-]{8,128}$/u;
 
 export type RealtimePermission = "read" | "edit";
 
@@ -24,6 +27,8 @@ export interface RealtimeSigningConfig {
   assignmentEpoch: number;
   roomHmacKey: Uint8Array;
   writeMacMasterKey: Uint8Array;
+  relayMasterKey: Uint8Array;
+  relayKeyKid: string;
 }
 
 export interface RealtimeConfigInput {
@@ -35,19 +40,31 @@ export interface RealtimeConfigInput {
   assignmentEpoch: string;
   roomHmacKey: string;
   writeMacMasterKey: string;
+  relayMasterKey: string;
+  relayKeyKid: string;
 }
 
 export interface RealtimeTicketContext {
   status: string;
   noteId?: string;
+  revision?: number;
   generation?: number;
   permissionEpoch?: number;
+  ydocState?: string;
+  sessionId?: string;
 }
 
 export interface RealtimeTicket {
   ticket: string;
   roomId: string;
+  relay_key: string;
+  relay_key_kid: string;
   write_mac_key?: string;
+  noteId?: string;
+  revision?: number;
+  generation?: number;
+  permissionEpoch?: number;
+  ydocState?: string;
 }
 
 export interface YDocLike {
@@ -173,6 +190,7 @@ export async function loadRealtimeSigningConfig(
   for (const [value, name] of [
     [input.ticketKid, "ticket key ID"],
     [input.savedAckKid, "saved-ack key ID"],
+    [input.relayKeyKid, "relay key ID"],
     [input.hubId, "hub ID"],
   ] as const) assertNonEmptyString(value, name);
   if (input.ticketKid === input.savedAckKid) fail("Realtime signing key IDs must be distinct");
@@ -181,6 +199,7 @@ export async function loadRealtimeSigningConfig(
     || !/^[A-Za-z0-9._:-]{1,128}$/u.test(input.hubId)) {
     fail("Invalid realtime key configuration");
   }
+  if (!/^[A-Za-z0-9._-]{1,64}$/u.test(input.relayKeyKid)) fail("Invalid relay key ID");
   if (!/^\d+$/u.test(input.assignmentEpoch)) fail("Invalid assignment epoch");
   const assignmentEpoch = Number(input.assignmentEpoch);
   assertSafeNonNegativeInteger(assignmentEpoch, "assignment epoch");
@@ -191,6 +210,16 @@ export async function loadRealtimeSigningConfig(
   ]);
   if (ticket.x === savedAck.x) fail("Realtime signing key pairs must be distinct");
 
+  const roomHmacKey = readSecret(input.roomHmacKey);
+  const writeMacMasterKey = readSecret(input.writeMacMasterKey);
+  const relayMasterKey = readSecret(input.relayMasterKey);
+  if (equalBytes(relayMasterKey, writeMacMasterKey)) {
+    fail("Realtime relay and write MAC master keys must be distinct");
+  }
+  if (equalBytes(relayMasterKey, roomHmacKey)) {
+    fail("Realtime relay and room HMAC keys must be distinct");
+  }
+
   return {
     ticketPrivateKey: ticket.key,
     ticketKid: input.ticketKid,
@@ -198,8 +227,10 @@ export async function loadRealtimeSigningConfig(
     savedAckKid: input.savedAckKid,
     hubId: input.hubId,
     assignmentEpoch,
-    roomHmacKey: readSecret(input.roomHmacKey),
-    writeMacMasterKey: readSecret(input.writeMacMasterKey),
+    roomHmacKey,
+    writeMacMasterKey,
+    relayMasterKey,
+    relayKeyKid: input.relayKeyKid,
   };
 }
 
@@ -240,18 +271,45 @@ export async function deriveWriteMacKey(
   ));
 }
 
+export async function deriveRelayKey(
+  masterKey: Uint8Array,
+  roomId: string,
+  generation: number,
+): Promise<Uint8Array> {
+  if (!(masterKey instanceof Uint8Array) || masterKey.byteLength < 32) {
+    fail("Invalid relay master key");
+  }
+  assertNonEmptyString(roomId, "room ID");
+  assertSafePositiveInteger(generation, "generation");
+  const key = await crypto.subtle.importKey(
+    "raw",
+    masterKey as BufferSource,
+    "HKDF",
+    false,
+    ["deriveBits"],
+  );
+  const info = encodeCanonicalTuple(RELAY_HKDF_LABEL, [roomId, generation]);
+  return new Uint8Array(await crypto.subtle.deriveBits(
+    { name: "HKDF", hash: "SHA-256", salt: RELAY_HKDF_SALT, info: info as BufferSource },
+    key,
+    256,
+  ));
+}
+
 export async function issueRealtimeTicket(
   input: {
     roomId: string;
     generation: number;
     permissionEpoch: number;
     permission: RealtimePermission;
+    sessionId: string;
     nowSeconds?: number;
     ttlSeconds?: number;
   },
   config: RealtimeSigningConfig,
 ): Promise<RealtimeTicket> {
   assertNonEmptyString(input.roomId, "room ID");
+  if (typeof input.sessionId !== "string" || !VALID_SESSION_ID.test(input.sessionId)) fail("Invalid session ID");
   assertSafePositiveInteger(input.generation, "generation");
   assertSafeNonNegativeInteger(input.permissionEpoch, "permission epoch");
   if (input.permission !== "read" && input.permission !== "edit") fail("Invalid realtime permission");
@@ -262,6 +320,8 @@ export async function issueRealtimeTicket(
     fail("Ticket lifetime exceeds its limit");
   }
   assertSafeNonNegativeInteger(nowSeconds + ttlSeconds, "ticket expiration time");
+  assertNonEmptyString(config.relayKeyKid, "relay key ID");
+  const relayKey = await deriveRelayKey(config.relayMasterKey, input.roomId, input.generation);
   const jti = encodeBase64Url(crypto.getRandomValues(new Uint8Array(16)));
   const permissions = input.permission === "edit" ? ["read", "write"] : ["read"];
   const payload = {
@@ -277,17 +337,24 @@ export async function issueRealtimeTicket(
     permission_epoch: input.permissionEpoch,
     permission: input.permission,
     permissions,
+    session_id: input.sessionId,
+    relay_key_kid: config.relayKeyKid,
   };
   const ticket = await signJws(payload, config.ticketPrivateKey, config.ticketKid, "syrin-ticket+jwt");
-  if (input.permission === "read") return { ticket, roomId: input.roomId };
+  const bundle: RealtimeTicket = {
+    ticket,
+    roomId: input.roomId,
+    relay_key: encodeBase64Url(relayKey),
+    relay_key_kid: config.relayKeyKid,
+  };
+  if (input.permission === "read") return bundle;
   const writeMacKey = await deriveWriteMacKey(
     config.writeMacMasterKey,
     input.roomId,
     input.generation,
   );
   return {
-    ticket,
-    roomId: input.roomId,
+    ...bundle,
     write_mac_key: encodeBase64Url(writeMacKey),
   };
 }
@@ -303,8 +370,12 @@ export async function issueRealtimeTicketFromContext(
   if (context.status !== "ok") return { ok: false, status: context.status };
   if (
     typeof context.noteId !== "string"
+    || typeof context.revision !== "number"
     || typeof context.generation !== "number"
     || typeof context.permissionEpoch !== "number"
+    || typeof context.ydocState !== "string"
+    || typeof context.sessionId !== "string"
+    || !VALID_SESSION_ID.test(context.sessionId)
   ) return { ok: false, status: "unavailable" };
   const roomId = await deriveOpaqueRoomId(config.roomHmacKey, context.noteId, context.generation);
   const ticket = await issueRealtimeTicket({
@@ -312,9 +383,17 @@ export async function issueRealtimeTicketFromContext(
     generation: context.generation,
     permissionEpoch: context.permissionEpoch,
     permission: "edit",
+    sessionId: context.sessionId,
     ...(nowSeconds === undefined ? {} : { nowSeconds }),
   }, config);
-  return { ok: true, ticket };
+  return { ok: true, ticket: {
+    ...ticket,
+    noteId: context.noteId,
+    revision: context.revision,
+    generation: context.generation,
+    permissionEpoch: context.permissionEpoch,
+    ydocState: context.ydocState,
+  } };
 }
 
 export async function createSavedAck(

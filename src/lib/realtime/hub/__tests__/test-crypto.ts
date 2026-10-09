@@ -62,6 +62,7 @@ export async function createTestSigningKeys(): Promise<TestSigningKeys> {
       hub_id: TEST_HUB_ID,
       assignment_epoch: 4,
       room_id: TEST_ROOM_ID,
+      session_id: "session-01",
       generation: 3,
       permission_epoch: 7,
       permission: "edit",

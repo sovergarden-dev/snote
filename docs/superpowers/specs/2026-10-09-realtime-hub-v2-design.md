@@ -3,7 +3,7 @@
 Xuất từ Notion ngày 09/10/2026 (toàn văn, không lược bớt).
 Cập nhật 09/10/2026: thêm mục K và L từ Notion.
 
-Trạng thái: **Đã duyệt** (Syringa, 09/10/2026), sau khi Notion AI review lần 4 Đạt. Nội dung dưới đây giữ nguyên bản Notion, gồm cả các vòng review và nhật ký sửa; các mục "Nhật ký sửa" và "Notion AI review lần 2 — sửa đổi thiết kế" có hiệu lực, dùng để làm rõ hoặc thay câu chữ trước đó nếu còn mơ hồ. Dòng trạng thái gốc: bản thiết kế để Notion AI review; **chưa được duyệt, chưa code, chưa tạo branch**. PR 5a tiếp tục độc lập, không chờ tài liệu này. Chỉ bắt đầu PR 5 sau khi Syringa ghi “Đã duyệt” ở đầu mục F của trang kế hoạch.
+Trạng thái: **đã duyệt A–L**; đã merge #177–#181; chưa deploy/rollout; client sync và Edge assignment theo K là các PR tiếp theo.
 Phạm vi là đồng bộ note thường `/slug`. Thiết kế có thể tái dùng cho note mở bằng owner link, nhưng PR 5 không đổi luồng đó. Nguồn quyết định: Quyết định kỹ thuật (Notion); kế hoạch yêu cầu A–J: Kế hoạch PR 1 và PR 2 (Notion); vận hành mini PC: Runbook vận hành mini PC (Notion).
 ## Threat model
 **Tài sản cần bảo vệ** gồm nội dung note và các sửa đổi chưa được xác nhận; tính đúng đắn của `revision`/`generation` và snapshot chuẩn; quyền đọc/ghi; khóa relay, khóa ký vé, token Cloudflare Tunnel; tính sẵn sàng và ngân sách Worker/DO; cùng metadata về thời điểm, kích thước và hoạt động của từng phòng.

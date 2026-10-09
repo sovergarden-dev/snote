@@ -4,6 +4,7 @@
     "src/main.tsx!",
     "tailwind.config.ts!",
     "e2e-extension/playwright.config.ts",
+    "playwright.realtime.config.ts",
     "e2e-extension/**/*.spec.ts",
     "cloudflare-worker/worker.js!",
     "public/sw-kill.js!",

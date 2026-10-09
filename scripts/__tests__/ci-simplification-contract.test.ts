@@ -16,6 +16,7 @@ const EXPECTED_APP_E2E = [
   "pwa-update-no-url-v-param.spec.ts",
   "pwa-update-sw-stall.spec.ts",
   "pwa-update-throttle.spec.ts",
+  "realtime-client-sync.spec.ts",
   "split-view-malformed-persistence.spec.ts",
   "split-view-same-note.spec.ts",
   "theme-toggle-direct.spec.ts",
@@ -88,20 +89,30 @@ describe("simplified delivery pipeline contract", () => {
   });
 
   it("uses condition-driven E2E waits and zero retries", () => {
-    const e2eSources = trackedFiles()
+    const e2eFiles = trackedFiles()
       .filter(
         (file) =>
           existsSync(file) &&
           (file.startsWith("e2e/") || file.startsWith("e2e-extension/")) &&
           /\.(?:[cm]?[jt]sx?)$/.test(file),
-      )
+      );
+    const e2eSources = e2eFiles
       .map((file) => `${file}\n${readFileSync(file, "utf8")}`)
       .join("\n");
 
     expect(e2eSources).not.toContain("waitForTimeout(");
     expect(e2eSources).not.toMatch(/\bretries\s*:\s*[1-9]\d*/);
     expect(e2eSources).not.toContain("helpers/seed-note");
-    expect(e2eSources).not.toContain('process.env.VITE_SUPABASE');
+    const supabaseEnvFiles = e2eFiles.filter((file) =>
+      readFileSync(file, "utf8").includes("process.env.VITE_SUPABASE"),
+    );
+    expect(supabaseEnvFiles).toEqual(["e2e/realtime-client-sync.spec.ts"]);
+
+    const realtimeSpec = readFileSync("e2e/realtime-client-sync.spec.ts", "utf8");
+    expect(realtimeSpec).toContain('context.routeWebSocket("**/*"');
+    expect(realtimeSpec).toContain('await route.abort("blockedbyclient")');
+    expect(realtimeSpec).toContain("expect(blockedRequests).toEqual([])");
+    expect(realtimeSpec).toContain("expect(externalWebSockets).toEqual([])");
   });
 
   it("gates dead files and dependencies in regular and production graphs", () => {

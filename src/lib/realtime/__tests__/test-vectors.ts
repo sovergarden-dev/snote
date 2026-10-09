@@ -9,7 +9,7 @@ export const TEST_SAVED_ACK_PUBLIC_KEY_BASE64URL =
 
 export const FRAME_VECTOR = {
   wireText:
-    '{"v":2,"message_type":"y-update","opaque_room_id":"room_01","payload":{"ciphertext":"AAECAw","sender_id":"sender-01","session_id":"session-01","counter":7},"slug":"must-be-ignored","role":"admin"}',
+    '{"v":2,"message_type":"y-update","opaque_room_id":"room_01","payload":{"ciphertext":"AAECAw","sender_id":"sender-01","session_id":"sender-01","counter":7},"slug":"must-be-ignored","role":"admin"}',
   expected: {
     v: 2,
     message_type: "y-update",
@@ -17,7 +17,7 @@ export const FRAME_VECTOR = {
     payload: {
       ciphertext: "AAECAw",
       sender_id: "sender-01",
-      session_id: "session-01",
+      session_id: "sender-01",
       counter: 7,
     },
   },

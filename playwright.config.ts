@@ -7,6 +7,8 @@ const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
 export default defineConfig({
   testDir: "./e2e",
+  // The PR #182 local-only sync exception has its own config/runner.
+  testIgnore: ["realtime-client-sync.spec.ts"],
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   // Flakes are regressions: every project and spec runs once.

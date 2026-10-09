@@ -118,7 +118,7 @@ describe("Realtime hub v2 shared protocol vectors", () => {
       } as typeof FRAME_VECTOR.expected & { role: string };
       const encoded = encodeRealtimeFrame(frame);
       expect(new TextDecoder().decode(encoded)).toBe(
-        '{"v":2,"message_type":"y-update","opaque_room_id":"room_01","payload":{"ciphertext":"AAECAw","sender_id":"sender-01","session_id":"session-01","counter":7}}',
+        '{"v":2,"message_type":"y-update","opaque_room_id":"room_01","payload":{"ciphertext":"AAECAw","sender_id":"sender-01","session_id":"sender-01","counter":7}}',
       );
       expect(encoded.byteLength).toBeLessThanOrEqual(MAX_REALTIME_FRAME_BYTES);
     });

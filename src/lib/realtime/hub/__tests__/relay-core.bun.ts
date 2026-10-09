@@ -70,7 +70,7 @@ describe("shared relay core contracts", () => {
   it("requires the ticket in the first text frame and never accepts a later auth frame", async () => {
     const { core, keys } = await setup();
     const peer = new FakePeer();
-    await core.handleFrame(peer, TEST_ROOM_ID, encoder.encode(relayFrame("presence", { ciphertext: "AAECAw" })), [peer]);
+    await core.handleFrame(peer, TEST_ROOM_ID, encoder.encode(relayFrame("presence", { ciphertext: "AAECAw", sender_id: "session-01", session_id: "session-01", counter: 1 })), [peer]);
     expect(peer.open).toBe(false);
     expect(peer.closeCode).toBe(1008);
 
@@ -91,8 +91,8 @@ describe("shared relay core contracts", () => {
     const { core, keys } = await setup();
     const editor = new FakePeer();
     const viewer = new FakePeer();
-    await authenticate(core, editor, await keys.signTicket({ permission: "edit", permissions: ["read", "write"] }), TEST_ROOM_ID, "session-01", [editor, viewer]);
-    await authenticate(core, viewer, await keys.signTicket({ permission: "read", permissions: ["read"] }), TEST_ROOM_ID, "session-02", [editor, viewer]);
+    await authenticate(core, editor, await keys.signTicket({ permission: "edit", permissions: ["read", "write"], session_id: "sender-01" }), TEST_ROOM_ID, "sender-01", [editor, viewer]);
+    await authenticate(core, viewer, await keys.signTicket({ permission: "read", permissions: ["read"], session_id: "session-02" }), TEST_ROOM_ID, "session-02", [editor, viewer]);
     editor.sent = [];
     viewer.sent = [];
 
@@ -100,6 +100,14 @@ describe("shared relay core contracts", () => {
 
     expect(viewer.sent).toEqual([FRAME_VECTOR.wireText]);
     expect(viewer.sent[0]).toBe(FRAME_VECTOR.wireText);
+  });
+
+  it("rejects an initial auth payload whose session differs from the signed claim", async () => {
+    const { core, keys } = await setup();
+    const peer = new FakePeer();
+    await authenticate(core, peer, await keys.signTicket({ session_id: "session-02" }), TEST_ROOM_ID, "session-01");
+    expect(peer.open).toBe(false);
+    expect(peer.closeCode).toBe(HUB_CLOSE_CODES.policy);
   });
 
   it("binds a verified ticket to its pinned-key audience, hub ID, and requested room before consuming JTI", async () => {
@@ -154,7 +162,7 @@ describe("shared relay core contracts", () => {
     await core.handleFrame(
       expiringPeer,
       TEST_ROOM_ID,
-      encoder.encode(relayFrame("presence", { ciphertext: "AAECAw" })),
+      encoder.encode(relayFrame("presence", { ciphertext: "AAECAw", sender_id: "session-01", session_id: "session-01", counter: 1 })),
       [expiringPeer],
     );
     expect(expiringPeer.open).toBe(false);
@@ -186,8 +194,8 @@ describe("shared relay core contracts", () => {
     const { core, keys } = await setup();
     const viewer = new FakePeer();
     const recipient = new FakePeer();
-    await authenticate(core, viewer, await keys.signTicket({ permission: "read", permissions: ["read"] }), TEST_ROOM_ID, "session-01", [viewer, recipient]);
-    await authenticate(core, recipient, await keys.signTicket({ permission: "edit", permissions: ["read", "write"] }), TEST_ROOM_ID, "session-02", [viewer, recipient]);
+    await authenticate(core, viewer, await keys.signTicket({ permission: "read", permissions: ["read"], session_id: "session-01" }), TEST_ROOM_ID, "session-01", [viewer, recipient]);
+    await authenticate(core, recipient, await keys.signTicket({ permission: "edit", permissions: ["read", "write"], session_id: "session-02" }), TEST_ROOM_ID, "session-02", [viewer, recipient]);
 
     await core.handleFrame(viewer, TEST_ROOM_ID, encoder.encode(JSON.stringify({
       v: 2,
@@ -257,8 +265,8 @@ describe("shared relay core contracts", () => {
     const { core, keys } = await setup();
     const sender = new FakePeer();
     const recipient = new FakePeer();
-    await authenticate(core, sender, await keys.signTicket({ permission: "read", permissions: ["read"] }), TEST_ROOM_ID, "session-01", [sender, recipient]);
-    await authenticate(core, recipient, await keys.signTicket({ permission: "read", permissions: ["read"] }), TEST_ROOM_ID, "session-02", [sender, recipient]);
+    await authenticate(core, sender, await keys.signTicket({ permission: "read", permissions: ["read"], session_id: "session-01" }), TEST_ROOM_ID, "session-01", [sender, recipient]);
+    await authenticate(core, recipient, await keys.signTicket({ permission: "read", permissions: ["read"], session_id: "session-02" }), TEST_ROOM_ID, "session-02", [sender, recipient]);
     const ack = await keys.signSavedAck();
     const ackFrame = relayFrame("saved-ack", { savedAck: ack });
     sender.sent = [];
@@ -268,8 +276,8 @@ describe("shared relay core contracts", () => {
 
     const invalidSender = new FakePeer();
     const invalidRecipient = new FakePeer();
-    await authenticate(core, invalidSender, await keys.signTicket({ permission: "read", permissions: ["read"] }), TEST_ROOM_ID, "session-03", [invalidSender, invalidRecipient]);
-    await authenticate(core, invalidRecipient, await keys.signTicket({ permission: "read", permissions: ["read"] }), TEST_ROOM_ID, "session-04", [invalidSender, invalidRecipient]);
+    await authenticate(core, invalidSender, await keys.signTicket({ permission: "read", permissions: ["read"], session_id: "session-03" }), TEST_ROOM_ID, "session-03", [invalidSender, invalidRecipient]);
+    await authenticate(core, invalidRecipient, await keys.signTicket({ permission: "read", permissions: ["read"], session_id: "session-04" }), TEST_ROOM_ID, "session-04", [invalidSender, invalidRecipient]);
     const fakeAck = await keys.signTicket({ purpose: "syrin:saved-ack:v1", room_id: TEST_ROOM_ID, generation: 3 });
     await core.handleFrame(invalidSender, TEST_ROOM_ID, encoder.encode(relayFrame("saved-ack", { savedAck: fakeAck })), [invalidSender, invalidRecipient]);
     expect(invalidSender.open).toBe(false);
@@ -285,9 +293,9 @@ describe("shared relay core contracts", () => {
     const peer = new FakePeer();
     await authenticate(core, peer, await keys.signTicket(), TEST_ROOM_ID, "session-01", [peer]);
     peer.sent = [];
-    await core.handleFrame(peer, TEST_ROOM_ID, encoder.encode(relayFrame("presence", { ciphertext: "AAECAw" }, TEST_ROOM_ID, 1)), [peer]);
+    await core.handleFrame(peer, TEST_ROOM_ID, encoder.encode(relayFrame("presence", { ciphertext: "AAECAw", sender_id: "session-01", session_id: "session-01", counter: 1 }, TEST_ROOM_ID, 1)), [peer]);
     expect(peer.open).toBe(true);
-    await core.handleFrame(peer, TEST_ROOM_ID, encoder.encode(relayFrame("presence", { ciphertext: "AAECAw" }, TEST_ROOM_ID, 0)), [peer]);
+    await core.handleFrame(peer, TEST_ROOM_ID, encoder.encode(relayFrame("presence", { ciphertext: "AAECAw", sender_id: "session-01", session_id: "session-01", counter: 1 }, TEST_ROOM_ID, 0)), [peer]);
     expect(peer.open).toBe(false);
   });
 
