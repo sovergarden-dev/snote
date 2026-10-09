@@ -935,7 +935,7 @@ describe("NotePage encryption gate", () => {
     await waitFor(() =>
       expect(harness.topbarProps).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          allowEncryptionTransitions: true,
+          allowEncryptionTransitions: false,
           currentShareUrl: `${window.location.origin}/secret`,
           legacyOn: false,
           onLegacyEnable: expect.any(Function),

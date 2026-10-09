@@ -1239,9 +1239,11 @@ export default function NotePage({
   // The ready phase schedules resource acquisition in a layout effect. Keep
   // the workspace closed for that single commit until its owned pair exists.
   if (!doc || !provider) return null;
-  const isManaged = !!capabilityAccess;
   const legacyContainment = legacyOnly || !capabilityAccess;
-  const allowEncryptionTransitions = !legacyOnly && !isManaged;
+  // Plain `/slug` encryption is temporarily unavailable until encrypted
+  // snapshots can be persisted safely. Existing encrypted notes can still be
+  // explicitly unlocked through LockButton.
+  const allowEncryptionTransitions = false;
   const getContent = () => doc.getText("content").toString();
   const getEditorSelection = () => editorRef.current?.getSelectedText() ?? "";
   const legacyEncryptionSecret = legacyContainment ? readEncryptionSecret(location.hash) : "";
