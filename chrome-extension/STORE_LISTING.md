@@ -37,13 +37,11 @@ Open source. Privacy policy: https://note.syrin.online/privacy
 
 ---
 
-## What's new — v1.3.6
+## What's new — v1.3.7
 
 ```
-• Honest offline/online-unverified fallback state with no cross-origin diagnostic probes.
-• Sanitized diagnostics schema v3 distinguishes network, handshake, and timeout failures.
-• Bounded device-local telemetry with transparent next-use pruning of events older than 7 days.
-• Extension package, release notes, and store listing are verified against the same source version.
+• The fallback screen now opens a built-in troubleshooting guide packaged inside the extension.
+• The guide explains the current offline/online-unverified and not-inspected CSP diagnostics without relying on a repository URL.
 ```
 
 (Previous releases: v1.2.0 added the badge + postMessage handshake;

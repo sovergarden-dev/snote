@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Syrin Note — Side Panel",
-  "version": "1.3.6",
+  "version": "1.3.7",
   "minimum_chrome_version": "114",
   "description": "Open Syrin Note in a side panel — write and read your notes without leaving the page you're on.",
   "permissions": ["sidePanel", "storage"],

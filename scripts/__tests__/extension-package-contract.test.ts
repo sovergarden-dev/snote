@@ -65,4 +65,29 @@ describe("extension package contract", () => {
       expect(shipped.get(entry.path)?.equals(entry.data)).toBe(true);
     }
   });
+
+  it("ships the current fallback guide locally and links to it from the side panel", async () => {
+    const sidepanel = readFileSync("chrome-extension/sidepanel.html", "utf8");
+    const guideBytes = readFileSync("chrome-extension/troubleshooting.html");
+    const guide = guideBytes.toString("utf8");
+
+    expect(sidepanel).toMatch(
+      /id="fallback-help-link"[\s\S]*?href="troubleshooting\.html"/,
+    );
+    expect(sidepanel).not.toContain(
+      "github.com/sovergarden-dev/snote/blob/main/docs/extension-fallback-diagnostics.md",
+    );
+    expect(guide).toContain('cspFrameAncestors.reason = "not-inspected"');
+    expect(guide).toContain("The extension does not inspect CSP across origins");
+    expect(guide).not.toContain("verifyFrameAncestorsCsp");
+    expect(guide).not.toContain("github.com");
+
+    const archive = await loadArchiveModule();
+    expect(archive).not.toBeNull();
+    if (!archive) return;
+    const shipped = archive.readZipEntries(
+      readFileSync("public/syrin-note-sidepanel.zip"),
+    );
+    expect(shipped.get("troubleshooting.html")?.equals(guideBytes)).toBe(true);
+  });
 });
