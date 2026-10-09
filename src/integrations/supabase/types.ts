@@ -343,9 +343,12 @@ export type Database = {
           enc_iterations: number
           enc_salt: string | null
           encryption_version: number
+          generation: number
           is_encrypted: boolean
           note_id: string
           payload_limit_bytes: number
+          permission_epoch: number
+          revision: number
           slug: string
           storage_limit_bytes: number
           sync_status: Database["public"]["Enums"]["note_sync_status"]
@@ -365,9 +368,12 @@ export type Database = {
           enc_iterations?: number
           enc_salt?: string | null
           encryption_version?: number
+          generation?: number
           is_encrypted?: boolean
           note_id?: string
           payload_limit_bytes?: number
+          permission_epoch?: number
+          revision?: number
           slug: string
           storage_limit_bytes?: number
           sync_status?: Database["public"]["Enums"]["note_sync_status"]
@@ -387,9 +393,12 @@ export type Database = {
           enc_iterations?: number
           enc_salt?: string | null
           encryption_version?: number
+          generation?: number
           is_encrypted?: boolean
           note_id?: string
           payload_limit_bytes?: number
+          permission_epoch?: number
+          revision?: number
           slug?: string
           storage_limit_bytes?: number
           sync_status?: Database["public"]["Enums"]["note_sync_status"]
@@ -498,6 +507,23 @@ export type Database = {
       }
       capability_note_bulk_disable_secure: {
         Args: { p_include_encrypted?: boolean; p_limit: number; p_slugs?: string[] }
+        Returns: Json
+      }
+      capability_note_cas_save: {
+        Args: {
+          p_char_count: number
+          p_check: string | null
+          p_content: string
+          p_expected_revision: number
+          p_generation: number
+          p_is_encrypted: boolean
+          p_iterations: number | null
+          p_permission_epoch: number
+          p_salt: string | null
+          p_slug: string
+          p_tags: string[]
+          p_ydoc_state: string
+        }
         Returns: Json
       }
       capability_note_convert_legacy: {

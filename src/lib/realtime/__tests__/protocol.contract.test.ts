@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   MAX_REALTIME_FRAME_BYTES,
   STALE_PERMISSION_EPOCH_ERROR_CODE,
@@ -57,6 +57,33 @@ beforeAll(async () => {
 });
 
 describe("Realtime hub v2 shared protocol vectors", () => {
+  describe("Ed25519 import capability", () => {
+    it("returns a stable code when WebCrypto does not support Ed25519", async () => {
+      const unsupported = Object.assign(new Error("unsupported"), {
+        name: "NotSupportedError",
+      });
+      const importKey = vi.spyOn(crypto.subtle, "importKey").mockRejectedValue(unsupported);
+      try {
+        await expect(importEd25519VerificationKey(new Uint8Array(32))).rejects.toMatchObject({
+          code: "ED25519_UNSUPPORTED",
+        });
+      } finally {
+        importKey.mockRestore();
+      }
+    });
+
+    it("returns the stable unsupported code when WebCrypto is absent", async () => {
+      vi.stubGlobal("crypto", { subtle: undefined });
+      try {
+        await expect(importEd25519VerificationKey(new Uint8Array(32))).rejects.toMatchObject({
+          code: "ED25519_UNSUPPORTED",
+        });
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+  });
+
   describe("strict base64url", () => {
     it("round-trips bytes without padding", () => {
       expect(encodeBase64Url(BASE64URL_VECTOR.bytes)).toBe(BASE64URL_VECTOR.encoded);
@@ -277,6 +304,21 @@ describe("Realtime hub v2 shared protocol vectors", () => {
       ).rejects.toThrow("Separate JWS key sets are required");
     });
 
+    it("rejects a kid shared between key sets even when the CryptoKeys differ", async () => {
+      const otherKey = await importEd25519VerificationKey(
+        decodeBase64Url(TEST_SAVED_ACK_PUBLIC_KEY_BASE64URL),
+      );
+      await expect(
+        verifyProtocolJws(JWS_VECTOR.ticket, {
+          ...options("ticket", JWS_VECTOR.audience),
+          pinnedKeys: {
+            ticketAndProbe: pinnedKeys.ticketAndProbe,
+            savedAck: { [TEST_ED25519_KID]: otherKey },
+          },
+        }),
+      ).rejects.toThrow("Separate JWS key sets are required");
+    });
+
     it("accepts both exact ±120-second clock-skew boundaries", async () => {
       await expect(
         verifyProtocolJws(JWS_VECTOR.boundary.expExactly120SecondsPast, options("ticket", JWS_VECTOR.audience)),
@@ -335,6 +377,20 @@ describe("Realtime hub v2 shared protocol vectors", () => {
     it("rejects malformed compact serialization and non-canonical segments", async () => {
       for (const token of ["one.two", "one.two.three.four", "AAB=.e30.AA", "*.e30.AA"]) {
         await expect(verifyProtocolJws(token, options("ticket", JWS_VECTOR.audience))).rejects.toThrow();
+      }
+    });
+
+    it("rejects non-string and oversized compact input before parsing", async () => {
+      const invalidInputs: unknown[] = [
+        null,
+        42,
+        { compact: JWS_VECTOR.ticket },
+        "A".repeat(MAX_REALTIME_FRAME_BYTES + 1),
+      ];
+      for (const input of invalidInputs) {
+        await expect(
+          verifyProtocolJws(input as unknown as string, options("ticket", JWS_VECTOR.audience)),
+        ).rejects.toThrow("Invalid compact JWS serialization");
       }
     });
   });

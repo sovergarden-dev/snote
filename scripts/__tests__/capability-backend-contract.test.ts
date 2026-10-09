@@ -29,6 +29,7 @@ const capabilityMigrationPaths = [
   "supabase/migrations/20260915000001_capability_note_disable_secure.sql",
   "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql",
   "supabase/migrations/20260922000000_capability_note_bulk_disable_secure_p_slugs.sql",
+  "supabase/migrations/20261009000000_realtime_edge_cas.sql",
 ];
 const allCapabilityMigrations = capabilityMigrationPaths.map(source).join("\n");
 const allCapabilitySources = [
@@ -234,6 +235,7 @@ describe("capability database boundary", () => {
     "capability_note_plain_upsert",
     "capability_note_disable_secure",
     "capability_note_bulk_disable_secure",
+    "capability_note_cas_save",
   ])("%s is fenced by the database runtime row", (functionName) => {
     const body = sqlFunction(allCapabilityMigrations, functionName);
     const gate = body.indexOf("IF NOT public.capability_writes_acquire()");
@@ -247,6 +249,32 @@ describe("capability database boundary", () => {
     expect(allCapabilitySources).not.toContain("note_write_disabled");
     expect(allCapabilitySources).not.toContain("CAPABILITY_WRITE_DISABLED");
     expect(allCapabilitySources).not.toContain("capabilityWritesDisabled");
+  });
+
+  it("adds monotonic note versions and a service-role-only atomic CAS RPC", () => {
+    const sql = source("supabase/migrations/20261009000000_realtime_edge_cas.sql");
+    const cas = sqlFunction(sql, "capability_note_cas_save");
+    expect(sql).toContain("ADD COLUMN revision bigint NOT NULL DEFAULT 1");
+    expect(sql).toContain("ADD COLUMN generation bigint NOT NULL DEFAULT 1");
+    expect(sql).toContain("ADD COLUMN permission_epoch bigint NOT NULL DEFAULT 0");
+    expect(sql).toContain("CREATE TRIGGER realtime_note_version_before_update");
+    expect(sql).toContain("CREATE TRIGGER realtime_note_permission_epoch_authorization_update");
+    expect(cas).toContain("public.capability_writes_acquire()");
+    expect(cas).toContain("FOR UPDATE");
+    expect(cas).toContain("generation_conflict");
+    expect(cas).toContain("stale_permission_epoch");
+    expect(cas).toContain("version_conflict");
+    expect(sql).toMatch(
+      /CREATE OR REPLACE FUNCTION public\.capability_note_cas_save\([\s\S]*?\)\s*RETURNS jsonb\s*LANGUAGE plpgsql\s*SECURITY DEFINER\s*SET search_path = pg_catalog, pg_temp/,
+    );
+    expect(sql).not.toContain("capability_note_plain_upsert");
+    expect(sql).toMatch(
+      /REVOKE ALL ON FUNCTION public\.capability_note_cas_save\([\s\S]+?FROM PUBLIC, anon, authenticated, service_role/,
+    );
+    expect(sql).toMatch(
+      /GRANT EXECUTE ON FUNCTION public\.capability_note_cas_save\([\s\S]+?TO service_role/,
+    );
+    expect(sql).not.toMatch(/GRANT .+public\.notes.+ TO (?:anon|authenticated)/i);
   });
 
   it("adds immutable note ids, scoped HMAC capabilities, append-only updates, and checkpoints", () => {

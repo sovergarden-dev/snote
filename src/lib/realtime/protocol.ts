@@ -365,13 +365,35 @@ export async function importEd25519VerificationKey(rawPublicKey: Uint8Array): Pr
   if (!isByteArray(rawPublicKey) || rawPublicKey.byteLength !== 32) {
     fail("Ed25519 public keys must be 32 bytes");
   }
-  return crypto.subtle.importKey(
-    "raw",
-    copyBytes(rawPublicKey) as BufferSource,
-    { name: "Ed25519" },
-    false,
-    ["verify"],
-  );
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle || typeof subtle.importKey !== "function") {
+    throw new Ed25519UnsupportedError();
+  }
+  try {
+    return await subtle.importKey(
+      "raw",
+      copyBytes(rawPublicKey) as BufferSource,
+      { name: "Ed25519" },
+      false,
+      ["verify"],
+    );
+  } catch (error) {
+    if (isRecord(error) && error.name === "NotSupportedError") {
+      throw new Ed25519UnsupportedError();
+    }
+    throw error;
+  }
+}
+
+export const ED25519_UNSUPPORTED_ERROR_CODE = "ED25519_UNSUPPORTED" as const;
+
+export class Ed25519UnsupportedError extends ProtocolError {
+  readonly code = ED25519_UNSUPPORTED_ERROR_CODE;
+
+  constructor() {
+    super("Ed25519 verification is not supported by this runtime");
+    this.name = "Ed25519UnsupportedError";
+  }
 }
 
 const TOKEN_PROFILES: Record<
@@ -414,6 +436,13 @@ export async function verifyProtocolJws(
   compact: string,
   options: VerifyProtocolJwsOptions,
 ): Promise<Record<string, unknown>> {
+  if (
+    typeof compact !== "string"
+    || compact.length === 0
+    || compact.length > MAX_REALTIME_FRAME_BYTES
+  ) {
+    fail("Invalid compact JWS serialization");
+  }
   if (!Object.prototype.hasOwnProperty.call(TOKEN_PROFILES, options.tokenType)) {
     fail("Unsupported JWS token type");
   }
@@ -425,6 +454,10 @@ export async function verifyProtocolJws(
     fail("Separate JWS key sets are required");
   }
   if (options.pinnedKeys.ticketAndProbe === options.pinnedKeys.savedAck) {
+    fail("Separate JWS key sets are required");
+  }
+  const ticketKeyIds = new Set(Object.keys(options.pinnedKeys.ticketAndProbe));
+  if (Object.keys(options.pinnedKeys.savedAck).some((kid) => ticketKeyIds.has(kid))) {
     fail("Separate JWS key sets are required");
   }
   const ticketKeys = new Set(Object.values(options.pinnedKeys.ticketAndProbe));
