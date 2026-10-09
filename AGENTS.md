@@ -47,6 +47,9 @@ Standard commands live in `README.md` (Local development / Verification) and
   (and optionally `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`) to use a system
   Chromium.
 
+### Cloudflare testing boundary
+- Miniflare local được dùng cho test adapter DO; mọi kết nối, cấu hình hay deploy Cloudflare thật vẫn cấm.
+
 ### Git hooks
 - Hooks are opt-in: `bun run hooks:install` sets `core.hooksPath=.githooks`. The
   pre-commit hook only runs the i18n allowlist check for i18n-relevant staged
