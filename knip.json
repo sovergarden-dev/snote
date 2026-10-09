@@ -38,6 +38,7 @@
   ],
   "ignore": [
     "src/integrations/supabase/types.ts",
+    "src/lib/realtime/protocol.ts",
     "src/lib/yjs/local-convert-provider.ts"
   ],
   "ignoreDependencies": [
