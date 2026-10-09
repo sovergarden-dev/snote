@@ -89,6 +89,7 @@ interface LiveVersion {
 const PAGE_SIZE = 100;
 const MAX_API_RESULTS = 1_000;
 const MAX_FIRST_PARENT_COMMITS = 30;
+const GITHUB_API_VERSION = "2022-11-28";
 const MAIN_GUARD_BASE_SHA = "6a3a3b404b719473af14a798a644f47af0ed3904";
 const MAIN_GUARD_ISSUE_TITLE = "[main-guard] Main policy violations";
 const DEFAULT_VERSION_URL = "https://note.syrin.online/version.json";
@@ -128,7 +129,7 @@ async function requestJson<T>(
   };
   if (options.token) {
     headers.Authorization = `Bearer ${options.token}`;
-    headers["X-GitHub-Api-Version"] = "2026-03-10";
+    headers["X-GitHub-Api-Version"] = GITHUB_API_VERSION;
   }
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
 
@@ -437,6 +438,15 @@ export async function getMainGuardFailures(
         `commit ${commitSha.slice(0, 12)} is not associated with a merged PR into main`,
       );
       continue;
+    }
+
+    const pullRequestMissingMergeCommitSha = mergedPullRequests.find(
+      (pullRequest) => !pullRequest.merge_commit_sha,
+    );
+    if (pullRequestMissingMergeCommitSha) {
+      throw new Error(
+        `GitHub API response is missing merge_commit_sha for PR #${pullRequestMissingMergeCommitSha.number}`,
+      );
     }
 
     const matchingMerge = mergedPullRequests.filter(

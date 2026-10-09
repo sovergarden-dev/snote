@@ -18,6 +18,8 @@ const ci = workflows.get(".github/workflows/ci.yml")!;
 const extensionWorkflow = workflows.get(".github/workflows/extension-e2e.yml")!;
 const extensionAudit = readFileSync("scripts/audit-extension.sh", "utf8")
   .replaceAll("\r\n", "\n");
+const mainGuard = readFileSync("scripts/main-guard.ts", "utf8")
+  .replaceAll("\r\n", "\n");
 const gitleaksScript = readFileSync("scripts/run-gitleaks.sh", "utf8")
   .replaceAll("\r\n", "\n");
 const gitleaksIgnore = readFileSync(".gitleaksignore", "utf8")
@@ -240,6 +242,14 @@ describe("CI toolchain contract", () => {
     expect(ci).not.toMatch(
       /^[ \t]+(?:actions|contents|pull-requests|checks):[ \t]*write\b/m,
     );
+  });
+
+  it("pins the GitHub REST API version that includes merge_commit_sha", () => {
+    expect(mainGuard).toMatch(/const GITHUB_API_VERSION = "2022-11-28";/);
+    expect(mainGuard).toMatch(
+      /headers\["X-GitHub-Api-Version"\] = GITHUB_API_VERSION;/,
+    );
+    expect(mainGuard).not.toContain("2026-03-10");
   });
 
   it("keeps one stable PR E2E check context without blanket retries", () => {
