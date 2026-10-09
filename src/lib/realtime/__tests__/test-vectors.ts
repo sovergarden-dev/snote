@@ -63,12 +63,13 @@ export const Y_UPDATE_MAC_VECTOR = {
 
 export const CAS_SAVE_MAC_VECTOR = {
   label: "syrin:realtime:cas-save-mac:v1",
-  fieldOrder: ["room", "generation", "expected_revision", "payload_sha256", "permission_epoch"],
+  fieldOrder: ["room", "generation", "expected_revision", "payload_sha256", "permission_epoch", "state_vector_sha256"],
   roomId: "room_01",
   generation: 3,
   expectedRevision: 12,
   payload: new TextEncoder().encode("doc-state"),
   permissionEpoch: 4,
+  stateVector: new Uint8Array([1, 2, 0]),
   key: new Uint8Array([
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
@@ -77,8 +78,8 @@ export const CAS_SAVE_MAC_VECTOR = {
     "0000001e737972696e3a7265616c74696d653a6361732d736176652d6d61633a7631" +
     "00000007726f6f6d5f303100000008000000000000000300000008000000000000000c" +
     "00000020e2bd74d33972e282c2224e0b86fb37bc58037e4332b41cfa112be32521ad9fc4" +
-    "000000080000000000000004",
-  expectedMacBase64Url: "Fd-HAPr9jiccDyUkUi4LsZm_iZML3H9lLGK4Q4f_lCE",
+    "00000008000000000000000400000020d7b3d4012540102c40a23acdeee417e06a42a74a5d66c7efe59f4e4aa0537c5c",
+  expectedMacBase64Url: "nxcU6H1A6DY_tlldg0Sb7DCl08N3ZhyXcR_GyyzTMz0",
 } as const;
 
 export const JWS_VECTOR = {

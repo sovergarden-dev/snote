@@ -1,0 +1,247 @@
+import * as Y from "yjs";
+import { describe, expect, it } from "vitest";
+import {
+  decodeBase64Url,
+  encodeBase64Url,
+  importEd25519VerificationKey,
+  verifyProtocolJws,
+} from "../protocol";
+import {
+  decodeStandardBase64,
+  deriveOpaqueRoomId,
+  deriveWriteMacKey,
+  issueRealtimeTicket,
+  issueRealtimeTicketFromContext,
+  loadRealtimeSigningConfig,
+  mergePlainYjsSnapshot,
+  savedAckForCommittedCas,
+  stateVectorsEqual,
+  type RealtimeConfigInput,
+  type RealtimeSigningConfig,
+  type YjsAdapter,
+} from "../../../../supabase/functions/_shared/realtime-edge";
+
+const NOW = 1_800_000_000;
+const base64url = (bytes: Uint8Array) => encodeBase64Url(bytes);
+
+async function makeConfigInput(): Promise<{
+  input: RealtimeConfigInput;
+  ticketPair: CryptoKeyPair;
+  ackPair: CryptoKeyPair;
+}> {
+  const [ticketPair, ackPair] = await Promise.all([
+    crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]),
+    crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]),
+  ]);
+  const [ticketJwk, ackJwk] = await Promise.all([
+    crypto.subtle.exportKey("jwk", ticketPair.privateKey),
+    crypto.subtle.exportKey("jwk", ackPair.privateKey),
+  ]);
+  return {
+    input: {
+      ticketPrivateJwk: JSON.stringify(ticketJwk),
+      ticketKid: "edge-ticket-test-v1",
+      savedAckPrivateJwk: JSON.stringify(ackJwk),
+      savedAckKid: "edge-ack-test-v1",
+      hubId: "hub-east",
+      assignmentEpoch: "9",
+      roomHmacKey: base64url(new Uint8Array(32).fill(11)),
+      writeMacMasterKey: base64url(new Uint8Array(32).fill(23)),
+    },
+    ticketPair,
+    ackPair,
+  };
+}
+
+async function pin(pair: CryptoKeyPair, kid: string): Promise<Readonly<Record<string, CryptoKey>>> {
+  const raw = new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey));
+  return { [kid]: await importEd25519VerificationKey(raw) };
+}
+
+async function config(): Promise<{
+  signing: RealtimeSigningConfig;
+  ticketPair: CryptoKeyPair;
+  ackPair: CryptoKeyPair;
+}> {
+  const material = await makeConfigInput();
+  return {
+    signing: await loadRealtimeSigningConfig(material.input),
+    ticketPair: material.ticketPair,
+    ackPair: material.ackPair,
+  };
+}
+
+describe("Edge realtime ticket and saved-ack signing", () => {
+  it("issues an EdDSA edit ticket with a random 128-bit jti, pinned audience, current epochs and a write key", async () => {
+    const { signing, ticketPair, ackPair } = await config();
+    const roomId = await deriveOpaqueRoomId(signing.roomHmacKey, "note-uuid-1", 4);
+    const issued = await issueRealtimeTicket({
+      roomId,
+      generation: 4,
+      permissionEpoch: 7,
+      permission: "edit",
+      nowSeconds: NOW,
+    }, signing);
+    const payload = await verifyProtocolJws(issued.ticket, {
+      tokenType: "ticket",
+      expectedAudience: "hub-east",
+      nowSeconds: NOW,
+      pinnedKeys: {
+        ticketAndProbe: await pin(ticketPair, signing.ticketKid),
+        savedAck: await pin(ackPair, signing.savedAckKid),
+      },
+    });
+
+    expect(payload).toMatchObject({
+      purpose: "syrin:ticket:v1",
+      aud: "hub-east",
+      hub_id: "hub-east",
+      room_id: roomId,
+      generation: 4,
+      permission_epoch: 7,
+      assignment_epoch: 9,
+      permission: "edit",
+      permissions: ["read", "write"],
+      iat: NOW,
+      exp: NOW + 300,
+    });
+    expect(decodeBase64Url(payload.jti as string)).toHaveLength(16);
+    expect(issued.write_mac_key).toBeTruthy();
+    expect(decodeBase64Url(issued.write_mac_key!)).toHaveLength(32);
+  });
+
+  it("does not return a write_mac_key for a read-only ticket", async () => {
+    const { signing } = await config();
+    const ticket = await issueRealtimeTicket({
+      roomId: "room-read-only",
+      generation: 2,
+      permissionEpoch: 3,
+      permission: "read",
+      nowSeconds: NOW,
+    }, signing);
+    expect(Object.hasOwn(ticket, "write_mac_key")).toBe(false);
+  });
+
+  it("does not issue any ticket when the slug context is invalid or absent", async () => {
+    const invalid = await issueRealtimeTicketFromContext(
+      { status: "invalid" },
+      {} as RealtimeSigningConfig,
+      NOW,
+    );
+    const missing = await issueRealtimeTicketFromContext(
+      { status: "not_found" },
+      {} as RealtimeSigningConfig,
+      NOW,
+    );
+    const unauthorized = await issueRealtimeTicketFromContext(
+      { status: "unauthorized" },
+      {} as RealtimeSigningConfig,
+      NOW,
+    );
+    expect(invalid).toEqual({ ok: false, status: "invalid" });
+    expect(missing).toEqual({ ok: false, status: "not_found" });
+    expect(unauthorized).toEqual({ ok: false, status: "unauthorized" });
+  });
+
+  it("derives distinct write MAC keys by opaque room and generation", async () => {
+    const masterKey = new Uint8Array(32).fill(5);
+    const [roomOne, roomTwo, nextGeneration] = await Promise.all([
+      deriveWriteMacKey(masterKey, "room-a", 1),
+      deriveWriteMacKey(masterKey, "room-b", 1),
+      deriveWriteMacKey(masterKey, "room-a", 2),
+    ]);
+    expect(roomOne).toHaveLength(32);
+    expect(roomOne).not.toEqual(roomTwo);
+    expect(roomOne).not.toEqual(nextGeneration);
+  });
+
+  it("rejects a shared ticket/ACK signing pair or kid", async () => {
+    const { input } = await makeConfigInput();
+    const shared = { ...input, savedAckPrivateJwk: input.ticketPrivateJwk };
+    await expect(loadRealtimeSigningConfig(shared)).rejects.toThrow("pairs must be distinct");
+    await expect(loadRealtimeSigningConfig({ ...input, savedAckKid: input.ticketKid }))
+      .rejects.toThrow("key IDs must be distinct");
+  });
+
+  it("signs saved-ack over the committed vector and its SHA-256, using the separate ACK key", async () => {
+    const { signing, ticketPair, ackPair } = await config();
+    const response = await savedAckForCommittedCas({
+      status: "ok",
+      noteId: "note-uuid-2",
+      generation: 5,
+      revision: 12,
+      permissionEpoch: 8,
+      stateVectorHex: "01020304",
+    }, signing, NOW);
+    expect(response).toMatchObject({ status: "ok", generation: 5, revision: 12 });
+    expect(response.savedAck).toBeTruthy();
+    const payload = await verifyProtocolJws(response.savedAck!, {
+      tokenType: "saved-ack",
+      nowSeconds: NOW + 86_400,
+      pinnedKeys: {
+        ticketAndProbe: await pin(ticketPair, signing.ticketKid),
+        savedAck: await pin(ackPair, signing.savedAckKid),
+      },
+    });
+    const vector = new Uint8Array([1, 2, 3, 4]);
+    const vectorHash = new Uint8Array(await crypto.subtle.digest("SHA-256", vector));
+    expect(payload).toMatchObject({
+      purpose: "syrin:saved-ack:v1",
+      room_id: response.roomId,
+      generation: 5,
+      revision: 12,
+      permission_epoch: 8,
+      state_vector: encodeBase64Url(vector),
+      state_vector_hash: encodeBase64Url(vectorHash),
+    });
+    expect(payload).not.toHaveProperty("exp");
+  });
+
+  it("never signs an ACK for any non-committed CAS result", async () => {
+    for (const status of [
+      "capability_managed",
+      "not_found",
+      "stale_permission_epoch",
+      "invalid_mac",
+      "invalid_state_vector",
+      "version_conflict",
+    ]) {
+      const result = await savedAckForCommittedCas(
+        { status },
+        {} as RealtimeSigningConfig,
+        NOW,
+      );
+      expect(result).toEqual({ status });
+      expect(result).not.toHaveProperty("savedAck");
+    }
+  });
+
+  it("merges plaintext Yjs snapshots and lets the Edge compare the canonical vector", () => {
+    const first = new Y.Doc();
+    first.getText("content").insert(0, "first");
+    const stored = Y.encodeStateAsUpdate(first);
+    const client = new Y.Doc();
+    Y.applyUpdate(client, stored);
+    client.getText("content").insert(5, " update");
+    const incoming = Y.encodeStateAsUpdate(client);
+    const requestedVector = Y.encodeStateVector(client);
+    const result = mergePlainYjsSnapshot(
+      stored,
+      incoming,
+      Y as unknown as YjsAdapter,
+    );
+    expect(result.content).toBe("first update");
+    expect(result.payload).toEqual(incoming);
+    expect(stateVectorsEqual(result.stateVector, requestedVector)).toBe(true);
+    expect(stateVectorsEqual(result.stateVector, new Uint8Array([0]))).toBe(false);
+    first.destroy();
+    client.destroy();
+  });
+
+  it("accepts canonical standard base64 snapshots only", () => {
+    expect(decodeStandardBase64("YQ==", 4)).toEqual(new Uint8Array([97]));
+    expect(decodeStandardBase64("", 4)).toEqual(new Uint8Array());
+    expect(() => decodeStandardBase64("YQ", 4)).toThrow();
+    expect(() => decodeStandardBase64("YQ==$", 4)).toThrow();
+  });
+});

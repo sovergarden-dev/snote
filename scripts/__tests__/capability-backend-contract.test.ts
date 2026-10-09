@@ -30,6 +30,7 @@ const capabilityMigrationPaths = [
   "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql",
   "supabase/migrations/20260922000000_capability_note_bulk_disable_secure_p_slugs.sql",
   "supabase/migrations/20261009000000_realtime_edge_cas.sql",
+  "supabase/migrations/20261009000001_realtime_ticket_cas.sql",
 ];
 const allCapabilityMigrations = capabilityMigrationPaths.map(source).join("\n");
 const allCapabilitySources = [
@@ -110,7 +111,7 @@ describe("capability primitives", () => {
     expect(manage).toContain('from "../_shared/slug.ts"');
     expect(session).not.toContain("const SLUG_RE");
     expect(manage).not.toContain("const SLUG_RE");
-    expect(session.match(/isUsableSlug\(slug\)/g) ?? []).toHaveLength(5);
+    expect(session.match(/isUsableSlug\(slug\)/g) ?? []).toHaveLength(7);
     expect(manage.match(/isUsableSlug\(slug\)/g) ?? []).toHaveLength(1);
 
     const slugPath = resolve(root, "supabase/functions/_shared/slug.ts");

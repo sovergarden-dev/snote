@@ -349,6 +349,7 @@ export type Database = {
           payload_limit_bytes: number
           permission_epoch: number
           revision: number
+          realtime_state_vector: string | null
           slug: string
           storage_limit_bytes: number
           sync_status: Database["public"]["Enums"]["note_sync_status"]
@@ -374,6 +375,7 @@ export type Database = {
           payload_limit_bytes?: number
           permission_epoch?: number
           revision?: number
+          realtime_state_vector?: string | null
           slug: string
           storage_limit_bytes?: number
           sync_status?: Database["public"]["Enums"]["note_sync_status"]
@@ -399,6 +401,7 @@ export type Database = {
           payload_limit_bytes?: number
           permission_epoch?: number
           revision?: number
+          realtime_state_vector?: string | null
           slug?: string
           storage_limit_bytes?: number
           sync_status?: Database["public"]["Enums"]["note_sync_status"]
@@ -521,6 +524,33 @@ export type Database = {
           p_permission_epoch: number
           p_salt: string | null
           p_slug: string
+          p_tags: string[]
+          p_ydoc_state: string
+        }
+        Returns: Json
+      }
+      capability_note_realtime_ticket_context: {
+        Args: { p_auth_user_id: string; p_slug: string }
+        Returns: Json
+      }
+      capability_note_realtime_save: {
+        Args: {
+          p_auth_user_id: string
+          p_char_count: number
+          p_check: string | null
+          p_content: string
+          p_expected_mac: string
+          p_expected_revision: number
+          p_generation: number
+          p_is_encrypted: boolean
+          p_iterations: number | null
+          p_permission_epoch: number
+          p_presented_mac: string
+          p_replace_generation: boolean
+          p_salt: string | null
+          p_slug: string
+          p_state_vector: string
+          p_state_vector_matches: boolean
           p_tags: string[]
           p_ydoc_state: string
         }

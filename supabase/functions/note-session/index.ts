@@ -17,11 +17,37 @@ import {
   rpcStatus,
   verifyRealtimeAuth,
 } from "../_shared/capability-edge.ts";
+import {
+  deriveOpaqueRoomId,
+  issueRealtimeTicketFromContext,
+  loadRealtimeSigningConfig,
+  type RealtimeSigningConfig,
+} from "../_shared/realtime-edge.ts";
+import {
+  handleRealtimeCasRequest,
+  realtimeFailure as mapRealtimeFailure,
+} from "./realtime-cas-handler.ts";
 import { isUsableSlug } from "../_shared/slug.ts";
-
 const UPDATE_ID_RE = /^[a-f0-9]{64}$/;
 const PAYLOAD_RE = /^[A-Za-z0-9_-]+$/;
 const MAX_ENCODED_PAYLOAD_CHARS = 5_592_406;
+
+function realtimeSigningConfig(): Promise<RealtimeSigningConfig> {
+  return loadRealtimeSigningConfig({
+    ticketPrivateJwk: Deno.env.get("SNOTE_REALTIME_TICKET_PRIVATE_JWK") ?? "",
+    ticketKid: Deno.env.get("SNOTE_REALTIME_TICKET_KID") ?? "",
+    savedAckPrivateJwk: Deno.env.get("SNOTE_REALTIME_SAVED_ACK_PRIVATE_JWK") ?? "",
+    savedAckKid: Deno.env.get("SNOTE_REALTIME_SAVED_ACK_KID") ?? "",
+    hubId: Deno.env.get("SNOTE_REALTIME_HUB_ID") ?? "",
+    assignmentEpoch: Deno.env.get("SNOTE_REALTIME_ASSIGNMENT_EPOCH") ?? "",
+    roomHmacKey: Deno.env.get("SNOTE_REALTIME_ROOM_HMAC_KEY") ?? "",
+    writeMacMasterKey: Deno.env.get("SNOTE_REALTIME_WRITE_MAC_MASTER_KEY") ?? "",
+  });
+}
+
+function realtimeFailure(status: string): Response {
+  return mapRealtimeFailure(status, { capabilityJson, capabilityFailure });
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: capabilityCorsHeaders });
@@ -34,6 +60,40 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const bearer = readCapabilityBearer(req);
 
+    if (body?.action === "realtime-ticket") {
+      const slug = typeof body?.slug === "string" ? body.slug.trim() : "";
+      if (!isUsableSlug(slug)) return realtimeFailure("invalid");
+      const auth = await verifyRealtimeAuth(req, environment);
+      if (auth.mode === "unavailable") return capabilityFailure("unavailable");
+      if (auth.mode !== "private-realtime") return realtimeFailure("unauthorized");
+
+      const { data: context, error: contextError } = await environment.client.rpc(
+        "capability_note_realtime_ticket_context",
+        { p_slug: slug, p_auth_user_id: auth.userId },
+      );
+      if (contextError) return capabilityFailure("unavailable");
+      if (rpcStatus(context) !== "ok") return realtimeFailure(rpcStatus(context));
+
+      const config = await realtimeSigningConfig();
+      const issued = await issueRealtimeTicketFromContext(context, config);
+      if (!issued.ok) return realtimeFailure(issued.status);
+      return capabilityJson(issued.ticket, 200);
+    }
+
+    if (body?.action === "realtime-cas-save" || body?.action === "realtime-replace") {
+      const slug = typeof body?.slug === "string" ? body.slug.trim() : "";
+      if (!isUsableSlug(slug)) return realtimeFailure("invalid");
+      return handleRealtimeCasRequest(req, body, slug, {
+        rpc: async (name, args) => {
+          const { data, error } = await environment.client.rpc(name, args as never);
+          return { data, error };
+        },
+        verifyRealtimeAuth: (request) => verifyRealtimeAuth(request, environment),
+        realtimeSigningConfig,
+        capabilityJson,
+        capabilityFailure,
+      });
+    }
     if (body?.action === "plain-upsert") {
       const slug = typeof body?.slug === "string" ? body.slug.trim() : "";
       const ydocState = typeof body?.ydocState === "string" ? body.ydocState : "";
