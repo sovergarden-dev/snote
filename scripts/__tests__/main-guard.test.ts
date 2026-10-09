@@ -312,6 +312,22 @@ describe("main-guard", () => {
     );
   });
 
+  it("reports a missing merge_commit_sha as an API contract error", async () => {
+    const associatedPullRequest = pullRequest(PR_NUMBER, COMMIT_SHA, HEAD_SHA);
+    delete associatedPullRequest.merge_commit_sha;
+    const api = makeApi({
+      associatedPullRequestsByCommit: {
+        [COMMIT_SHA]: [associatedPullRequest],
+      },
+    });
+
+    await expect(
+      getMainGuardFailures(pushEvent(), apiOptions(api.fetcher)),
+    ).rejects.toThrow(
+      `GitHub API response is missing merge_commit_sha for PR #${PR_NUMBER}`,
+    );
+  });
+
   it("passes only when PR checks and workflow_dispatch full browser e2e are green at PR head", async () => {
     const api = makeApi();
 
