@@ -83,7 +83,7 @@ describe("production note access hotfix", () => {
       "allowEncryptionTransitions={false}",
     );
     expect(source("src/pages/NotePage.tsx")).toContain(
-      "allowEncryptionTransitions = !legacyOnly && !isManaged",
+      "allowEncryptionTransitions = false",
     );
     expect(source("src/pages/CutoverNotePage.tsx")).toContain("isLegacyRoSearch");
     expect(source("src/pages/CutoverNotePage.tsx")).not.toMatch(

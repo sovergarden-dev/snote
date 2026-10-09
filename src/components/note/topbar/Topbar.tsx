@@ -58,6 +58,7 @@ interface TopbarProps {
   encryption?: Encryption | null;
   capabilityAccess?: CapabilityAccess | null;
   allowEncryptionTransitions?: boolean;
+  historyReadOnly?: boolean;
   /** True when this view is Legacy RO (`?legacyRo=1` or A′ plain Cutover/LNO). */
   legacyOn?: boolean;
   onLegacyEnable?: () => void;
@@ -101,6 +102,7 @@ export function Topbar({
   encryption = null,
   capabilityAccess = null,
   allowEncryptionTransitions = true,
+  historyReadOnly = false,
   legacyOn = false,
   onLegacyEnable,
   onLegacyDisable,
@@ -373,6 +375,7 @@ export function Topbar({
           slug={slug}
           doc={doc}
           snapshotProtection={encryption}
+          readOnly={historyReadOnly}
           open={historyOpen}
           onOpenChange={setHistoryOpen}
           trigger={false}

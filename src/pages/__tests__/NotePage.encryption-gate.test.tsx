@@ -29,6 +29,7 @@ const harness = vi.hoisted(() => ({
   providerConstruct: vi.fn(),
   providerConnect: vi.fn(),
   providerDestroy: vi.fn(),
+  providerSaveRequest: vi.fn(),
   capabilityProviderConstruct: vi.fn(),
   capabilityProviderConnect: vi.fn(),
   capabilityProviderDestroy: vi.fn(),
@@ -63,9 +64,17 @@ const harness = vi.hoisted(() => ({
 vi.mock("@/components/note/Editor", async () => {
   const { forwardRef } = await vi.importActual<typeof import("react")>("react");
   return {
-    Editor: forwardRef(function Editor() {
-      harness.editorRender();
-      return <div data-testid="editor" />;
+    Editor: forwardRef(function Editor(props: { editable?: boolean }) {
+      harness.editorRender(props);
+      return (
+        <textarea
+          data-testid="editor"
+          readOnly={props.editable === false}
+          onChange={() => {
+            if (props.editable !== false) harness.providerSaveRequest();
+          }}
+        />
+      );
     }),
   };
 });
@@ -552,6 +561,7 @@ describe("NotePage encryption gate", () => {
     harness.providerConstruct.mockClear();
     harness.providerConnect.mockClear();
     harness.providerDestroy.mockClear();
+    harness.providerSaveRequest.mockClear();
     harness.capabilityProviderConstruct.mockClear();
     harness.capabilityProviderConnect.mockClear();
     harness.capabilityProviderDestroy.mockClear();
@@ -912,6 +922,41 @@ describe("NotePage encryption gate", () => {
     expect(harness.upsertPlaintextNote).not.toHaveBeenCalled();
   });
 
+  it("keeps an unlocked encrypted ordinary note read-only without a save request", async () => {
+    harness.metaForSlug.mockResolvedValue({
+      data: {
+        is_encrypted: true,
+        enc_salt: "salt-secret",
+        enc_check: "check-secret",
+        enc_iterations: 1000,
+        ydoc_state: "ciphertext-secret",
+      },
+      error: null,
+    });
+    harness.deriveKey.mockResolvedValue({} as CryptoKey);
+    harness.verifyCheck.mockResolvedValue(true);
+    window.history.replaceState(null, "", "/secret#key");
+
+    const view = renderStandalone();
+    await waitFor(() => expect(view.getByTestId("editor")).toBeInTheDocument());
+
+    expect(view.getByRole("status")).toHaveTextContent(
+      "security.encrypted_note_readonly",
+    );
+    expect(view.getByTestId("editor")).toHaveAttribute("readonly");
+    fireEvent.change(view.getByTestId("editor"), {
+      target: { value: "unsaved edit" },
+    });
+    expect(harness.providerSaveRequest).not.toHaveBeenCalled();
+    expect(harness.providerConnect).toHaveBeenCalledWith("secret");
+    expect(harness.topbarProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        allowEncryptionTransitions: false,
+        historyReadOnly: true,
+      }),
+    );
+  });
+
   it("still mounts a fresh unpinned plaintext note", async () => {
     harness.metaForSlug.mockResolvedValue({
       data: { is_encrypted: false },
@@ -935,7 +980,7 @@ describe("NotePage encryption gate", () => {
     await waitFor(() =>
       expect(harness.topbarProps).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          allowEncryptionTransitions: true,
+          allowEncryptionTransitions: false,
           currentShareUrl: `${window.location.origin}/secret`,
           legacyOn: false,
           onLegacyEnable: expect.any(Function),
@@ -1382,7 +1427,7 @@ describe("NotePage encryption gate", () => {
     expect(harness.disableSecureNote).toHaveBeenCalledOnce();
     expect(localStorage.getItem("snote:legacy-secure:secret")).toBeNull();
     expect(screen.getByTestId("loc")).toHaveTextContent("/secret");
-    expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner=");
+    await waitFor(() => expect(screen.getByTestId("loc")).not.toHaveTextContent("#owner="));
     await waitFor(() => expect(harness.providerConstruct).toHaveBeenCalledWith("secret"));
     expect(screen.getByTestId("editor")).toBeInTheDocument();
     expect(screen.queryByText("security.legacy_secure_reopen_banner")).not.toBeInTheDocument();

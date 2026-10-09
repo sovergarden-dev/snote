@@ -281,6 +281,7 @@ const ko: Dictionary = {
     "security.panel_title": "노트 보안",
     "security.encrypt_label": "노트 암호화",
     "security.encrypt_helper": "이 노트를 브라우저에서 AES-256으로 암호화합니다. 다른 사람이 읽으려면 URL에 #key를 붙여 공유하세요.",
+    "security.encrypted_note_readonly": "이 암호화된 노트는 읽기 전용이며 수정 사항은 저장되지 않습니다. 내용을 보존하려면 암호화를 해제하거나 새 노트에 복사하세요.",
     "security.encrypt_helper_unavailable": "이 노트 유형에서는 암호화할 수 없습니다. 암호화하려면 소유자 링크를 사용하세요.",
     "security.encrypt_helper_mutex": "암호화를 켜기 전에 Legacy를 끄세요.",
     "security.advanced": "고급",

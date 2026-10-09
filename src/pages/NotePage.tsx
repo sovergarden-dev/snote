@@ -1239,9 +1239,12 @@ export default function NotePage({
   // The ready phase schedules resource acquisition in a layout effect. Keep
   // the workspace closed for that single commit until its owned pair exists.
   if (!doc || !provider) return null;
-  const isManaged = !!capabilityAccess;
   const legacyContainment = legacyOnly || !capabilityAccess;
-  const allowEncryptionTransitions = !legacyOnly && !isManaged;
+  const encryptedOrdinaryNote = !capabilityAccess && encMeta.isEncrypted;
+  // Plain `/slug` encryption is temporarily unavailable until encrypted
+  // snapshots can be persisted safely. Existing encrypted notes can still be
+  // explicitly unlocked through LockButton.
+  const allowEncryptionTransitions = false;
   const getContent = () => doc.getText("content").toString();
   const getEditorSelection = () => editorRef.current?.getSelectedText() ?? "";
   const legacyEncryptionSecret = legacyContainment ? readEncryptionSecret(location.hash) : "";
@@ -1266,6 +1269,14 @@ export default function NotePage({
           {t("security.convert_retry")}
         </Button>
       )}
+    </div>
+  ) : null;
+  const encryptedNoteReadOnlyNotice = encryptedOrdinaryNote ? (
+    <div
+      className="border-b bg-muted px-4 py-3 text-sm text-muted-foreground"
+      role="status"
+    >
+      {t("security.encrypted_note_readonly")}
     </div>
   ) : null;
 
@@ -1295,6 +1306,7 @@ export default function NotePage({
           encryption={encryption}
           capabilityAccess={capabilityAccess}
           allowEncryptionTransitions={allowEncryptionTransitions}
+          historyReadOnly={encryptedOrdinaryNote}
           legacyOn={!!capabilityAccess}
           onLegacyEnable={!capabilityAccess && !legacyOnly ? () => { void runConvert(); } : undefined}
           onLegacyDisable={capabilityAccess?.scope === "owner" ? () => { void runDisable(); } : undefined}
@@ -1306,6 +1318,7 @@ export default function NotePage({
           narrowOverride={narrow}
         />
         {convertChrome}
+        {encryptedNoteReadOnlyNotice}
         <div
           className={
             narrow
@@ -1322,7 +1335,7 @@ export default function NotePage({
                 className="h-full min-h-0 overflow-hidden"
                 onScrollEl={setEditorScrollEl}
                 vim={vim}
-                editable={!writeFenced}
+                editable={!writeFenced && !encryptedOrdinaryNote}
               />
             </div>
           )}
@@ -1384,6 +1397,7 @@ export default function NotePage({
         encryption={encryption}
         capabilityAccess={capabilityAccess}
         allowEncryptionTransitions={allowEncryptionTransitions}
+        historyReadOnly={encryptedOrdinaryNote}
         legacyOn={!!capabilityAccess}
         onLegacyEnable={!capabilityAccess && !legacyOnly ? () => { void runConvert(); } : undefined}
         onLegacyDisable={capabilityAccess?.scope === "owner" ? () => { void runDisable(); } : undefined}
@@ -1396,6 +1410,7 @@ export default function NotePage({
         outlineTriggerRef={outlineTriggerRef}
       />
       {convertChrome}
+      {encryptedNoteReadOnlyNotice}
 
       <div className="flex min-h-0 flex-1">
         <OutlineSidebar
@@ -1421,7 +1436,7 @@ export default function NotePage({
                 ref={editorRef}
                 doc={doc}
                 awareness={provider.awareness}
-                editable={!writeFenced}
+                editable={!writeFenced && !encryptedOrdinaryNote}
                 className="h-full min-h-0 overflow-hidden"
                 onScrollEl={setEditorScrollEl}
                 vim={vim}

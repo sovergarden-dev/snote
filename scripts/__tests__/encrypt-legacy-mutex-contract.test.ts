@@ -23,10 +23,9 @@ describe("Create-bare + Encrypt≠owner + Legacy/Encrypt mutex", () => {
     expect(home).toContain("seedAndOpen(randomSlug())");
   });
 
-  it("allows encryption transitions on unmanaged notes and forbids them on managed", () => {
+  it("temporarily disables encryption transitions and preserves security-panel wiring", () => {
     const notePage = source("src/pages/NotePage.tsx");
-    expect(notePage).toContain("const isManaged = !!capabilityAccess");
-    expect(notePage).toContain("allowEncryptionTransitions = !legacyOnly && !isManaged");
+    expect(notePage).toContain("const allowEncryptionTransitions = false;");
     expect(notePage).not.toContain("allowEncryptionTransitions={!legacyContainment}");
     expect(notePage).toContain("allowEncryptionTransitions={allowEncryptionTransitions}");
   });

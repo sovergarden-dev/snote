@@ -132,4 +132,50 @@ describe("HistoryDialog selective restore", () => {
     expect(confirm).not.toHaveBeenCalled();
     expect(doc.getText("content").toString()).toBe(NEW_TEXT);
   });
+
+  it("keeps encrypted ordinary-note history view-only", async () => {
+    const now = Date.now();
+    harness.listSnapshots.mockResolvedValue([
+      snapshot({ id: 1, ts: now - 60_000, content: OLD_TEXT }),
+    ]);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const doc = new Y.Doc();
+    doc.getText("content").insert(0, NEW_TEXT);
+
+    render(
+      <Wrap>
+        <HistoryDialog slug="demo" doc={doc} open trigger={false} readOnly />
+      </Wrap>,
+    );
+
+    expect(await screen.findByText(dict.en["history.burst.heading"])).toBeInTheDocument();
+    const restore = screen.getByRole("button", { name: dict.en["history.restore"] });
+    const clear = screen.getByRole("button", { name: dict.en["history.clear"] });
+    expect(restore).toBeDisabled();
+    expect(clear).toBeDisabled();
+    fireEvent.click(restore);
+    fireEvent.click(clear);
+    expect(confirm).not.toHaveBeenCalled();
+    expect(doc.getText("content").toString()).toBe(NEW_TEXT);
+
+    fireEvent.click(screen.getByRole("button", { name: dict.en["history.view"] }));
+    const restoreViewedSnapshot = screen.getByRole("button", {
+      name: dict.en["history.restore_btn"],
+    });
+    expect(restoreViewedSnapshot).toBeDisabled();
+    fireEvent.click(restoreViewedSnapshot);
+    expect(confirm).not.toHaveBeenCalled();
+    expect(doc.getText("content").toString()).toBe(NEW_TEXT);
+
+    fireEvent.click(screen.getByRole("button", { name: dict.en["history.back"] }));
+    fireEvent.click(screen.getByRole("button", { name: dict.en["history.burst.compare"] }));
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    const restoreHunks = screen.getByRole("button", {
+      name: dict.en["history.hunk.restore"],
+    });
+    expect(restoreHunks).toBeDisabled();
+    fireEvent.click(restoreHunks);
+    expect(confirm).not.toHaveBeenCalled();
+    expect(doc.getText("content").toString()).toBe(NEW_TEXT);
+  });
 });
