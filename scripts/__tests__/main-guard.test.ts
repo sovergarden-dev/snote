@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import {
   getMainGuardFailures,
@@ -5,7 +6,7 @@ import {
 } from "../main-guard";
 
 const REPOSITORY = "sovergarden-dev/snote";
-const BASE_SHA = "6a3a3b40d7db12057d761d7260fa712d96049548";
+const BASE_SHA = "6a3a3b404b719473af14a798a644f47af0ed3904";
 const COMMIT_SHA = "b".repeat(40);
 const PREVIOUS_SHA = "d".repeat(40);
 const HEAD_SHA = "a".repeat(40);
@@ -23,6 +24,7 @@ interface FakeApiOptions {
   compareStatus?: string;
   compareMergeBaseSha?: string;
   openIssues?: unknown[];
+  issueComments?: unknown[];
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -89,6 +91,7 @@ function makeApi(options: FakeApiOptions = {}) {
   const requests: Array<{ url: URL; method: string; body?: unknown }> = [];
   const defaultRuns = successfulRuns();
   const createdIssues: unknown[] = [];
+  const createdComments: unknown[] = [];
   const fetcher: typeof fetch = async (input, init) => {
     const url = new URL(String(input));
     const method = (init?.method ?? "GET").toUpperCase();
@@ -164,6 +167,15 @@ function makeApi(options: FakeApiOptions = {}) {
       return jsonResponse({ total_count: jobs.length, jobs });
     }
 
+    const issueCommentsMatch = url.pathname.match(/\/issues\/(\d+)\/comments$/);
+    if (issueCommentsMatch && method === "GET") {
+      return jsonResponse(options.issueComments ?? []);
+    }
+    if (issueCommentsMatch && method === "POST") {
+      createdComments.push(body);
+      return jsonResponse({ id: 1, ...(body as object) }, 201);
+    }
+
     if (url.pathname.endsWith("/issues") && method === "GET") {
       return jsonResponse(options.openIssues ?? []);
     }
@@ -176,7 +188,7 @@ function makeApi(options: FakeApiOptions = {}) {
     return new Response(`unexpected API path: ${url.pathname}`, { status: 404 });
   };
 
-  return { fetcher, requests, createdIssues };
+  return { fetcher, requests, createdIssues, createdComments };
 }
 
 function pushEvent(overrides: Record<string, unknown> = {}) {
@@ -201,6 +213,16 @@ const apiOptions = (fetcher: typeof fetch, overrides: Record<string, unknown> = 
 });
 
 describe("main-guard", () => {
+  it("pins the expected baseline to an existing Git commit", () => {
+    expect(BASE_SHA).toBe("6a3a3b404b719473af14a798a644f47af0ed3904");
+    expect(() =>
+      execFileSync("git", ["cat-file", "-e", `${BASE_SHA}^{commit}`], {
+        cwd: process.cwd(),
+        stdio: "ignore",
+      }),
+    ).not.toThrow();
+  });
+
   it("ignores events that do not update main without making API calls", async () => {
     const api = makeApi();
 
@@ -270,7 +292,7 @@ describe("main-guard", () => {
     );
 
     expect(failures).toContain(
-      "main first-parent history did not reach baseline 6a3a3b40d7db12057d761d7260fa712d96049548 within 30 commits",
+      "main first-parent history did not reach baseline 6a3a3b404b719473af14a798a644f47af0ed3904 within 30 commits",
     );
     expect(api.requests.filter((request) => /\/commits\/[0-9a-f]{40}$/.test(request.url.pathname)))
       .toHaveLength(30);
@@ -385,41 +407,91 @@ describe("main-guard", () => {
     const issue = await reportMainGuardFailure(["main commit was rejected"], {
       ...apiOptions(api.fetcher),
       mainSha: COMMIT_SHA,
+      before: BASE_SHA,
       eventName: "push",
       actor: "sovergarden-dev",
       runUrl: "https://github.com/sovergarden-dev/snote/actions/runs/42",
     });
 
-    expect(issue).toEqual({ number: 300, created: true });
+    expect(issue).toEqual({ number: 300, created: true, action: "created" });
     expect(api.createdIssues).toHaveLength(1);
     expect(api.createdIssues[0]).toMatchObject({
       title: "[main-guard] Main policy violations",
       assignees: ["sovergarden-dev"],
     });
     expect((api.createdIssues[0] as { body: string }).body).toContain("@sovergarden-dev");
+    expect((api.createdIssues[0] as { body: string }).body).toContain(`event.before: \`${BASE_SHA}\``);
     expect((api.createdIssues[0] as { body: string }).body).toContain("main commit was rejected");
   });
 
-  it("reuses an existing open guard issue instead of creating duplicates", async () => {
+  it("skips an exact violation fingerprint already present in an open issue", async () => {
+    const failures = ["main commit was rejected", "another policy finding"];
+    const initialApi = makeApi();
+    await reportMainGuardFailure(failures, {
+      ...apiOptions(initialApi.fetcher),
+      mainSha: COMMIT_SHA,
+      before: BASE_SHA,
+      eventName: "push",
+      actor: "sovergarden-dev",
+      runUrl: "https://github.com/sovergarden-dev/snote/actions/runs/43",
+    });
+    const originalBody = (initialApi.createdIssues[0] as { body: string }).body;
     const api = makeApi({
       openIssues: [
         {
           number: 299,
           title: "[main-guard] Main policy violations",
           state: "open",
+          body: "",
+        },
+      ],
+      issueComments: [{ body: originalBody }],
+    });
+
+    const issue = await reportMainGuardFailure([...failures].reverse(), {
+      ...apiOptions(api.fetcher),
+      mainSha: COMMIT_SHA,
+      before: BASE_SHA,
+      eventName: "push",
+      actor: "sovergarden-dev",
+      runUrl: "https://github.com/sovergarden-dev/snote/actions/runs/44",
+    });
+
+    expect(issue).toEqual({ number: 299, created: false, action: "duplicate" });
+    expect(api.createdComments).toHaveLength(0);
+    expect(api.createdIssues).toHaveLength(0);
+  });
+
+  it("comments on an open guard issue when the violation fingerprint changes", async () => {
+    const initialApi = makeApi();
+    await reportMainGuardFailure(["original policy finding"], {
+      ...apiOptions(initialApi.fetcher),
+      mainSha: COMMIT_SHA,
+      before: BASE_SHA,
+      eventName: "push",
+    });
+    const originalBody = (initialApi.createdIssues[0] as { body: string }).body;
+    const api = makeApi({
+      openIssues: [
+        {
+          number: 299,
+          title: "[main-guard] Main policy violations",
+          state: "open",
+          body: originalBody,
         },
       ],
     });
 
-    const issue = await reportMainGuardFailure(["another failure"], {
+    const issue = await reportMainGuardFailure(["new policy finding"], {
       ...apiOptions(api.fetcher),
       mainSha: COMMIT_SHA,
-      eventName: "schedule",
-      actor: "sovergarden-dev",
-      runUrl: "https://github.com/sovergarden-dev/snote/actions/runs/43",
+      before: BASE_SHA,
+      eventName: "push",
     });
 
-    expect(issue).toEqual({ number: 299, created: false });
+    expect(issue).toEqual({ number: 299, created: false, action: "commented" });
     expect(api.createdIssues).toHaveLength(0);
+    expect(api.createdComments).toHaveLength(1);
+    expect((api.createdComments[0] as { body: string }).body).toContain("new policy finding");
   });
 });

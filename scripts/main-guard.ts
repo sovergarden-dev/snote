@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 
 export interface MainPushEvent {
   ref?: string;
+  before?: string;
   forced?: boolean;
   created?: boolean;
   deleted?: boolean;
@@ -20,6 +22,7 @@ interface GuardOptions {
 
 interface FailureIssueOptions extends GuardOptions {
   mainSha: string;
+  before?: string;
   actor?: string;
   runUrl?: string;
 }
@@ -65,7 +68,12 @@ interface GitHubIssue {
   number: number;
   title: string;
   state: string;
+  body?: string | null;
   pull_request?: unknown;
+}
+
+interface GitHubIssueComment {
+  body?: string | null;
 }
 
 interface CompareResponse {
@@ -81,7 +89,7 @@ interface LiveVersion {
 const PAGE_SIZE = 100;
 const MAX_API_RESULTS = 1_000;
 const MAX_FIRST_PARENT_COMMITS = 30;
-const MAIN_GUARD_BASE_SHA = "6a3a3b40d7db12057d761d7260fa712d96049548";
+const MAIN_GUARD_BASE_SHA = "6a3a3b404b719473af14a798a644f47af0ed3904";
 const MAIN_GUARD_ISSUE_TITLE = "[main-guard] Main policy violations";
 const DEFAULT_VERSION_URL = "https://note.syrin.online/version.json";
 const REQUIRED_WORKFLOWS = [
@@ -499,10 +507,67 @@ async function findOpenGuardIssue(
   throw new Error("Open issue list exceeded the 1,000-item safety limit");
 }
 
+function violationFingerprint(mainSha: string, failures: string[]): string {
+  const canonicalFailures = [...new Set(failures)].sort();
+  return createHash("sha256")
+    .update(JSON.stringify({ mainSha, failures: canonicalFailures }))
+    .digest("hex");
+}
+
+function fingerprintMarker(fingerprint: string): string {
+  return `<!-- main-guard-fingerprint:${fingerprint} -->`;
+}
+
+function buildFailureBody(
+  owner: string,
+  failures: string[],
+  options: FailureIssueOptions,
+  fingerprint: string,
+): string {
+  const canonicalFailures = [...new Set(failures)].sort();
+  const visibleFailures = canonicalFailures.slice(0, 100);
+  const omittedCount = canonicalFailures.length - visibleFailures.length;
+  const runLink = options.runUrl ?? "Unavailable in this run context";
+  return [
+    fingerprintMarker(fingerprint),
+    `@${owner} main-guard found policy violations on \`${options.mainSha}\`.`,
+    "",
+    `- Event: \`${options.eventName ?? "unknown"}\``,
+    `- event.before: \`${options.before ?? "not supplied by event"}\``,
+    `- Actor: \`${options.actor ?? "unknown"}\``,
+    `- Workflow run: ${runLink}`,
+    "",
+    "### Findings",
+    ...visibleFailures.map((failure) => `- ${failure}`),
+    ...(omittedCount > 0 ? [`- ${omittedCount} additional finding(s) omitted.`] : []),
+  ].join("\n");
+}
+
+async function listIssueComments(
+  baseUrl: string,
+  issueNumber: number,
+  token: string,
+  fetcher: typeof fetch,
+): Promise<GitHubIssueComment[]> {
+  const comments: GitHubIssueComment[] = [];
+  for (let page = 1; page <= MAX_API_RESULTS / PAGE_SIZE; page += 1) {
+    const url = new URL(`${baseUrl}/issues/${encodeURIComponent(String(issueNumber))}/comments`);
+    url.searchParams.set("per_page", String(PAGE_SIZE));
+    url.searchParams.set("page", String(page));
+    const pageComments = await getJson<GitHubIssueComment[]>(url.toString(), token, fetcher);
+    if (!Array.isArray(pageComments)) {
+      throw new Error("GitHub API returned an invalid issue comment list");
+    }
+    comments.push(...pageComments);
+    if (pageComments.length < PAGE_SIZE) return comments;
+  }
+  throw new Error("Issue comment list exceeded the 1,000-item safety limit");
+}
+
 export async function reportMainGuardFailure(
   failures: string[],
   options: FailureIssueOptions,
-): Promise<{ number: number; created: boolean }> {
+): Promise<{ number: number; created: boolean; action: "created" | "commented" | "duplicate" }> {
   const repoParts = repositoryParts(options.repository);
   if (!repoParts) throw new Error("GITHUB_REPOSITORY must be in owner/repository form");
   if (!options.token) throw new Error("GITHUB_TOKEN is required to report main-guard failures");
@@ -511,23 +576,26 @@ export async function reportMainGuardFailure(
   const [owner, repo] = repoParts;
   const baseUrl = apiUrlFor(options.apiUrl ?? "https://api.github.com", owner, repo, "");
   const fetcher = options.fetcher ?? fetch;
+  const fingerprint = violationFingerprint(options.mainSha, failures);
+  const marker = fingerprintMarker(fingerprint);
+  const body = buildFailureBody(owner, failures, options, fingerprint);
   const existing = await findOpenGuardIssue(baseUrl, options.token, fetcher);
-  if (existing) return { number: existing.number, created: false };
 
-  const visibleFailures = failures.slice(0, 100);
-  const omittedCount = failures.length - visibleFailures.length;
-  const runLink = options.runUrl ?? "Unavailable in this run context";
-  const body = [
-    `@${owner} main-guard found policy violations on \`${options.mainSha}\`.`,
-    "",
-    `- Event: \`${options.eventName ?? "unknown"}\``,
-    `- Actor: \`${options.actor ?? "unknown"}\``,
-    `- Workflow run: ${runLink}`,
-    "",
-    "### Findings",
-    ...visibleFailures.map((failure) => `- ${failure}`),
-    ...(omittedCount > 0 ? [`- ${omittedCount} additional finding(s) omitted.`] : []),
-  ].join("\n");
+  if (existing) {
+    if (existing.body?.includes(marker)) {
+      return { number: existing.number, created: false, action: "duplicate" };
+    }
+    const comments = await listIssueComments(baseUrl, existing.number, options.token, fetcher);
+    if (comments.some((comment) => comment.body?.includes(marker))) {
+      return { number: existing.number, created: false, action: "duplicate" };
+    }
+    await requestJson<GitHubIssueComment>(
+      `${baseUrl}/issues/${encodeURIComponent(String(existing.number))}/comments`,
+      fetcher,
+      { token: options.token, method: "POST", body: { body } },
+    );
+    return { number: existing.number, created: false, action: "commented" };
+  }
 
   const created = await requestJson<GitHubIssue>(
     `${baseUrl}/issues`,
@@ -545,7 +613,7 @@ export async function reportMainGuardFailure(
   if (!Number.isInteger(created.number)) {
     throw new Error("GitHub API created an issue without a valid issue number");
   }
-  return { number: created.number, created: true };
+  return { number: created.number, created: true, action: "created" };
 }
 
 async function runFromGitHubActions(): Promise<void> {
@@ -594,6 +662,7 @@ async function runFromGitHubActions(): Promise<void> {
         token,
         apiUrl: process.env.GITHUB_API_URL,
         mainSha,
+        before: event.before,
         eventName,
         actor: process.env.GITHUB_ACTOR,
         runUrl:
@@ -601,11 +670,15 @@ async function runFromGitHubActions(): Promise<void> {
             ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
             : undefined,
       });
-      console.error(
-        issue.created
-          ? `main-guard opened issue #${issue.number} and assigned it to ${repositoryParts(repository)?.[0] ?? "the repository owner"}`
-          : `main-guard reused open issue #${issue.number}; no duplicate issue created`,
-      );
+      if (issue.action === "created") {
+        console.error(
+          `main-guard opened issue #${issue.number} and assigned it to ${repositoryParts(repository)?.[0] ?? "the repository owner"}`,
+        );
+      } else if (issue.action === "commented") {
+        console.error(`main-guard added a new violation to open issue #${issue.number}`);
+      } else {
+        console.error(`main-guard skipped duplicate violation in open issue #${issue.number}`);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "issue reporting failed";
       console.error(`main-guard could not open an issue: ${message}`);
