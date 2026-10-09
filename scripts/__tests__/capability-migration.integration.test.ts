@@ -42,6 +42,7 @@ const capabilityMigrationPaths = [
   "supabase/migrations/20260915000001_capability_note_disable_secure.sql",
   "supabase/migrations/20260916000000_capability_note_bulk_disable_secure.sql",
   "supabase/migrations/20260922000000_capability_note_bulk_disable_secure_p_slugs.sql",
+  "supabase/migrations/20261009000000_realtime_edge_cas.sql",
 ] as const;
 
 async function applyCapabilityMigrations(
@@ -1907,6 +1908,136 @@ it("scopes bulk disable-secure by p_slugs; empty array is no-op; NULL is fleet",
       )).rejects.toMatchObject({ code: "42501" });
       await db.exec("RESET ROLE");
     }
+  } finally {
+    await db.close();
+  }
+}, 30_000);
+
+
+it("enforces additive note revision, generation, permission epoch, and service-only CAS", async () => {
+  const db = await createCapabilityFixture();
+  try {
+    await applyCapabilityMigrations(db, capabilityMigrationPaths);
+    await db.exec("SET ROLE service_role");
+    await rpc(db, "capability_runtime_set", [true, true]);
+
+    const casTypes = [
+      "", "::bigint", "::bigint", "::bigint", "", "", "::integer", "::text[]",
+      "", "", "", "::integer",
+    ];
+    const cas = (values: unknown[]) => rpc<{
+      status: string;
+      created?: boolean;
+      noteId?: string;
+      revision?: number;
+      generation?: number;
+      permissionEpoch?: number;
+    }>(db, "capability_note_cas_save", values, casTypes);
+
+    const created = await cas([
+      "cas-note", 0, 1, 0, "YQ==", "one", 3, [], false, null, null, null,
+    ]);
+    expect(created).toMatchObject({
+      status: "ok",
+      created: true,
+      revision: 1,
+      generation: 1,
+      permissionEpoch: 0,
+    });
+
+    const saved = await cas([
+      "cas-note", 1, 1, 0, "YWI=", "two", 3, [], false, null, null, null,
+    ]);
+    expect(saved).toMatchObject({
+      status: "ok",
+      created: false,
+      revision: 2,
+      generation: 1,
+      permissionEpoch: 0,
+    });
+
+    expect(await cas([
+      "cas-note", 2, 1, 0, "YQ==", "", 0, [], true,
+      "s".repeat(16), "c".repeat(16), null,
+    ])).toMatchObject({ status: "invalid" });
+    await db.exec("RESET ROLE");
+    const afterNullIterations = (await db.query<{ is_encrypted: boolean }>(`
+      SELECT is_encrypted FROM public.notes WHERE slug = 'cas-note'
+    `)).rows[0];
+    expect(afterNullIterations.is_encrypted).toBe(false);
+    await db.exec("SET ROLE service_role");
+
+    expect(await cas([
+      "cas-note", 1, 1, 0, "YWM=", "stale", 5, [], false, null, null, null,
+    ])).toMatchObject({ status: "version_conflict", revision: 2, generation: 1 });
+
+    await db.exec("RESET ROLE");
+    await db.query(`
+      UPDATE public.notes
+      SET is_encrypted = true,
+          enc_salt = repeat('s', 16),
+          enc_check = repeat('c', 16),
+          enc_iterations = 100000,
+          encryption_version = 1
+      WHERE slug = 'cas-note'
+    `);
+    const afterEncryptionChange = (await db.query<{
+      revision: number;
+      generation: number;
+      permission_epoch: number;
+    }>(`
+      SELECT revision, generation, permission_epoch
+      FROM public.notes WHERE slug = 'cas-note'
+    `)).rows[0];
+    expect(afterEncryptionChange).toMatchObject({ generation: 2, permission_epoch: 0 });
+    expect(afterEncryptionChange.revision).toBeGreaterThan(2);
+    await db.exec("SET ROLE service_role");
+    expect(await cas([
+      "cas-note", afterEncryptionChange.revision, 1, 0, "YQ==", "stale generation", 15,
+      [], false, null, null, null,
+    ])).toMatchObject({ status: "generation_conflict", generation: 2 });
+
+    await db.exec("RESET ROLE");
+    await db.query(`
+      INSERT INTO public.note_capabilities(note_id, scope, token_hash, generation)
+      SELECT note_id, 'owner', repeat('a', 64), 1
+      FROM public.notes WHERE slug = 'cas-note'
+    `);
+    await db.query(`
+      UPDATE public.note_capabilities
+      SET revoked_at = statement_timestamp()
+      WHERE token_hash = repeat('a', 64)
+    `);
+    const current = (await db.query<{
+      revision: number;
+      generation: number;
+      permission_epoch: number;
+    }>(`
+      SELECT revision, generation, permission_epoch
+      FROM public.notes WHERE slug = 'cas-note'
+    `)).rows[0];
+    expect(current).toMatchObject({ generation: 2, permission_epoch: 2 });
+    await db.exec("SET ROLE service_role");
+    expect(await cas([
+      "cas-note", current.revision, current.generation, 0, "YQ==", "", 0,
+      [], true, "s".repeat(16), "c".repeat(16), 100000,
+    ])).toMatchObject({ status: "stale_permission_epoch", permissionEpoch: 2 });
+
+    await db.exec("RESET ROLE");
+    await db.exec("SET ROLE anon");
+    await expect(db.query(
+      "SELECT public.capability_note_cas_save($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",
+      ["cas-note", current.revision, current.generation, current.permission_epoch,
+        "YQ==", "x", 1, [], true, "s".repeat(16), "c".repeat(16), 100000],
+    )).rejects.toMatchObject({ code: "42501" });
+    await db.exec("RESET ROLE");
+    await db.exec("SET ROLE authenticated");
+    await expect(db.query(
+      "SELECT public.capability_note_cas_save($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",
+      ["cas-note", current.revision, current.generation, current.permission_epoch,
+        "YQ==", "x", 1, [], true, "s".repeat(16), "c".repeat(16), 100000],
+    )).rejects.toMatchObject({ code: "42501" });
+    await db.exec("RESET ROLE");
   } finally {
     await db.close();
   }
