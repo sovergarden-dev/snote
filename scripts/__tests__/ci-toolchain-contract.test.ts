@@ -200,7 +200,7 @@ describe("CI toolchain contract", () => {
   });
 
   it("scans complete git history with checksum-pinned Gitleaks on a weekly schedule", () => {
-    expect(ci).toContain('- cron: "17 5 * * 0"');
+    expect(ci).toContain('- cron: "17 5 * * 1"');
     expect(ci).toContain("fetch-depth: 0");
     expect(ci).toContain("bash scripts/run-gitleaks.sh");
     expect(gitleaksScript).toContain('VERSION="8.30.1"');
@@ -225,13 +225,13 @@ describe("CI toolchain contract", () => {
     ]);
   });
 
-  it("runs main-guard promptly on main pushes with read-only GitHub API permissions", () => {
+  it("runs main-guard on main pushes and the weekly schedule with issue reporting access", () => {
     const mainGuard = ci.split("  main-guard:")[1] ?? "";
 
     expect(mainGuard).toContain("name: main-guard");
-    expect(mainGuard).toContain(
-      "if: github.event_name == 'push' && github.ref == 'refs/heads/main'",
-    );
+    expect(mainGuard).toContain("github.event_name == 'push'");
+    expect(mainGuard).toContain("github.event_name == 'schedule'");
+    expect(mainGuard).toContain("github.ref == 'refs/heads/main'");
     expect(mainGuard).toContain("bun run scripts/main-guard.ts");
     expect(mainGuard).toContain("actions: read");
     expect(mainGuard).toContain("contents: read");
