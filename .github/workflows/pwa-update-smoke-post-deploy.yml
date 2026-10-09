@@ -65,7 +65,7 @@ permissions:
 jobs:
   decide:
     name: decide
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       run_smoke: ${{ steps.decide.outputs.run_smoke }}
@@ -97,7 +97,7 @@ jobs:
     name: pwa-update-smoke
     needs: decide
     if: needs.decide.outputs.run_smoke == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       SMOKE_BASE_URL: >-
