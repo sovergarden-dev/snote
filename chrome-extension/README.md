@@ -2,6 +2,10 @@
 
 A Manifest V3 Chrome extension that opens [note.syrin.online](https://note.syrin.online) in Chrome's side panel.
 
+## What's new in v1.3.7
+
+- **Built-in troubleshooting guide** — the fallback link opens a page packaged inside the extension, so help remains available without a repository URL.
+
 ## What's new in v1.3.6
 
 - **Ready handshake** — the panel now waits for a real `syrin:ready` postMessage from the app before hiding the loader, instead of trusting `iframe.onload`. Blank/error pages no longer look "loaded".
@@ -63,6 +67,8 @@ bun run scripts/verify-extension-zip.ts
 
 The fallback screen means the `syrin:ready` handshake did not arrive within
 12 s on either attempt. To diagnose:
+
+The fallback's **Troubleshooting guide** link opens the bundled `troubleshooting.html` page locally.
 
 1. Open the fallback's **Diagnostics** section. `Network state` reports
    `offline` when the browser knows it is disconnected; `online-unverified`

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Syrin Note — Troubleshooting</title>
+    <link rel="stylesheet" href="troubleshooting.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to guide</a>
+    <header class="hero">
+      <p class="eyebrow">SYRIN NOTE · SIDE PANEL</p>
+      <h1>Troubleshooting the fallback screen</h1>
+      <p class="lede">Use this guide when the side panel says it couldn’t load Syrin Note.</p>
+    </header>
+
+    <main id="main" class="guide">
+      <nav class="contents" aria-label="Guide contents">
+        <h2>On this page</h2>
+        <ul>
+          <li><a href="#meaning">What the fallback means</a></li>
+          <li><a href="#network">Read the network state</a></li>
+          <li><a href="#diagnostics">Copy or download diagnostics</a></li>
+          <li><a href="#csp">About CSP</a></li>
+          <li><a href="#steps">What to try next</a></li>
+        </ul>
+      </nav>
+
+      <section id="meaning" aria-labelledby="meaning-title">
+        <h2 id="meaning-title">What the fallback means</h2>
+        <p>
+          The side panel waits for a valid <code>syrin:ready</code> handshake from the app.
+          Each load attempt can wait up to 12 seconds; if the handshake does not arrive,
+          the panel retries once with a cache-busting URL. If the second attempt also has
+          no valid handshake, the fallback screen appears. The app may have loaded even
+          when the side panel did not receive the handshake.
+        </p>
+        <p>
+          A protocol-mismatch banner means the app and extension reported incompatible
+          handshake versions. Otherwise, use the network state and retry count below to
+          distinguish a browser-offline state from a load or handshake timeout.
+        </p>
+      </section>
+
+      <section id="network" aria-labelledby="network-title">
+        <h2 id="network-title">Read the network state</h2>
+        <dl class="facts">
+          <dt><code>offline</code></dt>
+          <dd>The browser reports that it is offline. Reconnect, then choose <strong>Retry</strong>.</dd>
+          <dt><code>online-unverified</code></dt>
+          <dd>
+            The browser does not report itself offline. This does not prove that the app
+            is reachable: the extension does not probe the app origin.
+          </dd>
+          <dt>Retry count</dt>
+          <dd>Shows whether the automatic retry ran before the fallback appeared.</dd>
+        </dl>
+      </section>
+
+      <section id="diagnostics" aria-labelledby="diagnostics-title">
+        <h2 id="diagnostics-title">Copy or download diagnostics</h2>
+        <ol>
+          <li>Open <strong>Diagnostics</strong> on the fallback screen.</li>
+          <li>Choose <strong>Copy diagnostics</strong> or <strong>Download diagnostics JSON</strong>.</li>
+          <li>Review the bundle before sharing it with the person helping you.</li>
+        </ol>
+        <p>
+          The bundle is sanitized and checked against its schema before it is copied or
+          downloaded. It records handshake and load status, retry count, a message timeline,
+          and optional device-local telemetry. It does not include note contents, note
+          slugs, capability tokens, sessions, URL paths, raw build identifiers, or email
+          addresses. Diagnostics are never uploaded automatically; sharing is your choice.
+        </p>
+      </section>
+
+      <section id="csp" class="callout" aria-labelledby="csp-title">
+        <h2 id="csp-title">About CSP</h2>
+        <p>
+          In this extension version, <code>cspFrameAncestors.reason = "not-inspected"</code>.
+          The extension does not inspect CSP across origins, so this field does not say
+          whether the host header is correct or incorrect.
+        </p>
+        <p>
+          If you maintain the app deployment and embedding still fails, ask its operator
+          to verify that the response includes
+          <code>Content-Security-Policy: frame-ancestors 'self' chrome-extension://*</code>.
+          That check belongs to the host deployment, not to the extension’s cross-origin
+          diagnostics.
+        </p>
+      </section>
+
+      <section id="steps" aria-labelledby="steps-title">
+        <h2 id="steps-title">What to try next</h2>
+        <ol>
+          <li>If the browser reports <code>offline</code>, reconnect and press <strong>Retry</strong>.</li>
+          <li>Choose <strong>Open in new tab</strong> to check whether the app works outside the side panel.</li>
+          <li>If the fallback returns, copy or download diagnostics and share them only after reviewing the contents.</li>
+        </ol>
+      </section>
+
+      <footer>
+        <p>This guide is included in the extension package and opens locally from the fallback screen.</p>
+      </footer>
+    </main>
+  </body>
+</html>
