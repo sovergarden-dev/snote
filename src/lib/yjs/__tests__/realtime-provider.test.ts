@@ -30,6 +30,11 @@ const ROOM_PREFIX = "test-room-generation-";
 const NOTE_ID = "d26ec6e7-038c-49c1-a767-8e38c0f9c1f0";
 const SESSION_ID = "session-test-01";
 const CONFIG: RealtimeHubConfig = { hubId: HUB_ID, hubUrl: "ws://localhost:8787" };
+const ROUTED_CONFIG: RealtimeHubConfig = {
+  hubId: "rt1",
+  hubUrl: "ws://localhost:8787/",
+  hubUrls: { rt1: "ws://localhost:8787/", rt2: "ws://localhost:8788/" },
+};
 
 function segment(value: unknown): string {
   return encodeBase64Url(encoder.encode(JSON.stringify(value)));
@@ -80,19 +85,22 @@ async function createTicketBundle(
   snapshot = "",
   permissionEpoch = 4,
   roomIdOverride?: string,
+  routing?: { hubId: "rt1" | "rt2"; assignmentEpoch: number; topologyEpoch: number },
 ): Promise<RealtimeTicketBundle> {
   const nowSeconds = Math.floor(Date.now() / 1000);
   const roomId = roomIdOverride ?? `${ROOM_PREFIX}${generation}-${"x".repeat(24)}`;
+  const hubId = routing?.hubId ?? HUB_ID;
   const rawWriteMacKey = new Uint8Array(32).fill(23 + generation);
   const rawRelayKey = new Uint8Array(32).fill(73 + generation);
   const ticket = await signJws({
     purpose: "syrin:ticket:v1",
-    aud: HUB_ID,
+    aud: hubId,
     iat: nowSeconds,
     exp: nowSeconds + 300,
     jti: `jti-${generation}-${sessionId}`,
-    hub_id: HUB_ID,
-    assignment_epoch: "epoch-a",
+    hub_id: hubId,
+    assignment_epoch: routing?.assignmentEpoch ?? "epoch-a",
+    ...(routing ? { topology_epoch: routing.topologyEpoch } : {}),
     room_id: roomId,
     generation,
     permission_epoch: permissionEpoch,
@@ -112,6 +120,11 @@ async function createTicketBundle(
     generation,
     permissionEpoch,
     ydocState: snapshot,
+    ...(routing ? {
+      hub_id: hubId,
+      assignment_epoch: routing.assignmentEpoch,
+      topology_epoch: routing.topologyEpoch,
+    } : {}),
   };
 }
 
@@ -239,6 +252,208 @@ async function connectProvider(provider: RealtimeYjsProvider): Promise<FakeWebSo
   const socket = (provider as unknown as { socket: FakeWebSocket }).socket;
   return socket;
 }
+
+describe("routed realtime provider recovery", () => {
+  it("opens the WebSocket on the URL selected by the renewed ticket hub_id", async () => {
+    const keys = await createKeyFixture();
+    const initialApi: RealtimeEdgeApi = {
+      issueTicket: async (_slug, sessionId) => createTicketBundle(
+        keys,
+        sessionId,
+        7,
+        "",
+        4,
+        undefined,
+        { hubId: "rt1", assignmentEpoch: 2, topologyEpoch: 1 },
+      ),
+      casSave: async () => { throw new Error("unexpected CAS save"); },
+    };
+    const prelude = await prepareRealtimeNote("random-test-note", {
+      api: initialApi,
+      config: ROUTED_CONFIG,
+      pinnedKeys: keys.pinnedKeys,
+      sessionId: SESSION_ID,
+    });
+    const reconnectApi: RealtimeEdgeApi = {
+      issueTicket: async (_slug, sessionId) => createTicketBundle(
+        keys,
+        sessionId,
+        7,
+        "",
+        4,
+        undefined,
+        { hubId: "rt2", assignmentEpoch: 3, topologyEpoch: 2 },
+      ),
+      casSave: async () => { throw new Error("unexpected CAS save"); },
+    };
+    const urls: string[] = [];
+    const doc = new Y.Doc();
+    const outbox = new RealtimeOutbox(`provider-route-${crypto.randomUUID()}`);
+    const provider = new RealtimeYjsProvider("random-test-note", doc, {
+      prelude,
+      api: reconnectApi,
+      outbox,
+      socketFactory: (url) => {
+        urls.push(url);
+        return new FakeWebSocket(url, prelude.ticket.roomId) as unknown as WebSocket;
+      },
+    });
+    doc.getText("content").insert(0, "unsent across hub change");
+    await provider.whenOutboxPersisted();
+    const pendingBefore = await outbox.list("random-test-note", 7);
+    expect(pendingBefore).toHaveLength(1);
+    await (provider as unknown as { openSocket(reconnecting: boolean): Promise<void> })
+      .openSocket(true);
+    for (let attempt = 0; attempt < 50 && !provider.connected; attempt += 1) await Promise.resolve();
+    expect(urls[0]).toContain("localhost:8788/room/");
+    expect(provider.connected).toBe(true);
+    expect(await outbox.list("random-test-note", 7)).toMatchObject([
+      { updateId: pendingBefore[0]!.updateId },
+    ]);
+    await provider.destroy();
+    doc.destroy();
+  });
+
+  it("reconnects after a hub drain using the newly issued hub ticket and retains outbox rows", async () => {
+    const keys = await createKeyFixture();
+    const initialApi: RealtimeEdgeApi = {
+      issueTicket: async (_slug, sessionId) => createTicketBundle(
+        keys,
+        sessionId,
+        7,
+        "",
+        4,
+        undefined,
+        { hubId: "rt1", assignmentEpoch: 2, topologyEpoch: 1 },
+      ),
+      casSave: async () => { throw new Error("unexpected CAS save"); },
+    };
+    const prelude = await prepareRealtimeNote("random-test-note", {
+      api: initialApi,
+      config: ROUTED_CONFIG,
+      pinnedKeys: keys.pinnedKeys,
+      sessionId: SESSION_ID,
+    });
+    const issueTicket = vi.fn(async (_slug: string, sessionId: string) => createTicketBundle(
+      keys,
+      sessionId,
+      7,
+      "",
+      4,
+      undefined,
+      { hubId: "rt2", assignmentEpoch: 3, topologyEpoch: 2 },
+    ));
+    const api: RealtimeEdgeApi = {
+      issueTicket,
+      casSave: initialApi.casSave,
+    };
+    const urls: string[] = [];
+    const doc = new Y.Doc();
+    const outbox = new RealtimeOutbox(`provider-drain-${crypto.randomUUID()}`);
+    const provider = new RealtimeYjsProvider("random-test-note", doc, {
+      prelude,
+      api,
+      outbox,
+      socketFactory: (url) => {
+        urls.push(url);
+        return new FakeWebSocket(url, prelude.ticket.roomId) as unknown as WebSocket;
+      },
+    });
+
+    const initialSocket = await connectProvider(provider);
+    doc.getText("content").insert(0, "unsent through drain");
+    await provider.whenOutboxPersisted();
+    const pendingBefore = await outbox.list("random-test-note", 7);
+    expect(pendingBefore).toHaveLength(1);
+
+    initialSocket.serverSend({
+      v: CURRENT_PROTOCOL_VERSION,
+      message_type: "drain",
+      opaque_room_id: prelude.ticket.roomId,
+    });
+
+    await vi.waitFor(() => expect(urls).toHaveLength(2));
+    await vi.waitFor(() => expect(provider.connected).toBe(true));
+    expect(urls[0]).toContain("localhost:8787/room/");
+    expect(urls[1]).toContain("localhost:8788/room/");
+    expect(issueTicket).toHaveBeenCalledOnce();
+    expect(await outbox.list("random-test-note", 7)).toMatchObject([
+      { updateId: pendingBefore[0]!.updateId },
+    ]);
+
+    await provider.destroy();
+    doc.destroy();
+  });
+
+  it("reports a single unreachable event only when the WebSocket never opened", async () => {
+    const keys = await createKeyFixture();
+    const initialApi: RealtimeEdgeApi = {
+      issueTicket: async (_slug, sessionId) => createTicketBundle(
+        keys,
+        sessionId,
+        7,
+        "",
+        4,
+        undefined,
+        { hubId: "rt1", assignmentEpoch: 2, topologyEpoch: 1 },
+      ),
+      casSave: async () => { throw new Error("unexpected CAS save"); },
+    };
+    const prelude = await prepareRealtimeNote("random-test-note", {
+      api: initialApi,
+      config: ROUTED_CONFIG,
+      pinnedKeys: keys.pinnedKeys,
+      sessionId: SESSION_ID,
+    });
+    const reportHubUnreachable = vi.fn(async () => "hub-change");
+    const api: RealtimeEdgeApi = {
+      issueTicket: initialApi.issueTicket,
+      reportHubUnreachable,
+      casSave: initialApi.casSave,
+    };
+    class NeverOpenWebSocket extends EventTarget {
+      static readonly CONNECTING = 0;
+      static readonly OPEN = 1;
+      static readonly CLOSING = 2;
+      static readonly CLOSED = 3;
+      readyState = NeverOpenWebSocket.CONNECTING;
+      readonly url: string;
+      constructor(url: string) {
+        super();
+        this.url = url;
+      }
+      send(): void {}
+      close(): void {
+        this.readyState = NeverOpenWebSocket.CLOSED;
+        this.dispatchEvent(new Event("close"));
+      }
+      failBeforeOpen(): void {
+        this.dispatchEvent(new Event("error"));
+        this.close();
+      }
+    }
+    let socket: NeverOpenWebSocket | null = null;
+    const provider = new RealtimeYjsProvider("random-test-note", new Y.Doc(), {
+      prelude,
+      api,
+      outbox: new RealtimeOutbox(`provider-report-${crypto.randomUUID()}`),
+      socketFactory: (url) => {
+        socket = new NeverOpenWebSocket(url);
+        return socket as unknown as WebSocket;
+      },
+    });
+    await (provider as unknown as { openSocket(reconnecting: boolean): Promise<void> })
+      .openSocket(false);
+    socket!.failBeforeOpen();
+    await vi.waitFor(() => expect(reportHubUnreachable).toHaveBeenCalledOnce());
+    expect(reportHubUnreachable).toHaveBeenCalledWith(
+      "random-test-note",
+      prelude.sessionId,
+      prelude.ticket.ticket,
+    );
+    await provider.destroy();
+  });
+});
 
 async function waitForRow(outbox: RealtimeOutbox, generation = 7): Promise<void> {
   for (let attempt = 0; attempt < 50; attempt += 1) {

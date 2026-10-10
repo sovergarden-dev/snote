@@ -111,7 +111,7 @@ describe("capability primitives", () => {
     expect(manage).toContain('from "../_shared/slug.ts"');
     expect(session).not.toContain("const SLUG_RE");
     expect(manage).not.toContain("const SLUG_RE");
-    expect(session.match(/isUsableSlug\(slug\)/g) ?? []).toHaveLength(7);
+    expect(session.match(/isUsableSlug\(slug\)/g) ?? []).toHaveLength(8);
     expect(manage.match(/isUsableSlug\(slug\)/g) ?? []).toHaveLength(1);
 
     const slugPath = resolve(root, "supabase/functions/_shared/slug.ts");

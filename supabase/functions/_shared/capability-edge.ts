@@ -115,6 +115,66 @@ type CapabilityDatabase = {
         Args: { p_slug: string; p_auth_user_id: string };
         Returns: CapabilityRpcResponse;
       };
+      realtime_topology_read: {
+        Args: Record<string, never>;
+        Returns: CapabilityRpcResponse;
+      };
+      realtime_hub_ramp_state_read: {
+        Args: Record<string, never>;
+        Returns: CapabilityRpcResponse;
+      };
+      realtime_hub_ramp_state_cas: {
+        Args: {
+          p_expected_state_version: number;
+          p_expected_topology_version: number;
+          p_expected_assignment_epoch: number;
+          p_runtime: Record<string, unknown>;
+        };
+        Returns: CapabilityRpcResponse;
+      };
+      realtime_topology_update: {
+        Args: {
+          p_expected_version: number;
+          p_min_fallback_bp: number;
+          p_hubs: Record<string, unknown>;
+          p_ramp: Record<string, unknown>;
+          p_actor_id: string;
+          p_reason: string;
+          p_emergency_override: boolean;
+        };
+        Returns: CapabilityRpcResponse;
+      };
+      realtime_hub_probe_claim: {
+        Args: { p_hub_id: string; p_assignment_epoch: number };
+        Returns: CapabilityRpcResponse;
+      };
+      realtime_hub_probe_complete: {
+        Args: {
+          p_hub_id: string;
+          p_assignment_epoch: number;
+          p_lease_id: string;
+          p_probe_succeeded: boolean;
+        };
+        Returns: CapabilityRpcResponse;
+      };
+      realtime_hub_health_read: {
+        Args: { p_hub_id: string; p_assignment_epoch: number };
+        Returns: CapabilityRpcResponse;
+      };
+      realtime_room_assignment_read: {
+        Args: { p_room_key_hash: string };
+        Returns: CapabilityRpcResponse;
+      };
+      realtime_room_assignment_apply: {
+        Args: {
+          p_room_key_hash: string;
+          p_bucket: number;
+          p_target_hub_id: string;
+          p_topology_epoch: number;
+          p_expected_assignment_epoch: number | null;
+        };
+        Returns: CapabilityRpcResponse;
+      };
       capability_note_realtime_save: {
         Args: {
           p_slug: string;

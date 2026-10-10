@@ -1,8 +1,8 @@
 import type { AddressInfo } from "node:net";
 import * as Y from "yjs";
-import { createNodeHubServer } from "../src/lib/realtime/hub/node-adapter";
-import { decodeBase64Url, encodeBase64Url } from "../src/lib/realtime/protocol";
-import { createTestSigningKeys, TEST_HUB_ID } from "../src/lib/realtime/hub/__tests__/test-crypto";
+import { createNodeHubServer, type NodeHubServer } from "../src/lib/realtime/hub/node-adapter";
+import { decodeBase64Url, encodeBase64Url, verifyProtocolJws } from "../src/lib/realtime/protocol";
+import { createTestSigningKeys } from "../src/lib/realtime/hub/__tests__/test-crypto";
 import { base64ToBytes, bytesToBase64 } from "../src/lib/yjs/base64";
 import {
   computeCasExpectedMac,
@@ -33,6 +33,17 @@ const corsHeaders = {
   "cache-control": "no-store",
 };
 
+type LocalHubId = "rt1" | "rt2";
+type LocalHubFixture = {
+  id: LocalHubId;
+  server: NodeHubServer;
+  webSocketUrl: string;
+  httpUrl: string;
+  disable(): Promise<void>;
+  isDisabled(): boolean;
+  upgradeCount(): number;
+};
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -41,7 +52,7 @@ function json(body: unknown, status = 200): Response {
 }
 
 function roomIdForSlug(slug: string): Promise<string> {
-  return crypto.subtle.digest("SHA-256", encoder.encode(`syrin:pr182:e2e:${slug}`))
+  return crypto.subtle.digest("SHA-256", encoder.encode(`syrin:realtime:local-e2e:${slug}`))
     .then((digest) => `room_${encodeBase64Url(new Uint8Array(digest)).slice(0, 32)}`);
 }
 
@@ -53,6 +64,15 @@ type FakeNoteState = {
   casAccepted: number;
   casConflicts: number;
   expectedRevisions: number[];
+  hubId: LocalHubId;
+  assignmentEpoch: number;
+  topologyEpoch: number;
+  issuedHubIds: LocalHubId[];
+  issuedTickets: Map<string, { sessionId: string; hubId: LocalHubId; assignmentEpoch: number }>;
+  hubReportCount: number;
+  probeFailures: number;
+  casBlocked: boolean;
+  requireConcurrentCas: boolean;
   firstPairReady: Promise<void>;
   releaseFirstPair: () => void;
 };
@@ -68,6 +88,15 @@ function createFakeNoteState(): FakeNoteState {
     casAccepted: 0,
     casConflicts: 0,
     expectedRevisions: [],
+    hubId: "rt1",
+    assignmentEpoch: 1,
+    topologyEpoch: 1,
+    issuedHubIds: [],
+    issuedTickets: new Map(),
+    hubReportCount: 0,
+    probeFailures: 0,
+    casBlocked: false,
+    requireConcurrentCas: false,
     firstPairReady,
     releaseFirstPair,
   };
@@ -90,7 +119,51 @@ function noteContent(snapshot: Uint8Array): string {
   }
 }
 
-async function startLocalEdge(keys: Awaited<ReturnType<typeof createTestSigningKeys>>) {
+async function startLocalHub(
+  keys: Awaited<ReturnType<typeof createTestSigningKeys>>,
+  id: LocalHubId,
+): Promise<LocalHubFixture> {
+  const replayed = new Set<string>();
+  const server = createNodeHubServer({
+    config: { hubId: id, pinnedKeys: keys.pinnedKeys },
+    replayStore: {
+      async consumeJti(jti, expiresAtSeconds, nowSeconds) {
+        if (expiresAtSeconds <= nowSeconds || replayed.has(jti)) return false;
+        replayed.add(jti);
+        return true;
+      },
+    },
+    drainWindowMilliseconds: 0,
+  });
+  let upgradeCount = 0;
+  let disabled = false;
+  server.on("upgrade", () => { upgradeCount += 1; });
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error(`Local ${id} hub did not bind a TCP port`);
+  const host = `127.0.0.1:${(address as AddressInfo).port}`;
+  return {
+    id,
+    server,
+    webSocketUrl: `ws://${host}`,
+    httpUrl: `http://${host}`,
+    async disable() {
+      if (disabled) return;
+      disabled = true;
+      await server.drain();
+    },
+    isDisabled: () => disabled,
+    upgradeCount: () => upgradeCount,
+  };
+}
+
+async function startLocalEdge(
+  keys: Awaited<ReturnType<typeof createTestSigningKeys>>,
+  hubs: Record<LocalHubId, LocalHubFixture>,
+) {
   const writeMacMasterKey = crypto.getRandomValues(new Uint8Array(32));
   const relayMasterKey = crypto.getRandomValues(new Uint8Array(32));
   const notes = new Map<string, FakeNoteState>();
@@ -101,6 +174,24 @@ async function startLocalEdge(keys: Awaited<ReturnType<typeof createTestSigningK
       notes.set(slug, note);
     }
     return note;
+  };
+  const probeHub = async (hubId: LocalHubId): Promise<boolean> => {
+    const now = Math.floor(Date.now() / 1_000);
+    const token = await keys.signProbe({
+      aud: hubId,
+      hub_id: hubId,
+      iat: now,
+      exp: now + 30,
+    });
+    try {
+      const response = await fetch(`${hubs[hubId].httpUrl}/healthz`, {
+        headers: { authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(2_000),
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
   };
   const server = Bun.serve({
     hostname: "127.0.0.1",
@@ -120,7 +211,38 @@ async function startLocalEdge(keys: Awaited<ReturnType<typeof createTestSigningK
           casConflicts: note.casConflicts,
           expectedRevisions: note.expectedRevisions,
           content: noteContent(note.snapshot),
+          hubId: note.hubId,
+          assignmentEpoch: note.assignmentEpoch,
+          topologyEpoch: note.topologyEpoch,
+          issuedHubIds: note.issuedHubIds,
+          hubReportCount: note.hubReportCount,
+          probeFailures: note.probeFailures,
+          casBlocked: note.casBlocked,
+          hub1Disabled: hubs.rt1.isDisabled(),
+          hub1Upgrades: hubs.rt1.upgradeCount(),
+          hub2Upgrades: hubs.rt2.upgradeCount(),
         });
+      }
+      if (request.method === "POST" && url.pathname === "/_test/control") {
+        let control: Record<string, unknown>;
+        try {
+          const parsed: unknown = await request.json();
+          if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+            return json({ error: "invalid_control" }, 400);
+          }
+          control = parsed as Record<string, unknown>;
+        } catch {
+          return json({ error: "invalid_control" }, 400);
+        }
+        const slug = typeof control.slug === "string" ? control.slug : "";
+        if (!/^[a-z0-9-]{8,60}$/.test(slug)) return json({ error: "invalid_slug" }, 400);
+        const note = noteForSlug(slug);
+        if (control.operation === "block-cas") note.casBlocked = true;
+        else if (control.operation === "unblock-cas") note.casBlocked = false;
+        else if (control.operation === "disable-hub1") await hubs.rt1.disable();
+        else if (control.operation === "enable-cas-conflict") note.requireConcurrentCas = true;
+        else return json({ error: "invalid_control" }, 400);
+        return json({ status: "ok", operation: control.operation });
       }
       if (url.pathname === "/auth/v1/user" && request.method === "GET") {
         return json({ id: "00000000-0000-4000-8000-000000000001", aud: "authenticated", role: "authenticated" });
@@ -166,7 +288,7 @@ async function startLocalEdge(keys: Awaited<ReturnType<typeof createTestSigningK
           exists: true,
           note: {
             slug,
-            content: `# Local sync test\n\nIsolated PR #182 note fixture. ${slug}`,
+            content: `# Local sync test\n\nIsolated loopback note fixture. ${slug}`,
             ydocState: "",
             isEncrypted: false,
             salt: null,
@@ -188,15 +310,17 @@ async function startLocalEdge(keys: Awaited<ReturnType<typeof createTestSigningK
         const sessionId = typeof body.session_id === "string" ? body.session_id : "";
         if (!/^[A-Za-z0-9_-]{8,128}$/.test(sessionId)) return json({ error: "invalid_session_id" }, 400);
         const now = Math.floor(Date.now() / 1_000);
+        const hubId = note.hubId;
         const relayKey = await deriveRelayKey(relayMasterKey, roomId, 1);
         const writeMacKey = await deriveWriteMacKey(writeMacMasterKey, roomId, 1);
         const ticket = await keys.signTicket({
-          aud: TEST_HUB_ID,
-          hub_id: TEST_HUB_ID,
+          aud: hubId,
+          hub_id: hubId,
           room_id: roomId,
           session_id: sessionId,
           generation: 1,
-          assignment_epoch: 1,
+          assignment_epoch: note.assignmentEpoch,
+          topology_epoch: note.topologyEpoch,
           permission_epoch: 1,
           permission: "edit",
           permissions: ["read", "write"],
@@ -204,9 +328,19 @@ async function startLocalEdge(keys: Awaited<ReturnType<typeof createTestSigningK
           iat: now,
           exp: now + 300,
         });
+        note.issuedHubIds.push(hubId);
+        note.issuedTickets.set(ticket, { sessionId, hubId, assignmentEpoch: note.assignmentEpoch });
+        while (note.issuedTickets.size > 32) {
+          const oldestTicket = note.issuedTickets.keys().next().value;
+          if (oldestTicket === undefined) break;
+          note.issuedTickets.delete(oldestTicket);
+        }
         return json({
           ticket,
           roomId,
+          hub_id: hubId,
+          assignment_epoch: note.assignmentEpoch,
+          topology_epoch: note.topologyEpoch,
           write_mac_key: encodeBase64Url(writeMacKey),
           relay_key: encodeBase64Url(relayKey),
           relay_key_kid: "e2e-relay-v1",
@@ -218,7 +352,48 @@ async function startLocalEdge(keys: Awaited<ReturnType<typeof createTestSigningK
         });
       }
 
+      if (body.action === "realtime-hub-report") {
+        const ticket = typeof body.ticket === "string" ? body.ticket : "";
+        const sessionId = typeof body.session_id === "string" ? body.session_id : "";
+        const issued = note.issuedTickets.get(ticket);
+        if (body.report !== "hub_unreachable" || !issued || issued.sessionId !== sessionId) {
+          return json({ error: "invalid_hub_report" }, 401);
+        }
+        let claims: Record<string, unknown>;
+        try {
+          claims = await verifyProtocolJws(ticket, {
+            tokenType: "ticket",
+            pinnedKeys: keys.pinnedKeys,
+            expectedAudience: issued.hubId,
+            nowSeconds: Math.floor(Date.now() / 1_000),
+          });
+        } catch {
+          return json({ error: "invalid_hub_report_ticket" }, 401);
+        }
+        if (
+          claims.session_id !== sessionId
+          || claims.room_id !== roomId
+          || claims.hub_id !== issued.hubId
+          || claims.assignment_epoch !== issued.assignmentEpoch
+          || note.hubId !== issued.hubId
+          || note.assignmentEpoch !== issued.assignmentEpoch
+        ) return json({ error: "stale_hub_report" }, 409);
+
+        note.hubReportCount += 1;
+        if (!await probeHub(issued.hubId)) {
+          note.probeFailures += 1;
+          if (issued.hubId === "rt1" && !hubs.rt2.isDisabled() && await probeHub("rt2")) {
+            note.hubId = "rt2";
+            note.assignmentEpoch += 1;
+            return json({ status: "hub-change", hub_id: note.hubId });
+          }
+          return json({ status: "hub-unavailable", hub_id: note.hubId }, 503);
+        }
+        return json({ status: "hub-healthy", hub_id: note.hubId });
+      }
+
       if (body.action === "realtime-cas-save") {
+        if (note.casBlocked) return json({ error: "local_cas_paused" }, 503);
         const generation = Number(body.generation);
         const permissionEpoch = Number(body.permissionEpoch);
         const expectedRevision = Number(body.expectedRevision);
@@ -234,7 +409,7 @@ async function startLocalEdge(keys: Awaited<ReturnType<typeof createTestSigningK
         }
         note.casAttempts += 1;
         note.expectedRevisions.push(expectedRevision);
-        if (note.casAttempts <= 2) {
+        if (note.requireConcurrentCas && note.casAttempts <= 2) {
           if (note.casAttempts === 2) note.releaseFirstPair();
           await note.firstPairReady;
         }
@@ -309,52 +484,46 @@ async function startLocalEdge(keys: Awaited<ReturnType<typeof createTestSigningK
 
 async function main(): Promise<number> {
   const keys = await createTestSigningKeys();
-  const replayed = new Set<string>();
-  const hub = createNodeHubServer({
-    config: { hubId: TEST_HUB_ID, pinnedKeys: keys.pinnedKeys },
-    replayStore: {
-      async consumeJti(jti, expiresAtSeconds, nowSeconds) {
-        if (expiresAtSeconds <= nowSeconds || replayed.has(jti)) return false;
-        replayed.add(jti);
-        return true;
-      },
-    },
-  });
-  await new Promise<void>((resolve, reject) => {
-    hub.once("error", reject);
-    hub.listen(0, "127.0.0.1", resolve);
-  });
-  const hubAddress = hub.address();
-  if (!hubAddress || typeof hubAddress === "string") throw new Error("Local hub did not bind a TCP port");
-  const hubUrl = `ws://127.0.0.1:${(hubAddress as AddressInfo).port}`;
-  const edge = await startLocalEdge(keys);
-  const edgeUrl = `http://127.0.0.1:${edge.port}`;
-
   const env: Record<string, string> = Object.fromEntries(
     Object.entries(process.env).filter(([key, value]) => value !== undefined) as [string, string][],
   );
   for (const key of Object.keys(env)) {
-    if (key.startsWith("VITE_SUPABASE_")) delete env[key];
+    if (key.startsWith("VITE_SUPABASE_") || [
+      "VITE_REALTIME_HUB_ID",
+      "VITE_REALTIME_HUB_URL",
+      "VITE_REALTIME_HUB_URLS_JSON",
+      "VITE_REALTIME_HUBS_JSON",
+    ].includes(key)) delete env[key];
   }
-  Object.assign(env, {
-    VITE_SUPABASE_URL: edgeUrl,
-    VITE_SUPABASE_PUBLISHABLE_KEY: "fake-invalid-local-publishable-key",
-    VITE_SUPABASE_PROJECT_ID: "fake-invalid-local-project-id",
-    VITE_TURNSTILE_SITE_KEY: "",
-    VITE_CAPABILITY_AUTH_ENABLED: "true",
-    VITE_CAPABILITY_ROUTES_ENABLED: "true",
-    VITE_REALTIME_HUB_SYNC_ENABLED: "true",
-    VITE_REALTIME_HUB_ID: TEST_HUB_ID,
-    VITE_REALTIME_HUB_URL: hubUrl,
-    VITE_REALTIME_TICKET_PUBLIC_KEYS_JSON: JSON.stringify({ "test-ticket-probe": keys.ticketPublicKeyBase64Url }),
-    VITE_REALTIME_SAVED_ACK_PUBLIC_KEYS_JSON: JSON.stringify({ "test-saved-ack": keys.savedAckPublicKeyBase64Url }),
-    PLAYWRIGHT_BASE_URL: APP_URL,
-  });
-
+  let hub1: LocalHubFixture | undefined;
+  let hub2: LocalHubFixture | undefined;
+  let edge: { port: number; stop(closeActiveConnections?: boolean): void } | undefined;
   let vite: Awaited<ReturnType<typeof createViteServer>> | undefined;
   try {
+    hub1 = await startLocalHub(keys, "rt1");
+    hub2 = await startLocalHub(keys, "rt2");
+    edge = await startLocalEdge(keys, { rt1: hub1, rt2: hub2 });
+    const edgeUrl = `http://127.0.0.1:${edge.port}`;
+    Object.assign(env, {
+      VITE_SUPABASE_URL: edgeUrl,
+      VITE_SUPABASE_PUBLISHABLE_KEY: "fake-invalid-local-publishable-key",
+      VITE_SUPABASE_PROJECT_ID: "fake-invalid-local-project-id",
+      VITE_TURNSTILE_SITE_KEY: "",
+      VITE_CAPABILITY_AUTH_ENABLED: "true",
+      VITE_CAPABILITY_ROUTES_ENABLED: "true",
+      VITE_REALTIME_HUB_SYNC_ENABLED: "true",
+      VITE_REALTIME_HUBS_JSON: JSON.stringify({ rt1: hub1.webSocketUrl, rt2: hub2.webSocketUrl }),
+      VITE_REALTIME_TICKET_PUBLIC_KEYS_JSON: JSON.stringify({ "test-ticket-probe": keys.ticketPublicKeyBase64Url }),
+      VITE_REALTIME_SAVED_ACK_PUBLIC_KEYS_JSON: JSON.stringify({ "test-saved-ack": keys.savedAckPublicKeyBase64Url }),
+      PLAYWRIGHT_BASE_URL: APP_URL,
+    });
     for (const key of Object.keys(process.env)) {
-      if (key.startsWith("VITE_SUPABASE_")) delete process.env[key];
+      if (key.startsWith("VITE_SUPABASE_") || [
+        "VITE_REALTIME_HUB_ID",
+        "VITE_REALTIME_HUB_URL",
+        "VITE_REALTIME_HUB_URLS_JSON",
+        "VITE_REALTIME_HUBS_JSON",
+      ].includes(key)) delete process.env[key];
     }
     Object.assign(process.env, env);
     vite = await createViteServer({
@@ -367,8 +536,8 @@ async function main(): Promise<number> {
     return await playwright.exited;
   } finally {
     await vite?.close();
-    edge.stop(true);
-    await hub.drain();
+    edge?.stop(true);
+    await Promise.all([hub1?.server.drain(), hub2?.server.drain()]);
   }
 }
 

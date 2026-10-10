@@ -11,12 +11,14 @@ import {
   deriveOpaqueRoomId,
   deriveRelayKey,
   deriveWriteMacKey,
+  issueRealtimeHealthProbeToken,
   issueRealtimeTicket,
   issueRealtimeTicketFromContext,
   loadRealtimeSigningConfig,
   mergePlainYjsSnapshot,
   savedAckForCommittedCas,
   stateVectorsEqual,
+  verifyRealtimeTicketClaims,
   type RealtimeConfigInput,
   type RealtimeSigningConfig,
   type YjsAdapter,
@@ -131,6 +133,77 @@ describe("Edge realtime ticket and saved-ack signing", () => {
     expect(ticket.relay_key).toBeTruthy();
     expect(ticket.relay_key_kid).toBe("relay-test-v1");
     expect(Object.hasOwn(ticket, "write_mac_key")).toBe(false);
+  });
+
+  it("binds routed tickets to a hub and room-local epoch and verifies them before report handling", async () => {
+    const { signing, ticketPair, ackPair } = await config();
+    const roomId = await deriveOpaqueRoomId(signing.roomHmacKey, "note-route", 8);
+    const route = { hubId: "rt2", assignmentEpoch: 4, topologyEpoch: 12 };
+    const issued = await issueRealtimeTicket({
+      roomId,
+      generation: 8,
+      permissionEpoch: 3,
+      permission: "edit",
+      sessionId: "session-route-1",
+      nowSeconds: NOW,
+      routing: route,
+    }, signing);
+    expect(issued).toMatchObject({
+      hub_id: "rt2",
+      assignment_epoch: 4,
+      topology_epoch: 12,
+    });
+    const claims = await verifyProtocolJws(issued.ticket, {
+      tokenType: "ticket",
+      expectedAudience: "rt2",
+      nowSeconds: NOW,
+      pinnedKeys: {
+        ticketAndProbe: await pin(ticketPair, signing.ticketKid),
+        savedAck: await pin(ackPair, signing.savedAckKid),
+      },
+    });
+    expect(claims).toMatchObject({
+      hub_id: "rt2",
+      aud: "rt2",
+      assignment_epoch: 4,
+      topology_epoch: 12,
+    });
+    await expect(verifyRealtimeTicketClaims(issued.ticket, signing, NOW))
+      .resolves.toMatchObject({ ok: true, claims: { assignment_epoch: 4, topology_epoch: 12 } });
+    await expect(verifyRealtimeTicketClaims(issued.ticket, signing, NOW + 300))
+      .resolves.toEqual({ ok: false, status: "expired" });
+    const [headerPart, payloadPart, signaturePart] = issued.ticket.split(".");
+    await expect(verifyRealtimeTicketClaims(
+      `${headerPart}.${payloadPart}.A${signaturePart.slice(1)}`,
+      signing,
+      NOW,
+    )).resolves.toEqual({ ok: false, status: "invalid" });
+  });
+
+  it("signs a short-lived health probe token without room, session, or JTI claims", async () => {
+    const { signing } = await config();
+    const token = await issueRealtimeHealthProbeToken("rt2", signing, NOW);
+    const [headerPart, claimsPart, signaturePart] = token.split(".");
+    const header = JSON.parse(new TextDecoder().decode(decodeBase64Url(headerPart)));
+    const claims = JSON.parse(new TextDecoder().decode(decodeBase64Url(claimsPart)));
+    const signatureValid = await crypto.subtle.verify(
+      { name: "Ed25519" },
+      signing.ticketPublicKey,
+      decodeBase64Url(signaturePart) as BufferSource,
+      new TextEncoder().encode(`${headerPart}.${claimsPart}`),
+    );
+    expect(header).toMatchObject({ alg: "EdDSA", kid: signing.ticketKid, typ: "syrin-health-probe+jwt" });
+    expect(claims).toMatchObject({
+      purpose: "syrin:healthz:v1",
+      aud: "rt2",
+      hub_id: "rt2",
+      iat: NOW,
+      exp: NOW + 30,
+    });
+    expect(signatureValid).toBe(true);
+    expect(claims).not.toHaveProperty("room_id");
+    expect(claims).not.toHaveProperty("session_id");
+    expect(claims).not.toHaveProperty("jti");
   });
 
   it("validates the client session binding before signing", async () => {

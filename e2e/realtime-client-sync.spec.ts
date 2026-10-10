@@ -1,8 +1,6 @@
-// PR #182-only exception: this E2E opens one randomly generated /slug in two
-// browser contexts. The dedicated Bun runner overrides all three VITE_SUPABASE_*
-// values with fake/local values, serves Edge/API and Node hub locally, and this
-// test blocks every non-loopback HTTP(S) request and fails if one is attempted.
-// Do not reuse this exception or fixture for other E2E suites.
+// Dedicated local-only realtime E2E. The Bun runner uses fake/local Supabase,
+// Edge and two Node hubs; this test blocks every non-loopback HTTP(S)/WebSocket
+// request and fails if one is attempted. Do not reuse this fixture for other suites.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1"]);
@@ -118,6 +116,13 @@ test("flagged /slug concurrent edits survive revision conflict and both contexts
     await expect(secondEditor).toBeVisible({ timeout: 20_000 });
     expect(firstPage.context()).not.toBe(secondPage.context());
 
+    const edgeUrl = process.env.VITE_SUPABASE_URL;
+    if (!edgeUrl) throw new Error("local fake Edge URL is not set");
+    const barrier = await firstContext.request.post(`${edgeUrl}/_test/control`, {
+      data: { operation: "enable-cas-conflict", slug },
+    });
+    expect(barrier.ok()).toBe(true);
+
     const firstMarker = `context-one-${crypto.randomUUID()}`;
     const secondMarker = `context-two-${crypto.randomUUID()}`;
     const appendMarker = async (editor: typeof firstEditor, marker: string) => {
@@ -135,8 +140,6 @@ test("flagged /slug concurrent edits survive revision conflict and both contexts
     await expect(secondEditor).toContainText(firstMarker, { timeout: 20_000 });
     await expect(secondEditor).toContainText(secondMarker, { timeout: 20_000 });
 
-    const edgeUrl = process.env.VITE_SUPABASE_URL;
-    if (!edgeUrl) throw new Error("local fake Edge URL is not set");
     const inspectUrl = `${edgeUrl}/_test/notes/${encodeURIComponent(slug)}`;
     await expect.poll(async () => {
       const response = await firstContext.request.get(inspectUrl);
@@ -169,5 +172,82 @@ test("flagged /slug concurrent edits survive revision conflict and both contexts
     expect(externalWebSockets).toEqual([]);
   } finally {
     await Promise.all([firstContext.close(), secondContext.close()]);
+  }
+});
+
+test("routes from disabled rt1 to rt2 and preserves pending outbox through the hub change", async ({ browser }) => {
+  const slug = `rt-e2e-failover-${crypto.randomUUID().slice(0, 8)}`;
+  const blockedRequests: string[] = [];
+  const externalWebSockets: string[] = [];
+  const context = await browser.newContext({ serviceWorkers: "block" });
+  try {
+    const page = await createIsolatedContext(context, slug, blockedRequests, externalWebSockets);
+    await page.goto(`/${slug}`);
+    const editor = page.locator(".cm-content[contenteditable='true']");
+    await expect(editor).toBeVisible({ timeout: 20_000 });
+
+    const edgeUrl = process.env.VITE_SUPABASE_URL;
+    if (!edgeUrl) throw new Error("local fake Edge URL is not set");
+    const inspect = async () => {
+      const response = await context.request.get(`${edgeUrl}/_test/notes/${encodeURIComponent(slug)}`);
+      if (!response.ok()) throw new Error("local failover diagnostics are unavailable");
+      return response.json() as Promise<{
+        hubId: string;
+        assignmentEpoch: number;
+        issuedHubIds: string[];
+        hubReportCount: number;
+        probeFailures: number;
+        casBlocked: boolean;
+        hub1Disabled: boolean;
+        hub1Upgrades: number;
+        hub2Upgrades: number;
+        content: string;
+        casAccepted: number;
+      }>;
+    };
+    const control = async (operation: "block-cas" | "unblock-cas" | "disable-hub1") => {
+      const response = await context.request.post(`${edgeUrl}/_test/control`, {
+        data: { operation, slug },
+      });
+      expect(response.ok()).toBe(true);
+    };
+
+    await expect.poll(async () => (await inspect()).hub1Upgrades, { timeout: 20_000 }).toBeGreaterThan(0);
+    await expect.poll(async () => (await inspect()).issuedHubIds[0], { timeout: 20_000 }).toBe("rt1");
+    await control("block-cas");
+
+    const marker = `outbox-survives-${crypto.randomUUID()}`;
+    await editor.click();
+    await editor.press("Control+End");
+    await editor.press("Enter");
+    await editor.pressSequentially(marker, { delay: 1 });
+    await expect(editor).toContainText(marker);
+    await expect.poll(() => outboxCount(page, slug), { timeout: 10_000 }).toBeGreaterThan(0);
+
+    await control("disable-hub1");
+    await expect.poll(async () => {
+      const state = await inspect();
+      return state.hubId === "rt2"
+        && state.assignmentEpoch === 2
+        && state.issuedHubIds.includes("rt2")
+        && state.hubReportCount >= 1
+        && state.probeFailures >= 1
+        && state.hub1Disabled
+        && state.hub2Upgrades >= 1;
+    }, { timeout: 30_000 }).toBe(true);
+
+    expect(await outboxCount(page, slug)).toBeGreaterThan(0);
+    const switchedState = await inspect();
+    expect(switchedState.issuedHubIds[0]).toBe("rt1");
+    expect(switchedState.issuedHubIds).toContain("rt2");
+    await control("unblock-cas");
+
+    await expect.poll(() => outboxCount(page, slug), { timeout: 30_000 }).toBe(0);
+    await expect.poll(async () => (await inspect()).content, { timeout: 30_000 }).toContain(marker);
+    expect((await inspect()).casAccepted).toBeGreaterThan(0);
+    expect(blockedRequests).toEqual([]);
+    expect(externalWebSockets).toEqual([]);
+  } finally {
+    await context.close();
   }
 });

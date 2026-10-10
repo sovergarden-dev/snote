@@ -20,6 +20,7 @@ export type RealtimePermission = "read" | "edit";
 
 export interface RealtimeSigningConfig {
   ticketPrivateKey: CryptoKey;
+  ticketPublicKey: CryptoKey;
   ticketKid: string;
   savedAckPrivateKey: CryptoKey;
   savedAckKid: string;
@@ -59,6 +60,9 @@ export interface RealtimeTicket {
   roomId: string;
   relay_key: string;
   relay_key_kid: string;
+  hub_id?: string;
+  assignment_epoch?: number;
+  topology_epoch?: number;
   write_mac_key?: string;
   noteId?: string;
   revision?: number;
@@ -77,6 +81,12 @@ export interface YjsAdapter {
   applyUpdate(doc: YDocLike, update: Uint8Array): void;
   encodeStateAsUpdate(doc: YDocLike): Uint8Array;
   encodeStateVector(doc: YDocLike): Uint8Array;
+}
+
+export interface RealtimeTicketRoute {
+  hubId: string;
+  assignmentEpoch: number;
+  topologyEpoch: number;
 }
 
 function fail(message: string): never {
@@ -127,7 +137,7 @@ async function signJws(
   payload: Record<string, unknown>,
   privateKey: CryptoKey,
   kid: string,
-  typ: "syrin-ticket+jwt" | "syrin-saved-ack+jwt",
+  typ: "syrin-ticket+jwt" | "syrin-saved-ack+jwt" | "syrin-health-probe+jwt",
 ): Promise<string> {
   assertNonEmptyString(kid, "JWS key ID");
   if (privateKey.type !== "private" || privateKey.algorithm.name !== "Ed25519") {
@@ -219,9 +229,22 @@ export async function loadRealtimeSigningConfig(
   if (equalBytes(relayMasterKey, roomHmacKey)) {
     fail("Realtime relay and room HMAC keys must be distinct");
   }
+  let ticketPublicKey: CryptoKey;
+  try {
+    ticketPublicKey = await crypto.subtle.importKey(
+      "jwk",
+      { kty: "OKP", crv: "Ed25519", x: ticket.x, ext: true } as JsonWebKey,
+      { name: "Ed25519" },
+      false,
+      ["verify"],
+    );
+  } catch {
+    return fail("Invalid realtime signing configuration");
+  }
 
   return {
     ticketPrivateKey: ticket.key,
+    ticketPublicKey,
     ticketKid: input.ticketKid,
     savedAckPrivateKey: savedAck.key,
     savedAckKid: input.savedAckKid,
@@ -305,6 +328,7 @@ export async function issueRealtimeTicket(
     sessionId: string;
     nowSeconds?: number;
     ttlSeconds?: number;
+    routing?: RealtimeTicketRoute;
   },
   config: RealtimeSigningConfig,
 ): Promise<RealtimeTicket> {
@@ -320,18 +344,28 @@ export async function issueRealtimeTicket(
     fail("Ticket lifetime exceeds its limit");
   }
   assertSafeNonNegativeInteger(nowSeconds + ttlSeconds, "ticket expiration time");
+  const hubId = input.routing?.hubId ?? config.hubId;
+  const assignmentEpoch = input.routing?.assignmentEpoch ?? config.assignmentEpoch;
+  assertNonEmptyString(hubId, "hub ID");
+  if (!/^[A-Za-z0-9._:-]{1,128}$/u.test(hubId)) fail("Invalid hub ID");
+  assertSafeNonNegativeInteger(assignmentEpoch, "assignment epoch");
+  if (input.routing) {
+    assertSafePositiveInteger(input.routing.assignmentEpoch, "room assignment epoch");
+    assertSafePositiveInteger(input.routing.topologyEpoch, "topology epoch");
+  }
   assertNonEmptyString(config.relayKeyKid, "relay key ID");
   const relayKey = await deriveRelayKey(config.relayMasterKey, input.roomId, input.generation);
   const jti = encodeBase64Url(crypto.getRandomValues(new Uint8Array(16)));
   const permissions = input.permission === "edit" ? ["read", "write"] : ["read"];
   const payload = {
     purpose: "syrin:ticket:v1",
-    aud: config.hubId,
+    aud: hubId,
     iat: nowSeconds,
     exp: nowSeconds + ttlSeconds,
     jti,
-    hub_id: config.hubId,
-    assignment_epoch: config.assignmentEpoch,
+    hub_id: hubId,
+    assignment_epoch: input.routing?.assignmentEpoch ?? assignmentEpoch,
+    ...(input.routing ? { topology_epoch: input.routing.topologyEpoch } : {}),
     room_id: input.roomId,
     generation: input.generation,
     permission_epoch: input.permissionEpoch,
@@ -346,6 +380,11 @@ export async function issueRealtimeTicket(
     roomId: input.roomId,
     relay_key: encodeBase64Url(relayKey),
     relay_key_kid: config.relayKeyKid,
+    ...(input.routing ? {
+      hub_id: hubId,
+      assignment_epoch: input.routing.assignmentEpoch,
+      topology_epoch: input.routing.topologyEpoch,
+    } : {}),
   };
   if (input.permission === "read") return bundle;
   const writeMacKey = await deriveWriteMacKey(
@@ -359,10 +398,135 @@ export async function issueRealtimeTicket(
   };
 }
 
+export interface VerifiedRealtimeTicketClaims {
+  purpose: "syrin:ticket:v1";
+  aud: string;
+  iat: number;
+  exp: number;
+  jti: string;
+  hub_id: string;
+  assignment_epoch: number;
+  topology_epoch?: number;
+  room_id: string;
+  generation: number;
+  permission_epoch: number;
+  permission: RealtimePermission;
+  session_id: string;
+}
+
+export type RealtimeTicketVerification =
+  | { ok: true; claims: VerifiedRealtimeTicketClaims }
+  | { ok: false; status: "invalid" | "expired" };
+
+export async function verifyRealtimeTicketClaims(
+  token: string,
+  config: RealtimeSigningConfig,
+  nowSeconds = Math.floor(Date.now() / 1000),
+): Promise<RealtimeTicketVerification> {
+  if (typeof token !== "string" || token.length > 8_192 || !Number.isSafeInteger(nowSeconds)) {
+    return { ok: false, status: "invalid" };
+  }
+  const parts = token.split(".");
+  if (parts.length !== 3 || parts.some((part) => part.length === 0)) {
+    return { ok: false, status: "invalid" };
+  }
+  let header: Record<string, unknown>;
+  let claims: Record<string, unknown>;
+  let signature: Uint8Array;
+  try {
+    header = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(decodeBase64Url(parts[0]))) as Record<string, unknown>;
+    claims = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(decodeBase64Url(parts[1]))) as Record<string, unknown>;
+    signature = decodeBase64Url(parts[2]);
+  } catch {
+    return { ok: false, status: "invalid" };
+  }
+  if (
+    !isRecord(header)
+    || !isRecord(claims)
+    || header.alg !== "EdDSA"
+    || header.kid !== config.ticketKid
+    || header.typ !== "syrin-ticket+jwt"
+    || signature.byteLength !== 64
+  ) return { ok: false, status: "invalid" };
+  try {
+    const valid = await crypto.subtle.verify(
+      { name: "Ed25519" },
+      config.ticketPublicKey,
+      signature as BufferSource,
+      utf8.encode(`${parts[0]}.${parts[1]}`) as BufferSource,
+    );
+    if (!valid) return { ok: false, status: "invalid" };
+  } catch {
+    return { ok: false, status: "invalid" };
+  }
+
+  const iat = claims.iat;
+  const exp = claims.exp;
+  const jti = claims.jti;
+  const assignmentEpoch = claims.assignment_epoch;
+  const topologyEpoch = claims.topology_epoch;
+  const roomId = claims.room_id;
+  const generation = claims.generation;
+  const permissionEpoch = claims.permission_epoch;
+  const hubId = claims.hub_id;
+  if (
+    claims.purpose !== "syrin:ticket:v1"
+    || typeof claims.aud !== "string"
+    || claims.aud !== hubId
+    || typeof hubId !== "string"
+    || !/^[A-Za-z0-9._:-]{1,128}$/u.test(hubId)
+    || !Number.isSafeInteger(iat)
+    || !Number.isSafeInteger(exp)
+    || (iat as number) < 0
+    || (iat as number) > nowSeconds
+    || (exp as number) <= (iat as number)
+    || (exp as number) - (iat as number) > MAX_TICKET_TTL_SECONDS
+    || typeof jti !== "string"
+    || typeof roomId !== "string"
+    || !/^[A-Za-z0-9_-]{43}$/u.test(roomId)
+    || !Number.isSafeInteger(generation)
+    || (generation as number) < 1
+    || !Number.isSafeInteger(permissionEpoch)
+    || (permissionEpoch as number) < 0
+    || !Number.isSafeInteger(assignmentEpoch)
+    || (assignmentEpoch as number) < 0
+    || (topologyEpoch !== undefined
+      && (!Number.isSafeInteger(topologyEpoch) || (topologyEpoch as number) < 1))
+    || typeof claims.session_id !== "string"
+    || !VALID_SESSION_ID.test(claims.session_id)
+    || (claims.permission !== "read" && claims.permission !== "edit")
+  ) return { ok: false, status: "invalid" };
+  try {
+    if (decodeBase64Url(jti).byteLength !== 16) return { ok: false, status: "invalid" };
+  } catch {
+    return { ok: false, status: "invalid" };
+  }
+  if ((exp as number) <= nowSeconds) return { ok: false, status: "expired" };
+  return { ok: true, claims: claims as unknown as VerifiedRealtimeTicketClaims };
+}
+
+export async function issueRealtimeHealthProbeToken(
+  hubId: string,
+  config: RealtimeSigningConfig,
+  nowSeconds = Math.floor(Date.now() / 1000),
+): Promise<string> {
+  assertNonEmptyString(hubId, "hub ID");
+  if (!/^[A-Za-z0-9._:-]{1,128}$/u.test(hubId)) fail("Invalid hub ID");
+  assertSafeNonNegativeInteger(nowSeconds, "health probe issue time");
+  return signJws({
+    purpose: "syrin:healthz:v1",
+    aud: hubId,
+    hub_id: hubId,
+    iat: nowSeconds,
+    exp: nowSeconds + 30,
+  }, config.ticketPrivateKey, config.ticketKid, "syrin-health-probe+jwt");
+}
+
 export async function issueRealtimeTicketFromContext(
   context: unknown,
   config: RealtimeSigningConfig,
   nowSeconds?: number,
+  routing?: RealtimeTicketRoute,
 ): Promise<{ ok: true; ticket: RealtimeTicket } | { ok: false; status: string }> {
   if (!isRecord(context) || typeof context.status !== "string") {
     return { ok: false, status: "unavailable" };
@@ -385,6 +549,7 @@ export async function issueRealtimeTicketFromContext(
     permission: "edit",
     sessionId: context.sessionId,
     ...(nowSeconds === undefined ? {} : { nowSeconds }),
+    ...(routing === undefined ? {} : { routing }),
   }, config);
   return { ok: true, ticket: {
     ...ticket,
