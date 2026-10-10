@@ -5,6 +5,7 @@ import {
   hashCapabilityToken,
   readCapabilityBearer,
 } from "../_shared/capability.ts";
+import { createCloudflareHubBudgetMetricsProvider } from "../_shared/hub-budget-metrics.ts";
 import {
   capabilityCorsHeaders,
   capabilityAdmissionFailure,
@@ -63,15 +64,20 @@ function realtimeHubRoutingEnabled(): boolean {
   return Deno.env.get("SNOTE_REALTIME_HUB_ROUTING_ENABLED") === "true";
 }
 
+const hubBudgetMetricsProvider = createCloudflareHubBudgetMetricsProvider({
+  SNOTE_CF_ANALYTICS_TOKEN: Deno.env.get("SNOTE_CF_ANALYTICS_TOKEN"),
+  SNOTE_CF_ACCOUNT_ID: Deno.env.get("SNOTE_CF_ACCOUNT_ID"),
+  SNOTE_CF_RT2_SCRIPT_NAME: Deno.env.get("SNOTE_CF_RT2_SCRIPT_NAME"),
+}) ?? unavailableHubBudgetMetricsProvider;
+
 function realtimeHubEdgeDependencies(environment: CapabilityEnvironment) {
   return {
     rpc: async (name: RealtimeHubRpcName, args: Record<string, unknown>) => {
       const { data, error } = await environment.client.rpc(name, args as never);
       return { data, error };
     },
-    // No live budget API is called in this PR. Until an explicit provider is
-    // injected, Hub 2 admission fails closed on stale/unavailable metrics.
-    metricsProvider: unavailableHubBudgetMetricsProvider,
+    // Missing Analytics configuration preserves the existing fail-closed provider.
+    metricsProvider: hubBudgetMetricsProvider,
     healthUrl: (hubId: "rt1" | "rt2") => {
       const variable = hubId === "rt1"
         ? "SNOTE_REALTIME_HUB_RT1_HEALTH_URL"
