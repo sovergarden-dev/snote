@@ -73,13 +73,14 @@ export class SqliteReplayStore implements ReplayStore {
     this.initialize(nowSeconds);
     this.cleanupExpiredBatch(nowSeconds);
 
-    const inserted = this.driver.run(
+    const inserted = this.driver.get(
       `INSERT INTO ${HUB_REPLAY_TABLE} (jti_sha256, expires_at)
-       VALUES (?, ?) ON CONFLICT(jti_sha256) DO NOTHING`,
+       VALUES (?, ?) ON CONFLICT(jti_sha256) DO NOTHING
+       RETURNING jti_sha256`,
       digest,
       expiresAt,
     );
-    return inserted === 1;
+    return inserted?.jti_sha256 === digest;
   }
 
   /**
@@ -104,14 +105,15 @@ export class SqliteReplayStore implements ReplayStore {
   }
 
   private cleanupExpiredBatch(nowSeconds: number): void {
-    const eligible = this.driver.run(
+    const eligible = this.driver.get(
       `UPDATE ${HUB_REPLAY_MAINTENANCE_TABLE}
        SET last_cleanup_at = ?
-       WHERE singleton = 1 AND last_cleanup_at <= ?`,
+       WHERE singleton = 1 AND last_cleanup_at <= ?
+       RETURNING singleton`,
       nowSeconds,
       nowSeconds - REPLAY_CLEANUP_INTERVAL_SECONDS,
     );
-    if (eligible !== 1) return;
+    if (eligible?.singleton !== 1) return;
 
     this.driver.run(
       `DELETE FROM ${HUB_REPLAY_TABLE}

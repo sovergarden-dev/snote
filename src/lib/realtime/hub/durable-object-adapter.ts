@@ -19,6 +19,7 @@ const HEALTH_OBJECT_NAME = "hub-health-v1";
 interface SqlCursor {
   rowsWritten: number;
   one(): Record<string, unknown> | undefined;
+  toArray(): Record<string, unknown>[];
 }
 
 interface DurableObjectSqlStorage {
@@ -69,7 +70,7 @@ function makeSqliteDriver(storage: DurableObjectSqlStorage): SqliteDriver {
       return storage.exec(sql, ...values).rowsWritten;
     },
     get(sql, ...values) {
-      return storage.exec(sql, ...values).one();
+      return storage.exec(sql, ...values).toArray()[0];
     },
   };
 }
