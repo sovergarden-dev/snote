@@ -137,9 +137,11 @@ async function createNodeHarness(keys: TestSigningKeys, clock: ManualClock): Pro
   const clients: NodeAdapterClient[] = [];
 
   async function startServer(): Promise<void> {
+    const store = replayStore();
+    store.initialize(TEST_NOW_SECONDS);
     server = createNodeHubServer({
       config: { hubId: TEST_HUB_ID, pinnedKeys: keys.pinnedKeys, clock },
-      replayStore: replayStore(),
+      replayStore: store,
       drainWindowMilliseconds: 0,
     });
     await new Promise<void>((resolve, reject) => {

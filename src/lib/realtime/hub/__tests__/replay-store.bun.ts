@@ -107,6 +107,14 @@ describe("durable replay store", () => {
     expect(after.changes).toBe(before.changes);
   });
 
+  it("reports unreadable when a required replay table is missing", () => {
+    const { database, store } = createStore();
+    store.initialize(NOW);
+    database.exec(`DROP TABLE ${HUB_REPLAY_TABLE}`);
+
+    expect(store.checkReadable()).toBe(false);
+  });
+
   it("retains consumed ticket JTI after closing and reopening the persistent SQLite file", async () => {
     const directory = await mkdtemp(join(tmpdir(), "snote-hub-replay-store-"));
     const path = join(directory, "replay.sqlite");

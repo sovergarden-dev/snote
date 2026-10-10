@@ -13,6 +13,7 @@
     "chrome-extension/sidepanel.js!",
     "supabase/functions/*/index.ts!",
     "src/lib/realtime/hub/node-adapter.ts!",
+    "src/lib/realtime/hub/node-entrypoint.ts!",
     "src/lib/realtime/hub/durable-object-worker.ts!",
     "supabase/functions/old-slug-cleanup-status/index.test.ts",
     "scripts/build-extension-zip.ts",

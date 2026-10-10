@@ -88,7 +88,16 @@ export class SqliteReplayStore implements ReplayStore {
    */
   checkReadable(): boolean {
     try {
-      return this.driver.get("SELECT 1 AS readable")?.readable === 1;
+      const maintenance = this.driver.get(
+        `SELECT last_cleanup_at FROM ${HUB_REPLAY_MAINTENANCE_TABLE} WHERE singleton = 1`,
+      );
+      if (!maintenance || !Number.isSafeInteger(maintenance.last_cleanup_at)) return false;
+      const replay = this.driver.get(
+        `SELECT jti_sha256, expires_at FROM ${HUB_REPLAY_TABLE} ORDER BY expires_at LIMIT 1`,
+      );
+      return replay === undefined || (
+        typeof replay.jti_sha256 === "string" && Number.isSafeInteger(replay.expires_at)
+      );
     } catch {
       return false;
     }

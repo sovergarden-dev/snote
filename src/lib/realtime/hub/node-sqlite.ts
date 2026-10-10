@@ -15,29 +15,41 @@ export async function openNodeReplayStore(databasePath: string): Promise<OpenNod
   if (!isAbsolute(databasePath) || databasePath === ":memory:") {
     throw new Error("A persistent absolute SQLite path is required");
   }
-  const { DatabaseSync } = await import("node:sqlite");
-  const database = new DatabaseSync(databasePath, { timeout: 5_000 });
-  database.exec("PRAGMA journal_mode = WAL");
-  database.exec("PRAGMA synchronous = FULL");
 
-  const driver: SqliteDriver = {
-    exec(sql) {
-      database.exec(sql);
-    },
-    run(sql, ...values) {
-      const result = database.prepare(sql).run(...values);
-      return Number(result.changes);
-    },
-    get(sql, ...values) {
-      const result = database.prepare(sql).get(...values);
-      return result && typeof result === "object" ? result as Record<string, unknown> : undefined;
-    },
-  };
-  const store = new SqliteReplayStore(driver);
-  store.initialize(Math.floor(Date.now() / 1_000));
-  return {
-    store,
-    close: () => database.close(),
-    checkReadable: () => store.checkReadable(),
-  };
+  let closeDatabase: (() => void) | undefined;
+  try {
+    const { DatabaseSync } = await import("node:sqlite");
+    const database = new DatabaseSync(databasePath, { timeout: 5_000 });
+    closeDatabase = () => database.close();
+    database.exec("PRAGMA journal_mode = WAL");
+    database.exec("PRAGMA synchronous = FULL");
+
+    const driver: SqliteDriver = {
+      exec(sql) {
+        database.exec(sql);
+      },
+      run(sql, ...values) {
+        const result = database.prepare(sql).run(...values);
+        return Number(result.changes);
+      },
+      get(sql, ...values) {
+        const result = database.prepare(sql).get(...values);
+        return result && typeof result === "object" ? result as Record<string, unknown> : undefined;
+      },
+    };
+    const store = new SqliteReplayStore(driver);
+    store.initialize(Math.floor(Date.now() / 1_000));
+    return {
+      store,
+      close: () => database.close(),
+      checkReadable: () => store.checkReadable(),
+    };
+  } catch {
+    try {
+      closeDatabase?.();
+    } catch {
+      // Startup already failed; do not replace the generic, log-safe error.
+    }
+    throw new Error("Unable to initialize persistent replay storage");
+  }
 }
