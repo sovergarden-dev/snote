@@ -81,15 +81,15 @@ describe("Cloudflare Analytics schema checker", () => {
     );
   });
 
-  it("reports unsupported SQLite candidates as missing without suppressing other fields", () => {
+  it("reports unsupported alternative metric fields as missing without suppressing other fields", () => {
     const result = inspectHubBudgetGraphqlSchema(schemaFixture({
       omitPrimaryRowsWritten: true,
       omitAlternates: true,
     }));
     expect(result.filter((field) => !field.present).map((field) => field.path)).toEqual([
       "durableObjectsPeriodicGroups.sum.rowsWritten",
-      "durableObjectsSqlStorageGroups.sum.rowsWritten",
       "durableObjectsPeriodicGroups.sum.duration",
+      "durableObjectsSqlStorageGroups.sum.rowsWritten",
     ]);
   });
 });

@@ -39,13 +39,15 @@ export const HUB_BUDGET_GRAPHQL_FIELD_MAPPING = {
     dataset: "durableObjectsPeriodicGroups",
     sumField: "activeTime",
   },
+  doGbSecondsAlternatives: [
+    { dataset: "durableObjectsPeriodicGroups", sumField: "duration" },
+  ],
   doSqliteRowsWritten: {
     dataset: "durableObjectsPeriodicGroups",
     sumField: "rowsWritten",
   },
   sqliteRowsWrittenAlternatives: [
     { dataset: "durableObjectsSqlStorageGroups", sumField: "rowsWritten" },
-    { dataset: "durableObjectsPeriodicGroups", sumField: "duration" },
   ],
 } as const;
 
@@ -86,6 +88,11 @@ export const HUB_BUDGET_GRAPHQL_SCHEMA_CHECK_PATHS: readonly (readonly string[])
     "sum",
     HUB_BUDGET_GRAPHQL_FIELD_MAPPING.doSqliteRowsWritten.sumField,
   ],
+  ...HUB_BUDGET_GRAPHQL_FIELD_MAPPING.doGbSecondsAlternatives.map((candidate) => [
+    candidate.dataset,
+    "sum",
+    candidate.sumField,
+  ]),
   ...HUB_BUDGET_GRAPHQL_FIELD_MAPPING.sqliteRowsWrittenAlternatives.map((candidate) => [
     candidate.dataset,
     "sum",
@@ -283,7 +290,7 @@ function readSettingsWindow(
 function sumMetric(rowsValue: unknown, fieldName: string): number | null {
   if (rowsValue === null || rowsValue === undefined) return null;
   if (!Array.isArray(rowsValue)) throw new Error("Invalid Analytics rows");
-  if (rowsValue.length === 0) return null;
+  if (rowsValue.length === 0) return 0;
 
   let total = 0;
   for (const row of rowsValue) {

@@ -158,8 +158,47 @@ describe("Cloudflare hub budget metrics provider", () => {
     expect(HUB_BUDGET_GRAPHQL_FIELD_MAPPING.doSqliteRowsWritten.sumField).toBe("rowsWritten");
     expect(HUB_BUDGET_GRAPHQL_FIELD_MAPPING.sqliteRowsWrittenAlternatives).toEqual([
       { dataset: "durableObjectsSqlStorageGroups", sumField: "rowsWritten" },
+    ]);
+    expect(HUB_BUDGET_GRAPHQL_FIELD_MAPPING.doGbSecondsAlternatives).toEqual([
       { dataset: "durableObjectsPeriodicGroups", sumField: "duration" },
     ]);
+  });
+
+  it("returns zero for empty DO datasets when rt2 has a fresh sample", async () => {
+    const result = await provider(fixtureFetcher(analyticsPayload({
+      doRequestTotals: [],
+      doPeriodicTotals: [],
+    })))!.readSnapshot({ nowMs: NOW });
+    const observedThrough = Date.parse("2026-10-10T11:59:00.000Z");
+
+    expect(result).toEqual({
+      status: "ok",
+      metrics: {
+        worker_requests: { used: 31, observedThrough },
+        do_billed_requests: { used: 0, observedThrough },
+        do_gb_s: { used: 0, observedThrough },
+        do_sqlite_rows_written: { used: 0, observedThrough },
+      },
+    });
+  });
+
+  it("stays unavailable when rt2 has no latest sample", async () => {
+    const result = await provider(fixtureFetcher(analyticsPayload({
+      rt2Latest: [],
+    })))!.readSnapshot({ nowMs: NOW });
+
+    expect(result.status).toBe("unavailable");
+  });
+
+  it("stays unavailable when a DO dataset row has a null sum", async () => {
+    const result = await provider(fixtureFetcher(analyticsPayload({
+      doPeriodicTotals: [{ sum: null }],
+    })))!.readSnapshot({ nowMs: NOW });
+
+    expect(result.status).toBe("unavailable");
+    expect(result.metrics.do_billed_requests).toBeUndefined();
+    expect(result.metrics.do_gb_s).toBeUndefined();
+    expect(result.metrics.do_sqlite_rows_written).toBeUndefined();
   });
 
   it("marks the snapshot unavailable when any required metric is missing", async () => {
