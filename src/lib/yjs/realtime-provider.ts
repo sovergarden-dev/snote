@@ -616,6 +616,9 @@ export class RealtimeYjsProvider implements YjsProviderLike {
     }
     if (frame.message_type === "drain" || frame.message_type === "hub-change") {
       this.closeSocket("hub transition requires safe fallback");
+      this.reconnectAttempts = 0;
+      this.clearTimer("reconnectTimer");
+      void this.openSocket(true);
       return;
     }
     if (frame.message_type === "permission-revoked") {

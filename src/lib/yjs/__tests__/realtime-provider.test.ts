@@ -314,6 +314,77 @@ describe("routed realtime provider recovery", () => {
     doc.destroy();
   });
 
+  it("reconnects after a hub drain using the newly issued hub ticket and retains outbox rows", async () => {
+    const keys = await createKeyFixture();
+    const initialApi: RealtimeEdgeApi = {
+      issueTicket: async (_slug, sessionId) => createTicketBundle(
+        keys,
+        sessionId,
+        7,
+        "",
+        4,
+        undefined,
+        { hubId: "rt1", assignmentEpoch: 2, topologyEpoch: 1 },
+      ),
+      casSave: async () => { throw new Error("unexpected CAS save"); },
+    };
+    const prelude = await prepareRealtimeNote("random-test-note", {
+      api: initialApi,
+      config: ROUTED_CONFIG,
+      pinnedKeys: keys.pinnedKeys,
+      sessionId: SESSION_ID,
+    });
+    const issueTicket = vi.fn(async (_slug: string, sessionId: string) => createTicketBundle(
+      keys,
+      sessionId,
+      7,
+      "",
+      4,
+      undefined,
+      { hubId: "rt2", assignmentEpoch: 3, topologyEpoch: 2 },
+    ));
+    const api: RealtimeEdgeApi = {
+      issueTicket,
+      casSave: initialApi.casSave,
+    };
+    const urls: string[] = [];
+    const doc = new Y.Doc();
+    const outbox = new RealtimeOutbox(`provider-drain-${crypto.randomUUID()}`);
+    const provider = new RealtimeYjsProvider("random-test-note", doc, {
+      prelude,
+      api,
+      outbox,
+      socketFactory: (url) => {
+        urls.push(url);
+        return new FakeWebSocket(url, prelude.ticket.roomId) as unknown as WebSocket;
+      },
+    });
+
+    const initialSocket = await connectProvider(provider);
+    doc.getText("content").insert(0, "unsent through drain");
+    await provider.whenOutboxPersisted();
+    const pendingBefore = await outbox.list("random-test-note", 7);
+    expect(pendingBefore).toHaveLength(1);
+
+    initialSocket.serverSend({
+      v: CURRENT_PROTOCOL_VERSION,
+      message_type: "drain",
+      opaque_room_id: prelude.ticket.roomId,
+    });
+
+    await vi.waitFor(() => expect(urls).toHaveLength(2));
+    await vi.waitFor(() => expect(provider.connected).toBe(true));
+    expect(urls[0]).toContain("localhost:8787/room/");
+    expect(urls[1]).toContain("localhost:8788/room/");
+    expect(issueTicket).toHaveBeenCalledOnce();
+    expect(await outbox.list("random-test-note", 7)).toMatchObject([
+      { updateId: pendingBefore[0]!.updateId },
+    ]);
+
+    await provider.destroy();
+    doc.destroy();
+  });
+
   it("reports a single unreachable event only when the WebSocket never opened", async () => {
     const keys = await createKeyFixture();
     const initialApi: RealtimeEdgeApi = {
