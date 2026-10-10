@@ -5,7 +5,14 @@ import {
   type MonitorRpc,
   type MonitorRpcName,
 } from "./monitor.ts";
+import { createCloudflareHubBudgetMetricsProvider } from "../_shared/hub-budget-metrics.ts";
 import { unavailableHubBudgetMetricsProvider } from "../note-session/realtime-hub-edge.ts";
+
+const hubBudgetMetricsProvider = createCloudflareHubBudgetMetricsProvider({
+  SNOTE_CF_ANALYTICS_TOKEN: Deno.env.get("SNOTE_CF_ANALYTICS_TOKEN"),
+  SNOTE_CF_ACCOUNT_ID: Deno.env.get("SNOTE_CF_ACCOUNT_ID"),
+  SNOTE_CF_RT2_SCRIPT_NAME: Deno.env.get("SNOTE_CF_RT2_SCRIPT_NAME"),
+}) ?? unavailableHubBudgetMetricsProvider;
 
 function createRpc(): MonitorRpc | null {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -47,9 +54,8 @@ const handler = createRealtimeMonitorHandler({
         return null;
       }
     },
-    // There is no live metrics provider in this PR. Keep rt2 fail-closed and
-    // never call Cloudflare Analytics; the request-cost guard remains injectable.
-    metricsProvider: unavailableHubBudgetMetricsProvider,
+    // Missing Analytics configuration preserves the existing fail-closed provider.
+    metricsProvider: hubBudgetMetricsProvider,
     healthUrl: (hubId) => {
       const variable = hubId === "rt1"
         ? "SNOTE_REALTIME_HUB_RT1_HEALTH_URL"
