@@ -23,13 +23,13 @@ import {
   type RealtimeTicket,
 } from "../_shared/realtime-edge.ts";
 
-const AUTOMATION_ACTOR_ID = "00000000-0000-4000-8000-000000000001";
 const SESSION_ID_RE = /^[A-Za-z0-9_-]{8,128}$/u;
 const HUB_ID_RE = /^(rt1|rt2)$/u;
 
 export type RealtimeHubRpcName =
   | "realtime_topology_read"
-  | "realtime_topology_update"
+  | "realtime_hub_ramp_state_read"
+  | "realtime_hub_ramp_state_cas"
   | "realtime_hub_health_read"
   | "realtime_hub_probe_claim"
   | "realtime_hub_probe_complete"
@@ -138,6 +138,18 @@ interface AssignmentSnapshot {
 
 interface ParsedHealth extends HubHealthSnapshot {
   status: "ok";
+}
+
+interface RampStateSnapshot {
+  stateVersion: number;
+  topologyVersion: number;
+  assignmentEpoch: number;
+  runtime: unknown;
+}
+
+interface LoadedRampState {
+  snapshot: RampStateSnapshot;
+  runtime: RampRuntime | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -279,8 +291,8 @@ function parseRampRuntime(value: unknown): RampRuntime | null {
   if (!isRecord(value) || value.active !== true || (value.recovering_hub_id !== "rt1" && value.recovering_hub_id !== "rt2")) {
     return null;
   }
-  const currentWeightBp = asSafeInteger(value.current_weight_bp, 1);
-  const targetWeightBp = asSafeInteger(value.target_weight_bp, 1);
+  const currentWeightBp = asSafeInteger(value.current_bp, 1);
+  const targetWeightBp = asSafeInteger(value.target_bp, 1);
   const lastStepAtMs = asSafeInteger(value.last_step_at_ms);
   const startedAtMs = asSafeInteger(value.started_at_ms);
   if (
@@ -297,13 +309,12 @@ function parseRampRuntime(value: unknown): RampRuntime | null {
   };
 }
 
-function serializeRampRuntime(runtime: RampRuntime | null): Record<string, unknown> | null {
-  if (!runtime) return null;
+function serializeRampRuntime(runtime: RampRuntime): Record<string, unknown> {
   return {
     active: runtime.active,
     recovering_hub_id: runtime.recoveringHubId,
-    current_weight_bp: runtime.currentWeightBp,
-    target_weight_bp: runtime.targetWeightBp,
+    current_bp: runtime.currentWeightBp,
+    target_bp: runtime.targetWeightBp,
     last_step_at_ms: runtime.lastStepAtMs,
     started_at_ms: runtime.startedAtMs,
     ...(runtime.stoppedAtMs === undefined ? {} : { stopped_at_ms: runtime.stoppedAtMs }),
@@ -338,6 +349,25 @@ async function roomKeyHash(roomId: string): Promise<string> {
 async function readTopology(dependencies: RealtimeHubEdgeDependencies): Promise<TopologySnapshot | null> {
   const reply = await dependencies.rpc("realtime_topology_read", {});
   return reply.error ? null : parseTopology(reply.data);
+}
+
+function parseRampState(value: unknown): RampStateSnapshot | null {
+  if (
+    !isRecord(value) || (value.status !== "ok" && value.status !== "updated")
+    || !isRecord(value.runtime)
+  ) return null;
+  const stateVersion = asSafeInteger(value.stateVersion, 1);
+  const topologyVersion = asSafeInteger(value.topologyVersion, 1);
+  const assignmentEpoch = asSafeInteger(value.assignmentEpoch, 1);
+  if (stateVersion === null || topologyVersion === null || assignmentEpoch === null) return null;
+  return { stateVersion, topologyVersion, assignmentEpoch, runtime: value.runtime };
+}
+
+async function readRampState(
+  dependencies: RealtimeHubEdgeDependencies,
+): Promise<RampStateSnapshot | null> {
+  const reply = await dependencies.rpc("realtime_hub_ramp_state_read", {});
+  return reply.error ? null : parseRampState(reply.data);
 }
 
 async function readHealth(
@@ -389,6 +419,7 @@ async function readAssignment(
 function makeAssignmentDecision(input: {
   topology: TopologySnapshot;
   assignment: AssignmentSnapshot;
+  rampRuntime: RampRuntime | null;
   bucket: number;
   health: Record<HubId, ParsedHealth>;
   metrics: BudgetMetricsSnapshot;
@@ -418,7 +449,7 @@ function makeAssignmentDecision(input: {
     budgetReadiness: topology.hub2NewRoomAdmissionReady,
     nowMs: input.nowMs,
     destinationWasJustProbedHealthy: input.destinationWasJustProbedHealthy,
-    rampRuntime: parseRampRuntime(topology.ramp.runtime),
+    rampRuntime: input.rampRuntime,
     metrics: input.metrics,
   });
 }
@@ -436,6 +467,8 @@ export async function issueRoutedRealtimeTicketFromContext(
   const nowMs = dependencies.now?.() ?? Date.now();
   const topology = await readTopology(dependencies);
   if (!topology) return { ok: false, status: "unavailable" };
+  const rampState = await loadRampState(dependencies, topology, nowMs);
+  if (!rampState) return { ok: false, status: "unavailable", syncTransport: "slow_sync" };
 
   let roomId: string;
   try {
@@ -462,6 +495,7 @@ export async function issueRoutedRealtimeTicketFromContext(
   const decision = makeAssignmentDecision({
     topology,
     assignment,
+    rampRuntime: rampState.runtime,
     bucket,
     health,
     metrics,
@@ -585,30 +619,42 @@ export async function runHubHealthProbeRound(input: {
 async function persistRamp(
   dependencies: RealtimeHubEdgeDependencies,
   topology: TopologySnapshot,
+  snapshot: RampStateSnapshot,
   runtime: RampRuntime,
-  reason: string,
-  targetWeights?: { rt1: number; rt2: number },
-): Promise<TopologySnapshot | null> {
-  const hubs: HubMap = {
-    rt1: { ...topology.hubConfig.rt1 },
-    rt2: { ...topology.hubConfig.rt2 },
-  };
-  if (targetWeights) {
-    hubs.rt1 = { ...hubs.rt1, weight_bp: targetWeights.rt1 };
-    hubs.rt2 = { ...hubs.rt2, weight_bp: targetWeights.rt2 };
-  }
-  const ramp = { ...topology.ramp, runtime: serializeRampRuntime(runtime) };
-  const reply = await dependencies.rpc("realtime_topology_update", {
-    p_expected_version: topology.version,
-    p_min_fallback_bp: topology.minFallbackBp,
-    p_hubs: hubs,
-    p_ramp: ramp,
-    p_actor_id: AUTOMATION_ACTOR_ID,
-    p_reason: reason,
-    p_emergency_override: false,
+): Promise<RampStateSnapshot | null> {
+  const serialized = serializeRampRuntime(runtime);
+  const reply = await dependencies.rpc("realtime_hub_ramp_state_cas", {
+    p_expected_state_version: snapshot.stateVersion,
+    p_expected_topology_version: topology.version,
+    p_expected_assignment_epoch: topology.assignmentEpoch,
+    p_runtime: serialized,
   });
   if (reply.error || rpcStatus(reply.data) !== "updated") return null;
-  return readTopology(dependencies);
+  const updated = parseRampState(reply.data);
+  if (
+    !updated || updated.stateVersion <= snapshot.stateVersion
+    || updated.topologyVersion !== topology.version
+    || updated.assignmentEpoch !== topology.assignmentEpoch
+  ) return null;
+  return updated;
+}
+
+async function loadRampState(
+  dependencies: RealtimeHubEdgeDependencies,
+  topology: TopologySnapshot,
+  nowMs: number,
+): Promise<LoadedRampState | null> {
+  const snapshot = await readRampState(dependencies);
+  if (!snapshot) return null;
+  const runtime = parseRampRuntime(snapshot.runtime);
+  const configMatches = snapshot.topologyVersion === topology.version
+    && snapshot.assignmentEpoch === topology.assignmentEpoch;
+  if (configMatches) return { snapshot, runtime };
+  if (!runtime?.active) return { snapshot, runtime: null };
+
+  const stopped = stopRamp(runtime, nowMs, "configuration_changed");
+  const updated = await persistRamp(dependencies, topology, snapshot, stopped);
+  return updated ? { snapshot: updated, runtime: null } : null;
 }
 
 async function updateRecoveryRampAfterProbe(input: {
@@ -618,16 +664,18 @@ async function updateRecoveryRampAfterProbe(input: {
   topology: TopologySnapshot;
   dependencies: RealtimeHubEdgeDependencies;
   nowMs: number;
-}): Promise<TopologySnapshot | null> {
-  const current = parseRampRuntime(input.topology.ramp.runtime);
+}): Promise<void> {
+  const loaded = await loadRampState(input.dependencies, input.topology, input.nowMs);
+  if (!loaded) return;
+  const current = loaded.runtime;
   const metrics = await readMetrics(input.dependencies, input.nowMs);
   const budget = evaluateBudget(input.topology, metrics, input.nowMs);
   let next = current;
-  let reason = "";
-  if (!input.probeSucceeded && current?.active) {
+  if (!input.probeSucceeded && current?.active && current.recoveringHubId === input.hubId) {
     next = stopRamp(current, input.nowMs, "probe_failed");
-    reason = "Edge probe failed during recovery ramp";
-  } else if (input.probeSucceeded && current?.active) {
+  } else if (
+    input.probeSucceeded && current?.active && current.recoveringHubId === input.hubId
+  ) {
     next = advanceRamp(
       current,
       input.nowMs,
@@ -637,9 +685,6 @@ async function updateRecoveryRampAfterProbe(input: {
     );
     if (budget.status === "blocked") {
       next = stopRamp(current, input.nowMs, "budget_blocked");
-      reason = "Hub budget hard stop paused recovery ramp";
-    } else if (next !== current) {
-      reason = "Edge probe advanced recovery ramp";
     }
   } else if (
     input.probeSucceeded
@@ -651,23 +696,20 @@ async function updateRecoveryRampAfterProbe(input: {
     const otherAvailable = input.topology.hubConfig[other].enabled
       && !input.topology.hubConfig[other].drain
       && input.previousHealth[other].healthStatus !== "down";
-    if (otherAvailable && budget.status === "ok" && input.topology.hub2NewRoomAdmissionReady) {
-      next = beginRecoveryRamp(input.hubId, 9_000, input.nowMs, {
+    const configuredTargetBp = input.topology.hubConfig[input.hubId].weight_bp;
+    if (
+      configuredTargetBp > 0 && otherAvailable && budget.status === "ok"
+      && input.topology.hub2NewRoomAdmissionReady
+    ) {
+      next = beginRecoveryRamp(input.hubId, configuredTargetBp, input.nowMs, {
         canaryBp: asSafeInteger(input.topology.ramp.canary_bp, 1) ?? 500,
         stepBp: asSafeInteger(input.topology.ramp.step_bp, 1) ?? 1_000,
         intervalSeconds: asSafeInteger(input.topology.ramp.interval_seconds, 1) ?? 300,
       });
-      reason = "Edge probe started recovery canary ramp";
     }
   }
-  if (!next || next === current || !reason) return null;
-  let targetWeights: { rt1: number; rt2: number } | undefined;
-  if (!next.active && next.currentWeightBp === next.targetWeightBp) {
-    targetWeights = input.hubId === "rt1"
-      ? { rt1: 9_000, rt2: 1_000 }
-      : { rt1: 1_000, rt2: 9_000 };
-  }
-  return persistRamp(input.dependencies, input.topology, next, reason, targetWeights);
+  if (!next || next === current) return;
+  await persistRamp(input.dependencies, input.topology, loaded.snapshot, next);
 }
 
 export async function handleRealtimeHubReport(
@@ -772,7 +814,7 @@ export async function handleRealtimeHubReport(
     return { status: completeReply.error ? "unavailable" : rpcStatus(completeReply.data), hubId };
   }
 
-  const afterRamp = await updateRecoveryRampAfterProbe({
+  await updateRecoveryRampAfterProbe({
     hubId,
     probeSucceeded,
     previousHealth,
@@ -791,7 +833,7 @@ export async function handleRealtimeHubReport(
       status: routed.status === "slow_sync" ? "slow_sync" : routed.status,
       hubId,
       probeSucceeded,
-      topologyEpoch: afterRamp?.assignmentEpoch ?? topology.assignmentEpoch,
+      topologyEpoch: topology.assignmentEpoch,
       reason: routed.status,
     };
   }

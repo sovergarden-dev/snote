@@ -63,6 +63,13 @@ type ProbeResult = {
   stateVersion?: number;
   downUntil?: string | null;
 };
+type RampStateResult = {
+  status: string;
+  stateVersion?: number;
+  topologyVersion?: number;
+  assignmentEpoch?: number;
+  runtime?: Record<string, unknown>;
+};
 
 const baselineRamp: RampConfig = {
   canary_bp: 500,
@@ -156,6 +163,45 @@ async function topologyUpdate(
   return result.rows[0].result;
 }
 
+async function rampStateRead(db: PGlite): Promise<RampStateResult> {
+  const result = await db.query<{ result: RampStateResult }>(
+    "SELECT public.realtime_hub_ramp_state_read() AS result",
+  );
+  return result.rows[0].result;
+}
+
+async function rampStateCas(
+  db: PGlite,
+  expectedStateVersion: number,
+  expectedTopologyVersion: number,
+  expectedAssignmentEpoch: number,
+  runtime: Record<string, unknown>,
+): Promise<RampStateResult> {
+  const result = await db.query<{ result: RampStateResult }>(
+    `SELECT public.realtime_hub_ramp_state_cas(
+      $1::bigint, $2::bigint, $3::bigint, $4::jsonb
+    ) AS result`,
+    [
+      expectedStateVersion,
+      expectedTopologyVersion,
+      expectedAssignmentEpoch,
+      JSON.stringify(runtime),
+    ],
+  );
+  return result.rows[0].result;
+}
+
+async function configurationAndAuditSnapshot(db: PGlite) {
+  const config = await db.query<{ configuration: unknown }>(
+    "SELECT to_jsonb(c) AS configuration FROM public.realtime_topology_config AS c WHERE singleton",
+  );
+  const audit = await db.query<{ entries: unknown }>(`
+    SELECT COALESCE(jsonb_agg(to_jsonb(a) ORDER BY a.audit_id), '[]'::jsonb) AS entries
+    FROM public.realtime_topology_audit AS a
+  `);
+  return { configuration: config.rows[0].configuration, audit: audit.rows[0].entries };
+}
+
 function configuredRt2(weight_bp: number): HubConfig {
   return {
     ...baselineHubs.rt2,
@@ -247,6 +293,7 @@ it("stores full K1 defaults without enabling unverified hubs or inventing budget
   const db = await createDatabase();
   try {
     const initial = await asRole(db, "service_role", () => topologyRead(db));
+    const initialRampState = await asRole(db, "service_role", () => rampStateRead(db));
     expect(initial).toMatchObject({
       status: "ok",
       version: 1,
@@ -255,6 +302,13 @@ it("stores full K1 defaults without enabling unverified hubs or inventing budget
       ramp: baselineRamp,
       hub2NewRoomAdmissionReady: false,
       hubConfig: baselineHubs,
+    });
+    expect(initialRampState).toMatchObject({
+      status: "ok",
+      stateVersion: 1,
+      topologyVersion: initial.version,
+      assignmentEpoch: initial.assignmentEpoch,
+      runtime: { active: false },
     });
     expect(initial.hubConfig?.rt2).toMatchObject({
       enabled: false,
@@ -555,6 +609,8 @@ it("exposes topology and monitor RPCs only to service_role", async () => {
     const signatures = [
       "public.realtime_topology_read()",
       "public.realtime_topology_update(bigint,integer,jsonb,jsonb,uuid,text,boolean)",
+      "public.realtime_hub_ramp_state_read()",
+      "public.realtime_hub_ramp_state_cas(bigint,bigint,bigint,jsonb)",
       "public.realtime_hub_probe_claim(text,bigint)",
       "public.realtime_hub_probe_complete(text,bigint,uuid,boolean)",
       "public.realtime_hub_health_read(text,bigint)",
@@ -587,6 +643,8 @@ it("exposes topology and monitor RPCs only to service_role", async () => {
           .rejects.toMatchObject({ code: "42501" });
         await expect(db.query("SELECT * FROM public.realtime_room_assignment_gc_state"))
           .rejects.toMatchObject({ code: "42501" });
+        await expect(db.query("SELECT * FROM public.realtime_hub_ramp_state"))
+          .rejects.toMatchObject({ code: "42501" });
       });
     }
 
@@ -597,6 +655,9 @@ it("exposes topology and monitor RPCs only to service_role", async () => {
         .rejects.toMatchObject({ code: "42501" });
       await expect(db.query("SELECT * FROM public.realtime_room_assignment_gc_state"))
         .rejects.toMatchObject({ code: "42501" });
+      await expect(db.query("SELECT * FROM public.realtime_hub_ramp_state"))
+        .rejects.toMatchObject({ code: "42501" });
+      expect((await rampStateRead(db)).status).toBe("ok");
       expect((await topologyRead(db)).status).toBe("ok");
     });
   } finally {
@@ -684,6 +745,149 @@ it("serializes simultaneous probe reports to one state transition and expires do
       state_version: 2,
       down_until: null,
     });
+  } finally {
+    await db.close();
+  }
+});
+for (const scenario of [
+  { name: "rt1 9,000/1,000", recoveringHub: "rt1" as const, rt1Weight: 9_000, rt2Weight: 1_000 },
+  { name: "rt2 1,000/9,000", recoveringHub: "rt2" as const, rt1Weight: 1_000, rt2Weight: 9_000 },
+  { name: "custom 7,000/3,000", recoveringHub: "rt1" as const, rt1Weight: 7_000, rt2Weight: 3_000 },
+]) {
+  it(`keeps K1 configuration and audit unchanged during ${scenario.name} ramp`, async () => {
+    const db = await createDatabase();
+    try {
+      const hubs: HubMap = {
+        rt1: { ...baselineHubs.rt1, enabled: true, weight_bp: scenario.rt1Weight },
+        rt2: configuredRt2(scenario.rt2Weight),
+      };
+      const activated = await asRole(db, "service_role", () =>
+        topologyUpdate(db, 1, 1_000, hubs, baselineRamp),
+      );
+      expect(activated).toMatchObject({ status: "updated", version: 2, assignmentEpoch: 2 });
+
+      const before = await configurationAndAuditSnapshot(db);
+      const targetBp = hubs[scenario.recoveringHub].weight_bp;
+      let state = await asRole(db, "service_role", () => rampStateRead(db));
+      expect(state).toMatchObject({
+        status: "ok",
+        stateVersion: 1,
+        topologyVersion: 1,
+        assignmentEpoch: 1,
+      });
+
+      let currentBp = 500;
+      let active = currentBp < targetBp;
+      let lastStepAtMs = 1_800_000_000_000;
+      while (true) {
+        const runtime = {
+          active,
+          recovering_hub_id: scenario.recoveringHub,
+          current_bp: currentBp,
+          target_bp: targetBp,
+          last_step_at_ms: lastStepAtMs,
+          started_at_ms: 1_800_000_000_000,
+        };
+        const saved = await asRole(db, "service_role", () =>
+          rampStateCas(db, state.stateVersion!, 2, 2, runtime),
+        );
+        expect(saved.status).toBe("updated");
+        state = saved;
+        if (!active) break;
+        currentBp = Math.min(targetBp, currentBp + 1_000);
+        active = currentBp < targetBp;
+        lastStepAtMs += 300_000;
+      }
+
+      expect(state.runtime).toMatchObject({
+        active: false,
+        recovering_hub_id: scenario.recoveringHub,
+        current_bp: targetBp,
+        target_bp: targetBp,
+      });
+      expect(state.stateVersion).toBeGreaterThan(1);
+      expect(await configurationAndAuditSnapshot(db)).toEqual(before);
+    } finally {
+      await db.close();
+    }
+  });
+}
+
+it("rejects stale ramp writes after a K1 edit and stops old runtime without adding an automation audit", async () => {
+  const db = await createDatabase();
+  try {
+    const firstHubs: HubMap = {
+      rt1: { ...baselineHubs.rt1, enabled: true, weight_bp: 9_000 },
+      rt2: configuredRt2(1_000),
+    };
+    await asRole(db, "service_role", () =>
+      topologyUpdate(db, 1, 1_000, firstHubs, baselineRamp),
+    );
+    let state = await asRole(db, "service_role", () => rampStateRead(db));
+    const activeRuntime = {
+      active: true,
+      recovering_hub_id: "rt1",
+      current_bp: 500,
+      target_bp: 9_000,
+      last_step_at_ms: 1_800_000_000_000,
+      started_at_ms: 1_800_000_000_000,
+    };
+    state = await asRole(db, "service_role", () => rampStateCas(db, state.stateVersion!, 2, 2, activeRuntime));
+    expect(state.status).toBe("updated");
+
+    const extraIdentifier = await asRole(db, "service_role", () =>
+      rampStateCas(db, state.stateVersion!, 2, 2, { ...activeRuntime, note_slug: "synthetic-slug" }),
+    );
+    expect(extraIdentifier.status).toBe("invalid");
+
+    const wrongTargetWrite = await asRole(db, "service_role", () =>
+      rampStateCas(db, state.stateVersion!, 2, 2, { ...activeRuntime, target_bp: 8_000 }),
+    );
+    expect(wrongTargetWrite.status).toBe("config_changed");
+
+    const changedRamp = { ...baselineRamp, interval_seconds: 600 };
+    await asRole(db, "service_role", () => topologyUpdate(db, 2, 1_000, firstHubs, changedRamp));
+    const afterUserEdit = await configurationAndAuditSnapshot(db);
+
+    const staleConfigWrite = await asRole(db, "service_role", () =>
+      rampStateCas(db, state.stateVersion!, 2, 2, {
+        ...activeRuntime,
+        current_bp: 1_500,
+      }),
+    );
+    expect(staleConfigWrite.status).toBe("config_changed");
+
+    const staleTargetWrite = await asRole(db, "service_role", () =>
+      rampStateCas(db, state.stateVersion!, 3, 3, {
+        ...activeRuntime,
+        current_bp: 1_500,
+      }),
+    );
+    expect(staleTargetWrite.status).toBe("config_changed");
+
+    const stopped = await asRole(db, "service_role", () => rampStateCas(
+      db,
+      state.stateVersion!,
+      3,
+      3,
+      { ...activeRuntime, active: false, stopped_reason: "configuration_changed" },
+    ));
+    expect(stopped).toMatchObject({
+      status: "updated",
+      topologyVersion: 3,
+      assignmentEpoch: 3,
+      runtime: { active: false, stopped_reason: "configuration_changed" },
+    });
+    expect(await configurationAndAuditSnapshot(db)).toEqual(afterUserEdit);
+
+    const staleStateVersion = await asRole(db, "service_role", () =>
+      rampStateCas(db, state.stateVersion!, 3, 3, {
+        ...activeRuntime,
+        active: false,
+        stopped_reason: "configuration_changed",
+      }),
+    );
+    expect(staleStateVersion.status).toBe("version_conflict");
   } finally {
     await db.close();
   }

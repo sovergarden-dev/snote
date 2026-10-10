@@ -13,7 +13,11 @@ import {
   type RealtimeHubEdgeDependencies,
   type RealtimeHubRpcName,
 } from "../../supabase/functions/note-session/realtime-hub-edge";
-import { stableRoomBucket } from "../../supabase/functions/note-session/realtime-hub-routing";
+import {
+  type AssignmentHub,
+  stableRoomBucket,
+  type HubId,
+} from "../../supabase/functions/note-session/realtime-hub-routing";
 
 const NOW_SECONDS = 1_800_000_000;
 const NOW_MS = NOW_SECONDS * 1_000;
@@ -71,13 +75,34 @@ function hub(enabled: boolean, weight: number, probeBeforeAssign: boolean) {
   };
 }
 
+const hub2Thresholds = {
+  worker_requests: { warning: 70_000, hard_stop: 70_000 },
+  do_billed_requests: { warning: 70_000, hard_stop: 70_000 },
+  do_gb_s: { warning: 9_100, hard_stop: 9_100 },
+  do_sqlite_rows_written: { warning: 70_000, hard_stop: 70_000 },
+};
+
+function readyHub(weight: number, probeBeforeAssign: boolean) {
+  return {
+    ...hub(true, weight, probeBeforeAssign),
+    budget_profile: "cf_free_daily",
+    budget_thresholds: hub2Thresholds,
+    unit_prices: {
+      worker_requests: 1,
+      do_billed_requests: 1,
+      do_gb_s: 1,
+      do_sqlite_rows_written: 1,
+    },
+  };
+}
+
 const topology = {
   status: "ok",
   version: 4,
   assignmentEpoch: CURRENT_TOPOLOGY_EPOCH,
   minFallbackBp: 1_000,
   hubConfig: { rt1: hub(true, 10_000, true), rt2: hub(false, 0, false) },
-  ramp: { canary_bp: 500, step_bp: 1_000, interval_seconds: 300, runtime: null },
+  ramp: { canary_bp: 500, step_bp: 1_000, interval_seconds: 300 },
   hub2NewRoomAdmissionReady: false,
 };
 
@@ -88,19 +113,43 @@ async function makeScenario(options: {
   fetcher?: typeof fetch;
   sleep?: (delayMs: number) => Promise<void>;
   rampRuntime?: Record<string, unknown>;
+  rampConfigVersion?: number;
+  rampConfigAssignmentEpoch?: number;
+  reportHubId?: HubId;
+  health?: Record<HubId, "healthy" | "down" | "unknown">;
+  hubConfig?: typeof topology.hubConfig;
+  hub2NewRoomAdmissionReady?: boolean;
+  metricsReady?: boolean;
 } = {}) {
   const signing = await makeSigning();
   const nowMs = options.nowMs ?? NOW_MS;
-  let currentTopology = options.rampRuntime
-    ? { ...topology, ramp: { ...topology.ramp, runtime: options.rampRuntime } }
-    : topology;
+  const reportHubId = options.reportHubId ?? "rt1";
+  const currentTopology = {
+    ...topology,
+    hubConfig: options.hubConfig ?? topology.hubConfig,
+    hub2NewRoomAdmissionReady: options.hub2NewRoomAdmissionReady
+      ?? topology.hub2NewRoomAdmissionReady,
+  };
+  let rampState = {
+    stateVersion: 1,
+    topologyVersion: options.rampConfigVersion ?? currentTopology.version,
+    assignmentEpoch: options.rampConfigAssignmentEpoch ?? currentTopology.assignmentEpoch,
+    runtime: options.rampRuntime ?? { active: false },
+  };
+  const initialHubConfig = structuredClone(currentTopology.hubConfig);
   const roomId = await deriveOpaqueRoomId(signing.roomHmacKey, NOTE_ID, GENERATION);
   const bucket = await stableRoomBucket(roomId);
   const assignmentEpoch = options.assignmentEpoch ?? ASSIGNMENT_EPOCH;
-  let assignment = {
+  let assignment: {
+    status: "ok",
+    bucket: number;
+    hubId: AssignmentHub;
+    assignmentEpoch,
+    topologyEpoch: number;
+  } = {
     status: "ok",
     bucket,
-    hubId: "rt1",
+    hubId: reportHubId,
     assignmentEpoch,
     topologyEpoch: TOPOLOGY_EPOCH_AT_ISSUE,
   };
@@ -113,26 +162,50 @@ async function makeScenario(options: {
     nowSeconds: NOW_SECONDS,
     ttlSeconds: 300,
     routing: {
-      hubId: "rt1",
+      hubId: reportHubId,
       assignmentEpoch: ASSIGNMENT_EPOCH,
       topologyEpoch: options.topologyEpochAtIssue ?? TOPOLOGY_EPOCH_AT_ISSUE,
     },
   }, signing);
   const calls: Array<{ name: RealtimeHubRpcName; args: Record<string, unknown> }> = [];
-  let latestRt1Health: "healthy" | "down" = "healthy";
+  const health: Record<HubId, "healthy" | "down" | "unknown"> = options.health ?? {
+    rt1: "healthy",
+    rt2: "unknown",
+  };
   const rpc = vi.fn(async (name: RealtimeHubRpcName, args: Record<string, unknown>) => {
     calls.push({ name, args });
     if (name === "realtime_topology_read") return { data: currentTopology, error: null };
+    if (name === "realtime_hub_ramp_state_read") {
+      return { data: { status: "ok", ...rampState }, error: null };
+    }
+    if (name === "realtime_hub_ramp_state_cas") {
+      if (args.p_expected_state_version !== rampState.stateVersion) {
+        return { data: { status: "version_conflict", stateVersion: rampState.stateVersion }, error: null };
+      }
+      if (
+        args.p_expected_topology_version !== currentTopology.version
+        || args.p_expected_assignment_epoch !== currentTopology.assignmentEpoch
+      ) return { data: { status: "config_changed" }, error: null };
+      rampState = {
+        stateVersion: rampState.stateVersion + 1,
+        topologyVersion: currentTopology.version,
+        assignmentEpoch: currentTopology.assignmentEpoch,
+        runtime: args.p_runtime as Record<string, unknown>,
+      };
+      return { data: { status: "updated", ...rampState }, error: null };
+    }
     if (name === "realtime_hub_health_read") {
+      const hubId = args.p_hub_id as HubId;
+      const healthStatus = health[hubId];
       return {
         data: {
           status: "ok",
-          hubId: args.p_hub_id,
+          hubId,
           assignmentEpoch: currentTopology.assignmentEpoch,
-          healthStatus: args.p_hub_id === "rt1" ? latestRt1Health : "unknown",
-          checkedAt: args.p_hub_id === "rt1" ? new Date(nowMs).toISOString() : null,
-          downUntil: latestRt1Health === "down" ? new Date(nowMs + 60_000).toISOString() : null,
-          consecutiveFailures: latestRt1Health === "down" ? 1 : 0,
+          healthStatus,
+          checkedAt: healthStatus === "unknown" ? null : new Date(nowMs).toISOString(),
+          downUntil: healthStatus === "down" ? new Date(nowMs + 60_000).toISOString() : null,
+          consecutiveFailures: healthStatus === "down" ? 1 : 0,
           stateVersion: 1,
         },
         error: null,
@@ -141,26 +214,25 @@ async function makeScenario(options: {
     if (name === "realtime_room_assignment_read") return { data: assignment, error: null };
     if (name === "realtime_hub_probe_claim") {
       return {
-        data: { status: "probe_started", hubId: "rt1", assignmentEpoch: currentTopology.assignmentEpoch, leaseId: LEASE_ID },
+        data: {
+          status: "probe_started",
+          hubId: args.p_hub_id,
+          assignmentEpoch: currentTopology.assignmentEpoch,
+          leaseId: LEASE_ID,
+        },
         error: null,
       };
     }
     if (name === "realtime_hub_probe_complete") {
-      latestRt1Health = args.p_probe_succeeded === true ? "healthy" : "down";
+      health[args.p_hub_id as HubId] = args.p_probe_succeeded === true ? "healthy" : "down";
       return {
-        data: { status: "accepted", hubId: "rt1", healthStatus: args.p_probe_succeeded ? "healthy" : "down" },
+        data: {
+          status: "accepted",
+          hubId: args.p_hub_id,
+          healthStatus: args.p_probe_succeeded ? "healthy" : "down",
+        },
         error: null,
       };
-    }
-    if (name === "realtime_topology_update") {
-      currentTopology = {
-        ...currentTopology,
-        version: currentTopology.version + 1,
-        assignmentEpoch: currentTopology.assignmentEpoch + 1,
-        hubConfig: args.p_hubs as typeof topology.hubConfig,
-        ramp: args.p_ramp as typeof topology.ramp,
-      };
-      return { data: { status: "updated" }, error: null };
     }
     if (name === "realtime_room_assignment_apply") {
       if (args.p_target_hub_id === "slow") {
@@ -198,9 +270,25 @@ async function makeScenario(options: {
   const dependencies: RealtimeHubEdgeDependencies = {
     rpc,
     now: () => nowMs,
-    healthUrl: () => "https://rt1.example.test/healthz",
+    healthUrl: (hubId) => `https://${hubId}.example.test/healthz`,
     fetcher: options.fetcher,
     sleep: options.sleep,
+    ...(options.metricsReady ? {
+      metricsProvider: {
+        async readSnapshot({ nowMs: observedAt }: { nowMs: number }) {
+          const sample = (used: number) => ({ used, observedThrough: observedAt });
+          return {
+            status: "ok" as const,
+            metrics: {
+              worker_requests: sample(1_000),
+              do_billed_requests: sample(1_000),
+              do_gb_s: sample(100),
+              do_sqlite_rows_written: sample(1_000),
+            },
+          };
+        },
+      },
+    } : {}),
   };
   return {
     signing,
@@ -213,6 +301,13 @@ async function makeScenario(options: {
     get assignment() {
       return assignment;
     },
+    get rampState() {
+      return rampState;
+    },
+    get currentTopology() {
+      return currentTopology;
+    },
+    initialHubConfig,
     context: {
       status: "ok",
       noteId: NOTE_ID,
@@ -351,8 +446,8 @@ describe("K2 Edge report validation and health probe round", () => {
       rampRuntime: {
         active: true,
         recovering_hub_id: "rt1",
-        current_weight_bp: 500,
-        target_weight_bp: 9_000,
+        current_bp: 500,
+        target_bp: 9_000,
         last_step_at_ms: NOW_MS - 300_000,
         started_at_ms: NOW_MS - 600_000,
       },
@@ -368,12 +463,18 @@ describe("K2 Edge report validation and health probe round", () => {
     expect(result).toMatchObject({
       status: "slow_sync",
       probeSucceeded: false,
-      topologyEpoch: CURRENT_TOPOLOGY_EPOCH + 1,
+      topologyEpoch: CURRENT_TOPOLOGY_EPOCH,
     });
-    const rampUpdate = scenario.calls.find((call) => call.name === "realtime_topology_update");
-    expect(rampUpdate?.args.p_reason).toBe("Edge probe failed during recovery ramp");
-    expect(rampUpdate?.args.p_ramp).toMatchObject({
-      runtime: { active: false, stopped_reason: "probe_failed" },
+    const rampUpdate = scenario.calls.find((call) => call.name === "realtime_hub_ramp_state_cas");
+    expect(rampUpdate?.args.p_runtime).toMatchObject({
+      active: false,
+      stopped_reason: "probe_failed",
+    });
+    expect(scenario.currentTopology.version).toBe(topology.version);
+    expect(scenario.currentTopology.assignmentEpoch).toBe(CURRENT_TOPOLOGY_EPOCH);
+    expect(scenario.rampState).toMatchObject({
+      topologyVersion: topology.version,
+      assignmentEpoch: CURRENT_TOPOLOGY_EPOCH,
     });
     const assignmentUpdates = scenario.calls.filter(
       (call) => call.name === "realtime_room_assignment_apply",
@@ -382,13 +483,112 @@ describe("K2 Edge report validation and health probe round", () => {
     expect(assignmentUpdate?.args).toMatchObject({
       p_target_hub_id: "slow",
       p_expected_assignment_epoch: ASSIGNMENT_EPOCH,
-      p_topology_epoch: CURRENT_TOPOLOGY_EPOCH + 1,
+      p_topology_epoch: CURRENT_TOPOLOGY_EPOCH,
     });
     expect(scenario.assignment).toMatchObject({
       hubId: "slow",
       assignmentEpoch: ASSIGNMENT_EPOCH + 1,
-      topologyEpoch: CURRENT_TOPOLOGY_EPOCH + 1,
+      topologyEpoch: CURRENT_TOPOLOGY_EPOCH,
     });
+  });
+
+  it.each([
+    {
+      name: "rt1 configured at 9,000 / 1,000",
+      recoveringHub: "rt1" as const,
+      rt1Weight: 9_000,
+      rt2Weight: 1_000,
+    },
+    {
+      name: "rt2 configured at 1,000 / 9,000",
+      recoveringHub: "rt2" as const,
+      rt1Weight: 1_000,
+      rt2Weight: 9_000,
+    },
+    {
+      name: "rt1 configured at a custom 7,000 / 3,000 split",
+      recoveringHub: "rt1" as const,
+      rt1Weight: 7_000,
+      rt2Weight: 3_000,
+    },
+  ])("starts a recovery ramp toward the configured target: $name", async (scenarioCase) => {
+    const otherHub: HubId = scenarioCase.recoveringHub === "rt1" ? "rt2" : "rt1";
+    const health: Record<HubId, "healthy" | "down" | "unknown"> = {
+      rt1: "healthy",
+      rt2: "healthy",
+    };
+    health[scenarioCase.recoveringHub] = "down";
+    const config = {
+      rt1: readyHub(scenarioCase.rt1Weight, true),
+      rt2: readyHub(scenarioCase.rt2Weight, false),
+    };
+    const fetcher = vi.fn(async () => new Response(null, { status: 204 })) as typeof fetch;
+    const scenario = await makeScenario({
+      fetcher,
+      reportHubId: scenarioCase.recoveringHub,
+      health,
+      hubConfig: config,
+      hub2NewRoomAdmissionReady: true,
+      metricsReady: true,
+    });
+    const beforeConfig = structuredClone(scenario.initialHubConfig);
+
+    const result = await handleRealtimeHubReport(
+      reportBody(scenario.ticket.ticket),
+      scenario.context,
+      scenario.signing,
+      scenario.dependencies,
+    );
+
+    const rampCall = scenario.calls.find((call) => call.name === "realtime_hub_ramp_state_cas");
+    expect(result.probeSucceeded).toBe(true);
+    expect(rampCall?.args.p_runtime).toMatchObject({
+      active: true,
+      recovering_hub_id: scenarioCase.recoveringHub,
+      current_bp: 500,
+      target_bp: config[scenarioCase.recoveringHub].weight_bp,
+    });
+    expect(scenario.currentTopology.hubConfig).toEqual(beforeConfig);
+    expect(scenario.currentTopology.version).toBe(topology.version);
+    expect(scenario.currentTopology.assignmentEpoch).toBe(CURRENT_TOPOLOGY_EPOCH);
+    expect(scenario.calls.map((call) => String(call.name)))
+      .not.toContain("realtime_topology_update");
+  });
+
+  it("stops a persisted ramp when its bound K1 configuration version changes", async () => {
+    const scenario = await makeScenario({
+      rampRuntime: {
+        active: true,
+        recovering_hub_id: "rt1",
+        current_bp: 1_500,
+        target_bp: 9_000,
+        last_step_at_ms: NOW_MS - 300_000,
+        started_at_ms: NOW_MS - 600_000,
+      },
+      rampConfigVersion: topology.version - 1,
+    });
+    const fetcher = vi.fn(async () => new Response(null, { status: 204 })) as typeof fetch;
+    scenario.dependencies.fetcher = fetcher;
+
+    await handleRealtimeHubReport(
+      reportBody(scenario.ticket.ticket),
+      scenario.context,
+      scenario.signing,
+      scenario.dependencies,
+    );
+
+    const rampCall = scenario.calls.find((call) => call.name === "realtime_hub_ramp_state_cas");
+    expect(rampCall?.args.p_runtime).toMatchObject({
+      active: false,
+      stopped_reason: "configuration_changed",
+    });
+    expect(scenario.rampState).toMatchObject({
+      topologyVersion: topology.version,
+      assignmentEpoch: CURRENT_TOPOLOGY_EPOCH,
+      runtime: { active: false, stopped_reason: "configuration_changed" },
+    });
+    expect(scenario.currentTopology.version).toBe(topology.version);
+    expect(scenario.currentTopology.assignmentEpoch).toBe(CURRENT_TOPOLOGY_EPOCH);
   });
 
   it("keeps retry timing deterministic and reports failure only after both attempts fail", async () => {

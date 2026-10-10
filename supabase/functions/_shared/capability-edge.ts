@@ -119,6 +119,19 @@ type CapabilityDatabase = {
         Args: Record<string, never>;
         Returns: CapabilityRpcResponse;
       };
+      realtime_hub_ramp_state_read: {
+        Args: Record<string, never>;
+        Returns: CapabilityRpcResponse;
+      };
+      realtime_hub_ramp_state_cas: {
+        Args: {
+          p_expected_state_version: number;
+          p_expected_topology_version: number;
+          p_expected_assignment_epoch: number;
+          p_runtime: Record<string, unknown>;
+        };
+        Returns: CapabilityRpcResponse;
+      };
       realtime_topology_update: {
         Args: {
           p_expected_version: number;

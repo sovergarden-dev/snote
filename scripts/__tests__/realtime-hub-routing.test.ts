@@ -259,4 +259,41 @@ describe("failback ramp", () => {
       stoppedAtMs: now + 300_000,
     });
   });
+
+  it.each([
+    { recovering: "rt1" as const, rt1: 9_000, rt2: 1_000 },
+    { recovering: "rt2" as const, rt1: 1_000, rt2: 9_000 },
+    { recovering: "rt1" as const, rt1: 7_000, rt2: 3_000 },
+  ])("returns to configured effective weights after ramp: $recovering $rt1/$rt2", (config) => {
+    const configured: HubRoutingConfig = {
+      rt1: hub(config.rt1, { probeBeforeAssign: true }),
+      rt2: hub(config.rt2),
+    };
+    const target = config[config.recovering];
+    let runtime = beginRecoveryRamp(config.recovering, target, now, {
+      canaryBp: 500,
+      stepBp: 1_000,
+      intervalSeconds: 300,
+    });
+    let nowAt = now;
+    while (runtime.active) {
+      nowAt += 300_000;
+      runtime = advanceRamp(runtime, nowAt, 1_000, 300, "ok");
+    }
+
+    expect(runtime.currentWeightBp).toBe(target);
+    const decision = planHubAssignment({
+      bucket: 2_500,
+      currentHub: config.recovering,
+      hubs: configured,
+      availability: availability(),
+      health: { rt1: healthy(nowAt), rt2: healthy(nowAt) },
+      budgetStatus: "ok",
+      budgetReadiness: true,
+      nowMs: nowAt,
+      rampRuntime: runtime,
+      metrics: healthyMetrics(),
+    });
+    expect(decision.effectiveWeights).toEqual({ rt1: config.rt1, rt2: config.rt2 });
+  });
 });

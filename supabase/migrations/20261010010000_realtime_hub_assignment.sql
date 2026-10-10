@@ -83,6 +83,186 @@ GRANT EXECUTE ON FUNCTION public.realtime_room_assignment_cleanup() TO service_r
 COMMENT ON FUNCTION public.realtime_room_assignment_cleanup() IS
   'Best-effort bounded GC: removes at most 100 assignments inactive for 90 days, at most once every 10 minutes; invoked only after a successful assignment RPC.';
 
+CREATE TABLE public.realtime_hub_ramp_state (
+  singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+  state_version bigint NOT NULL DEFAULT 1 CHECK (state_version >= 1),
+  topology_version bigint NOT NULL CHECK (topology_version >= 1),
+  assignment_epoch bigint NOT NULL CHECK (assignment_epoch >= 1),
+  runtime jsonb NOT NULL DEFAULT '{"active":false}'::jsonb
+    CHECK (jsonb_typeof(runtime) = 'object'),
+  updated_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+
+COMMENT ON TABLE public.realtime_hub_ramp_state IS
+  'Single service-only optimistic-versioned failback runtime; configuration remains authoritative in realtime_topology_config and no identifiers are stored.';
+
+INSERT INTO public.realtime_hub_ramp_state (
+  singleton, state_version, topology_version, assignment_epoch, runtime
+)
+SELECT true, 1, c.version, c.assignment_epoch, '{"active":false}'::jsonb
+FROM public.realtime_topology_config AS c
+WHERE c.singleton;
+
+ALTER TABLE public.realtime_hub_ramp_state ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.realtime_hub_ramp_state
+  FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.realtime_hub_ramp_state_read()
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, pg_temp
+AS $$
+  SELECT jsonb_build_object(
+    'status', 'ok',
+    'stateVersion', r.state_version,
+    'topologyVersion', r.topology_version,
+    'assignmentEpoch', r.assignment_epoch,
+    'runtime', r.runtime
+  )
+  FROM public.realtime_hub_ramp_state AS r
+  WHERE r.singleton
+$$;
+
+CREATE OR REPLACE FUNCTION public.realtime_hub_ramp_state_cas(
+  p_expected_state_version bigint,
+  p_expected_topology_version bigint,
+  p_expected_assignment_epoch bigint,
+  p_runtime jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, pg_temp
+AS $$
+DECLARE
+  v_config public.realtime_topology_config%ROWTYPE;
+  v_state public.realtime_hub_ramp_state%ROWTYPE;
+  v_hub_id text;
+  v_current_text text;
+  v_target_text text;
+  v_current_bp integer;
+  v_target_bp integer;
+BEGIN
+  IF p_expected_state_version IS NULL OR p_expected_state_version < 1
+    OR p_expected_topology_version IS NULL OR p_expected_topology_version < 1
+    OR p_expected_assignment_epoch IS NULL OR p_expected_assignment_epoch < 1
+    OR p_runtime IS NULL OR jsonb_typeof(p_runtime) <> 'object'
+    OR p_runtime ->> 'active' IS NULL
+    OR p_runtime ->> 'active' NOT IN ('true', 'false')
+    OR EXISTS (
+      SELECT 1
+      FROM jsonb_object_keys(p_runtime) AS runtime_key(key)
+      WHERE runtime_key.key NOT IN (
+        'active', 'recovering_hub_id', 'current_bp', 'target_bp',
+        'last_step_at_ms', 'started_at_ms', 'stopped_at_ms', 'stopped_reason'
+      )
+    )
+    OR (p_runtime ? 'stopped_reason' AND (
+      p_runtime ->> 'stopped_reason' IS NULL
+      OR p_runtime ->> 'stopped_reason' NOT IN (
+        'probe_failed', 'budget_blocked', 'configuration_changed'
+      )
+    ))
+  THEN
+    RETURN jsonb_build_object('status', 'invalid');
+  END IF;
+
+  SELECT c.* INTO v_config
+  FROM public.realtime_topology_config AS c
+  WHERE c.singleton
+  FOR SHARE;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('status', 'unavailable');
+  END IF;
+  IF p_expected_topology_version <> v_config.version
+    OR p_expected_assignment_epoch <> v_config.assignment_epoch
+  THEN
+    RETURN jsonb_build_object(
+      'status', 'config_changed',
+      'topologyVersion', v_config.version,
+      'assignmentEpoch', v_config.assignment_epoch
+    );
+  END IF;
+
+  IF p_runtime ->> 'active' = 'true' THEN
+    v_hub_id := p_runtime ->> 'recovering_hub_id';
+    v_current_text := p_runtime ->> 'current_bp';
+    v_target_text := p_runtime ->> 'target_bp';
+    IF v_hub_id IS NULL OR v_hub_id NOT IN ('rt1', 'rt2')
+      OR v_current_text IS NULL OR v_current_text !~ '^[0-9]{1,5}$'
+      OR v_target_text IS NULL OR v_target_text !~ '^[0-9]{1,5}$'
+    THEN
+      RETURN jsonb_build_object('status', 'invalid');
+    END IF;
+    v_current_bp := v_current_text::integer;
+    v_target_bp := v_target_text::integer;
+    IF v_current_bp NOT BETWEEN 1 AND 10_000
+      OR v_target_bp NOT BETWEEN 1 AND 10_000
+      OR v_current_bp >= v_target_bp
+    THEN
+      RETURN jsonb_build_object('status', 'invalid');
+    END IF;
+    IF v_target_bp IS DISTINCT FROM
+      (v_config.hubs -> v_hub_id ->> 'weight_bp')::integer
+    THEN
+      RETURN jsonb_build_object('status', 'config_changed');
+    END IF;
+  END IF;
+
+  SELECT r.* INTO v_state
+  FROM public.realtime_hub_ramp_state AS r
+  WHERE r.singleton
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('status', 'unavailable');
+  END IF;
+  IF v_state.state_version <> p_expected_state_version THEN
+    RETURN jsonb_build_object(
+      'status', 'version_conflict',
+      'stateVersion', v_state.state_version
+    );
+  END IF;
+  IF p_runtime ->> 'active' = 'true'
+    AND v_state.runtime ->> 'active' = 'true'
+    AND (
+      v_state.topology_version <> v_config.version
+      OR v_state.assignment_epoch <> v_config.assignment_epoch
+    )
+  THEN
+    RETURN jsonb_build_object('status', 'config_changed');
+  END IF;
+
+  UPDATE public.realtime_hub_ramp_state AS r
+  SET state_version = r.state_version + 1,
+      topology_version = v_config.version,
+      assignment_epoch = v_config.assignment_epoch,
+      runtime = p_runtime,
+      updated_at = clock_timestamp()
+  WHERE r.singleton
+  RETURNING r.* INTO v_state;
+
+  RETURN jsonb_build_object(
+    'status', 'updated',
+    'stateVersion', v_state.state_version,
+    'topologyVersion', v_state.topology_version,
+    'assignmentEpoch', v_state.assignment_epoch,
+    'runtime', v_state.runtime
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.realtime_hub_ramp_state_read()
+  FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.realtime_hub_ramp_state_cas(bigint, bigint, bigint, jsonb)
+  FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.realtime_hub_ramp_state_read() TO service_role;
+GRANT EXECUTE ON FUNCTION public.realtime_hub_ramp_state_cas(bigint, bigint, bigint, jsonb)
+  TO service_role;
+COMMENT ON FUNCTION public.realtime_hub_ramp_state_cas(bigint, bigint, bigint, jsonb) IS
+  'Service-only optimistic update of ramp runtime; rejects stale K1 versions and validates active targets against configured hub weights without writing configuration or audit rows.';
+
 CREATE OR REPLACE FUNCTION public.realtime_topology_update(
   p_expected_version bigint,
   p_min_fallback_bp integer,
