@@ -42,6 +42,7 @@ services:
 
   cloudflared:
     image: ${CLOUDFLARED_IMAGE_REPOSITORY:?set the cloudflared repository}@sha256:${CLOUDFLARED_IMAGE_DIGEST:?set the cloudflared SHA-256 digest}
+    user: "${CLOUDFLARED_UID:?set the non-root tunnel-token owner UID}:${CLOUDFLARED_GID:?set the tunnel-token owner GID}"
     command:
       - tunnel
       - --no-autoupdate

@@ -292,7 +292,7 @@ describe("rt1 Node health and lifecycle", () => {
 });
 
 describe("rt1 Docker packaging contract", () => {
-  it("uses a private internal network, no published ports, and only cloudflared has egress", async () => {
+  it("uses an internal network with no published ports, cloudflared-only egress, and a required non-root token-owner user", async () => {
     const document = parseYaml(await readFile(COMPOSE_URL, "utf8")) as {
       services: Record<string, Record<string, unknown>>;
       networks: Record<string, { internal?: boolean }>;
@@ -303,6 +303,7 @@ describe("rt1 Docker packaging contract", () => {
     const cloudflaredNetworks = cloudflared.networks as string[];
     const buildArgs = (hub.build as { args: Record<string, string> }).args;
     const cloudflaredImage = cloudflared.image as string;
+    const cloudflaredUser = cloudflared.user as string;
     const dockerfile = await readFile(DOCKERFILE_URL, "utf8");
 
     expect(buildArgs.HUB_BUN_BUILDER_IMAGE_REPOSITORY).toBe("${HUB_BUN_BUILDER_IMAGE_REPOSITORY:?set the Bun builder repository}");
@@ -310,6 +311,8 @@ describe("rt1 Docker packaging contract", () => {
     expect(buildArgs.HUB_NODE_RUNTIME_IMAGE_REPOSITORY).toBe("${HUB_NODE_RUNTIME_IMAGE_REPOSITORY:?set the Node 22.22+ runtime repository}");
     expect(buildArgs.HUB_NODE_RUNTIME_IMAGE_DIGEST).toBe("${HUB_NODE_RUNTIME_IMAGE_DIGEST:?set the Node runtime SHA-256 digest}");
     expect(cloudflaredImage).toBe("${CLOUDFLARED_IMAGE_REPOSITORY:?set the cloudflared repository}@sha256:${CLOUDFLARED_IMAGE_DIGEST:?set the cloudflared SHA-256 digest}");
+    expect(cloudflaredUser).toBe("${CLOUDFLARED_UID:?set the non-root tunnel-token owner UID}:${CLOUDFLARED_GID:?set the tunnel-token owner GID}");
+    expect(cloudflaredUser.startsWith("0")).toBe(false);
     expect(dockerfile.includes("FROM ${HUB_BUN_BUILDER_IMAGE_REPOSITORY}@sha256:${HUB_BUN_BUILDER_IMAGE_DIGEST} AS builder")).toBe(true);
     expect(dockerfile.includes("FROM ${HUB_NODE_RUNTIME_IMAGE_REPOSITORY}@sha256:${HUB_NODE_RUNTIME_IMAGE_DIGEST} AS runtime")).toBe(true);
     const firstFromIndex = dockerfile.indexOf("FROM ");
@@ -364,9 +367,14 @@ describe("rt1 Docker packaging contract", () => {
       .split(/\r?\n/u)
       .filter((line) => line && !line.startsWith("#"));
     expect(sampleLines.length > 0).toBe(true);
+    expect(sampleLines.includes("CLOUDFLARED_UID=")).toBe(true);
+    expect(sampleLines.includes("CLOUDFLARED_GID=")).toBe(true);
     for (const line of sampleLines) expect(/^[A-Z][A-Z0-9_]*=$/u.test(line)).toBe(true);
 
     const runtimeDocs = await readFile(RUNTIME_DOCS_URL, "utf8");
+    expect(runtimeDocs.includes("`CLOUDFLARED_UID` must be nonzero")).toBe(true);
+    expect(runtimeDocs.includes("Do not use `0644`")).toBe(true);
+    expect(runtimeDocs.includes("owned by the exact UID/GID supplied as `CLOUDFLARED_UID` and `CLOUDFLARED_GID`")).toBe(true);
     expect(runtimeDocs.includes("http://rt1-hub:<HUB_PORT>")).toBe(true);
     expect(runtimeDocs.includes("the Ubuntu VM/Docker host is inside the trusted boundary")).toBe(true);
     expect(runtimeDocs.includes("No host firewall or iptables rule is added")).toBe(true);
