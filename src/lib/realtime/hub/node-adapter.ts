@@ -1,9 +1,10 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { Buffer } from "node:buffer";
+import type { Socket } from "node:net";
+import type { Duplex } from "node:stream";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import {
   MAX_REALTIME_FRAME_BYTES,
-  SUPPORTED_PROTOCOL_VERSIONS,
 } from "../protocol";
 import type { HubClock } from "./clock";
 import { systemHubClock } from "./clock";
@@ -15,6 +16,7 @@ import { InMemoryHubRateLimiter, DEFAULT_HUB_RATE_LIMITS, type HubRateLimits } f
 
 const AUTH_TIMEOUT_MS = 5_000;
 const DEFAULT_DRAIN_WINDOW_MS = 2_000;
+export const MAX_NODE_HUB_DRAIN_WINDOW_MS = 30_000;
 const MAX_SOCKETS_PER_ROOM = 128;
 const HEALTH_PATH = "/healthz";
 
@@ -105,6 +107,10 @@ function sendHttp(response: ServerResponse, status: number, body: string): void 
   response.end(body);
 }
 
+function rejectWebSocketUpgrade(socket: Duplex, status: number, reason: string): void {
+  socket.end(`HTTP/1.1 ${status} ${reason}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
+}
+
 function bearerToken(request: IncomingMessage): string | undefined {
   const authorization = request.headers.authorization;
   if (typeof authorization !== "string") return undefined;
@@ -112,21 +118,43 @@ function bearerToken(request: IncomingMessage): string | undefined {
   return match?.[1];
 }
 
-function healthStoreReadable(replayStore: ReplayStore): boolean {
-  const probe = replayStore as ReplayStore & { checkReadable?: () => boolean };
-  return typeof probe.checkReadable === "function" ? probe.checkReadable() : true;
-}
-
 export function createNodeHubServer(options: NodeHubOptions): NodeHubServer {
   const clock = options.config.clock ?? systemHubClock;
   const config = { ...options.config, clock };
   const replayStore = options.replayStore;
-  const core = new RelayCore(config, replayStore);
+  let replayStoreUnavailable = false;
+  const replayStoreReadable = (): boolean => {
+    if (replayStoreUnavailable) return false;
+    const probe = replayStore as ReplayStore & { checkReadable?: () => boolean };
+    try {
+      const readable = typeof probe.checkReadable === "function" ? probe.checkReadable() : true;
+      if (!readable) replayStoreUnavailable = true;
+      return readable;
+    } catch {
+      replayStoreUnavailable = true;
+      return false;
+    }
+  };
+  const healthAwareReplayStore: ReplayStore = {
+    async consumeJti(jti, ticketExpSeconds, nowSeconds) {
+      if (!replayStoreReadable()) throw new Error("Replay store unavailable");
+      try {
+        return await replayStore.consumeJti(jti, ticketExpSeconds, nowSeconds);
+      } catch {
+        replayStoreUnavailable = true;
+        throw new Error("Replay store unavailable");
+      }
+    },
+  };
+  const core = new RelayCore(config, healthAwareReplayStore);
   const limiter = new InMemoryHubRateLimiter(clock, options.rateLimits ?? DEFAULT_HUB_RATE_LIMITS);
   const contexts = new WeakMap<WebSocket, SocketContext>();
   const pendingLeases = new WeakMap<WebSocket, { roomId: string; releaseAddress: () => void }>();
   const rooms = new Map<string, Set<NodeSocketPeer>>();
   const drainWindow = options.drainWindowMilliseconds ?? DEFAULT_DRAIN_WINDOW_MS;
+  if (!Number.isSafeInteger(drainWindow) || drainWindow < 0 || drainWindow > MAX_NODE_HUB_DRAIN_WINDOW_MS) {
+    throw new Error("Invalid hub drain window");
+  }
   let draining = false;
   let drainPromise: Promise<void> | undefined;
   let resolveDrainWait: (() => void) | undefined;
@@ -134,6 +162,7 @@ export function createNodeHubServer(options: NodeHubOptions): NodeHubServer {
 
   const websocketServer = new WebSocketServer({
     noServer: true,
+    clientTracking: false,
     maxPayload: MAX_REALTIME_FRAME_BYTES,
     perMessageDeflate: false,
   });
@@ -161,14 +190,16 @@ export function createNodeHubServer(options: NodeHubOptions): NodeHubServer {
       return;
     }
 
-    if (draining || !healthStoreReadable(replayStore)) {
+    if (draining || !replayStoreReadable()) {
       sendHttp(response, 503, "{\"ok\":false}");
       return;
     }
-    sendHttp(response, 200, JSON.stringify({
-      ok: true,
-      protocol_versions: SUPPORTED_PROTOCOL_VERSIONS,
-    }));
+    sendHttp(response, 200, "{\"ok\":true}");
+  });
+  const trackedSockets = new Set<Socket>();
+  server.on("connection", (socket: Socket) => {
+    trackedSockets.add(socket);
+    socket.once("close", () => trackedSockets.delete(socket));
   });
 
   function allPeers(roomId: string): HubSocketPeer[] {
@@ -249,24 +280,20 @@ export function createNodeHubServer(options: NodeHubOptions): NodeHubServer {
   server.on("upgrade", (request, socket, head) => {
     const roomId = parseRoomRoute(request.url);
     if (!roomId || request.headers.upgrade?.toLowerCase() !== "websocket") {
-      socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
-      socket.destroy();
+      rejectWebSocketUpgrade(socket, 404, "Not Found");
       return;
     }
-    if (draining) {
-      socket.write("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
-      socket.destroy();
+    if (draining || !replayStoreReadable()) {
+      rejectWebSocketUpgrade(socket, 503, "Service Unavailable");
       return;
     }
     if ((rooms.get(roomId)?.size ?? 0) >= MAX_SOCKETS_PER_ROOM) {
-      socket.write("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
-      socket.destroy();
+      rejectWebSocketUpgrade(socket, 503, "Service Unavailable");
       return;
     }
     const releaseAddress = limiter.tryOpen(request.socket.remoteAddress ?? "unknown");
     if (!releaseAddress) {
-      socket.write("HTTP/1.1 429 Too Many Requests\r\nConnection: close\r\n\r\n");
-      socket.destroy();
+      rejectWebSocketUpgrade(socket, 429, "Too Many Requests");
       return;
     }
     websocketServer.handleUpgrade(request, socket, head, (websocket) => {
@@ -274,6 +301,17 @@ export function createNodeHubServer(options: NodeHubOptions): NodeHubServer {
       websocketServer.emit("connection", websocket, request);
     });
   });
+
+  function closeWebSocketServer(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      websocketServer.close((error) => error ? reject(error) : resolve());
+    });
+  }
+
+  function closeHttpServer(): void {
+    if (server.listening) server.close();
+    for (const socket of trackedSockets) socket.destroy();
+  }
 
   const drain = (): Promise<void> => {
     if (drainPromise) return drainPromise;
@@ -298,7 +336,7 @@ export function createNodeHubServer(options: NodeHubOptions): NodeHubServer {
         return;
       }
       drainTimer = clock.setTimeout(() => resolve(), drainWindow);
-    }).then(() => {
+    }).then(async () => {
       if (drainTimer !== undefined) clock.clearTimeout(drainTimer);
       resolveDrainWait = undefined;
       for (const peers of rooms.values()) {
@@ -307,8 +345,11 @@ export function createNodeHubServer(options: NodeHubOptions): NodeHubServer {
           (peer as NodeSocketPeer).terminate();
         }
       }
-      websocketServer.close();
-      if (server.listening) server.close();
+      try {
+        await closeWebSocketServer();
+      } finally {
+        closeHttpServer();
+      }
     });
     return drainPromise;
   };
@@ -317,9 +358,18 @@ export function createNodeHubServer(options: NodeHubOptions): NodeHubServer {
   return hubServer;
 }
 
-export function installNodeSigtermDrain(server: NodeHubServer): () => void {
+export function installNodeSigtermDrain(
+  server: NodeHubServer,
+  onDrained?: (error?: unknown) => void,
+): () => void {
+  let started = false;
   const handler = () => {
-    void server.drain();
+    if (started) return;
+    started = true;
+    void server.drain().then(
+      () => onDrained?.(),
+      (error: unknown) => onDrained?.(error),
+    );
   };
   process.on("SIGTERM", handler);
   return () => process.off("SIGTERM", handler);
@@ -328,25 +378,34 @@ export function installNodeSigtermDrain(server: NodeHubServer): () => void {
 /** Creates a Node hub backed by a persistent SQLite file on the operator's volume. */
 export async function createNodeHubServerWithVolume(options: NodeHubVolumeOptions): Promise<NodeVolumeHubServer> {
   const opened = await openNodeReplayStore(options.replayDatabasePath);
-  const server = createNodeHubServer({
-    config: options.config,
-    replayStore: opened.store,
-    rateLimits: options.rateLimits,
-    drainWindowMilliseconds: options.drainWindowMilliseconds,
-  });
-  const baseDrain = server.drain.bind(server);
-  let storageClosed = false;
-  const closeStorage = () => {
-    if (storageClosed) return;
-    storageClosed = true;
-    opened.close();
-  };
-  server.drain = async () => {
+  try {
+    const server = createNodeHubServer({
+      config: options.config,
+      replayStore: opened.store,
+      rateLimits: options.rateLimits,
+      drainWindowMilliseconds: options.drainWindowMilliseconds,
+    });
+    const baseDrain = server.drain.bind(server);
+    let storageClosed = false;
+    const closeStorage = () => {
+      if (storageClosed) return;
+      storageClosed = true;
+      opened.close();
+    };
+    server.drain = async () => {
+      try {
+        await baseDrain();
+      } finally {
+        closeStorage();
+      }
+    };
+    return Object.assign(server, { closeStorage }) as NodeVolumeHubServer;
+  } catch {
     try {
-      await baseDrain();
-    } finally {
-      closeStorage();
+      opened.close();
+    } catch {
+      // Preserve the safe startup error at the entrypoint boundary.
     }
-  };
-  return Object.assign(server, { closeStorage }) as NodeVolumeHubServer;
+    throw new Error("Unable to create rt1 hub server");
+  }
 }

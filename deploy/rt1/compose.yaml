@@ -1,0 +1,81 @@
+services:
+  rt1-hub:
+    build:
+      context: ../..
+      dockerfile: deploy/rt1/Dockerfile
+      args:
+        HUB_BUN_BUILDER_IMAGE_REPOSITORY: ${HUB_BUN_BUILDER_IMAGE_REPOSITORY:?set the Bun builder repository}
+        HUB_BUN_BUILDER_IMAGE_DIGEST: ${HUB_BUN_BUILDER_IMAGE_DIGEST:?set the Bun builder SHA-256 digest}
+        HUB_NODE_RUNTIME_IMAGE_REPOSITORY: ${HUB_NODE_RUNTIME_IMAGE_REPOSITORY:?set the Node 22.22+ runtime repository}
+        HUB_NODE_RUNTIME_IMAGE_DIGEST: ${HUB_NODE_RUNTIME_IMAGE_DIGEST:?set the Node runtime SHA-256 digest}
+    image: snote/rt1-hub:local
+    init: true
+    user: "10001:10001"
+    read_only: true
+    restart: unless-stopped
+    stop_grace_period: 40s
+    mem_limit: ${HUB_MEMORY_LIMIT:?set an operator-selected cap}
+    cpus: ${HUB_CPU_LIMIT:?set an operator-selected cap}
+    pids_limit: ${HUB_PIDS_LIMIT:?set an operator-selected cap}
+    ulimits:
+      nofile:
+        soft: ${HUB_NOFILE_LIMIT:?set an operator-selected cap}
+        hard: ${HUB_NOFILE_LIMIT:?set an operator-selected cap}
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    environment:
+      HUB_ID: ${HUB_ID:?required}
+      TICKET_PROBE_PUBLIC_KEYS_JSON: ${TICKET_PROBE_PUBLIC_KEYS_JSON:?required}
+      SAVED_ACK_PUBLIC_KEYS_JSON: ${SAVED_ACK_PUBLIC_KEYS_JSON:?required}
+      HUB_LISTEN_ADDRESS: ${HUB_LISTEN_ADDRESS:?required}
+      HUB_PORT: ${HUB_PORT:?required}
+      HUB_DRAIN_WINDOW_MS: ${HUB_DRAIN_WINDOW_MS:?required}
+      HUB_REPLAY_DATABASE_PATH: ${HUB_REPLAY_DATABASE_PATH:?required}
+    volumes:
+      - rt1-replay:/var/lib/snote-rt1
+    networks:
+      - rt1-internal
+
+  cloudflared:
+    image: ${CLOUDFLARED_IMAGE_REPOSITORY:?set the cloudflared repository}@sha256:${CLOUDFLARED_IMAGE_DIGEST:?set the cloudflared SHA-256 digest}
+    command:
+      - tunnel
+      - --no-autoupdate
+      - run
+      - --token-file
+      - /run/secrets/tunnel_token
+    restart: unless-stopped
+    stop_grace_period: 40s
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    depends_on:
+      rt1-hub:
+        condition: service_started
+    secrets:
+      - tunnel_token
+    networks:
+      - rt1-internal
+      - rt1-egress
+
+networks:
+  rt1-internal:
+    driver: bridge
+    internal: true
+  rt1-egress:
+    driver: bridge
+
+volumes:
+  rt1-replay:
+
+secrets:
+  tunnel_token:
+    file: ${CLOUDFLARED_TOKEN_FILE:?set the VM-only token file path}
