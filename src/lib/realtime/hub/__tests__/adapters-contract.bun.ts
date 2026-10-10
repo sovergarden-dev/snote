@@ -307,12 +307,14 @@ function createDoContext(database: Database): TestDurableObjectContext {
       sqlExecutions += 1;
       if (failWrites && !/^\s*(SELECT|PRAGMA)\b/iu.test(query)) throw new Error("synthetic DO SQLite write failure");
       const statement = database.query(query);
-      if (/^\s*(SELECT|PRAGMA)\b/iu.test(query)) {
-        const row = statement.get(...values);
-        return { rowsWritten: 0, one: () => row && typeof row === "object" ? row as Record<string, unknown> : undefined };
+      if (/^\s*(SELECT|PRAGMA)\b/iu.test(query) || /\bRETURNING\b/iu.test(query)) {
+        const rows = statement.all(...values).filter((row): row is Record<string, unknown> =>
+          typeof row === "object" && row !== null,
+        );
+        return { rowsWritten: 0, one: () => rows[0], toArray: () => rows };
       }
       const result = statement.run(...values);
-      return { rowsWritten: Number(result.changes), one: () => undefined };
+      return { rowsWritten: Number(result.changes), one: () => undefined, toArray: () => [] };
     },
   };
   return {

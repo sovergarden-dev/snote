@@ -136,11 +136,24 @@ describe("durable replay store", () => {
     }
   });
 
+  it("fails closed when the replay INSERT returns an unrecognized row", async () => {
+    const { driver } = createStore();
+    const uncertainStore = new SqliteReplayStore({
+      ...driver,
+      get(sql, ...values) {
+        const row = driver.get(sql, ...values);
+        return /\bINSERT\b/iu.test(sql) ? {} : row;
+      },
+    });
+
+    expect(await uncertainStore.consumeJti(jti(16), NOW + 300, NOW)).toBe(false);
+  });
+
   it("propagates storage failures so the caller can fail closed", async () => {
     const { driver } = createStore();
     const failingStore = new SqliteReplayStore({
       ...driver,
-      run() {
+      get() {
         throw new Error("synthetic sqlite failure");
       },
     });
