@@ -34,6 +34,10 @@ const PRODUCTION_SUPABASE_ORIGIN =
   "https://onfzjmfjldsbthchssfr.supabase.co";
 const PRODUCTION_SUPABASE_WS_ORIGIN =
   "wss://onfzjmfjldsbthchssfr.supabase.co";
+const REALTIME_HUB_WS_ORIGINS = Object.freeze([
+  "wss://rt1.syrin.online",
+  "wss://rt2.syrin.online",
+]);
 const SECURITY_CSP_PREFIX =
   "default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; " +
   "frame-ancestors 'self' chrome-extension://*; script-src 'self' https://challenges.cloudflare.com; " +
@@ -770,7 +774,8 @@ function securityCsp(httpOrigin, websocketOrigin) {
   const supabaseSources = httpOrigin && websocketOrigin
     ? ` ${httpOrigin} ${websocketOrigin}`
     : "";
-  return `${SECURITY_CSP_PREFIX}connect-src 'self'${supabaseSources}${SECURITY_CSP_SUFFIX}`;
+  const realtimeHubSources = ` ${REALTIME_HUB_WS_ORIGINS.join(" ")}`;
+  return `${SECURITY_CSP_PREFIX}connect-src 'self'${supabaseSources}${realtimeHubSources}${SECURITY_CSP_SUFFIX}`;
 }
 
 function securityCspForEnv(env) {

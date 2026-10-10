@@ -5,7 +5,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const EXPECTED_WORKER_SHA256 = "78e344d7d838be57e94364e86b1ab0178f0434dd0ef18f28cbe7764f6f0fad3d";
+// 78e344d7d838be57e94364e86b1ab0178f0434dd0ef18f28cbe7764f6f0fad3d is the Worker currently running in production.
+// 3974debfcf65e7ceb367cbad0d589b25e12328fd9679e0b9e769778a5cbe68a5 is the realtime CSP version awaiting Syringa's release.
+const EXPECTED_WORKER_SHA256 = "3974debfcf65e7ceb367cbad0d589b25e12328fd9679e0b9e769778a5cbe68a5";
 const EXPECTED_WRANGLER_TOML = `name = "syrin-prerender"
 main = "worker.js"
 compatibility_date = "2024-11-01"
