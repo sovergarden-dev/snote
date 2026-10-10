@@ -1,9 +1,10 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  createCloudflareHubBudgetMetricsProvider,
   calculateDoBilledRequests,
   calculateDoGbSeconds,
+  createCloudflareHubBudgetMetricsProvider,
+  HUB_BUDGET_GRAPHQL_FIELD_MAPPING,
 } from "../../supabase/functions/_shared/hub-budget-metrics.ts";
 import {
   evaluateHub2Budget,
@@ -18,6 +19,40 @@ const ENV = {
   SNOTE_CF_ACCOUNT_ID: "fixture-account-id-not-real",
   SNOTE_CF_RT2_SCRIPT_NAME: "fixture-rt2-script",
 };
+
+type AnalyticsPayloadOptions = Partial<{
+  workerRequestTotals: unknown[];
+  doRequestTotals: unknown[];
+  doPeriodicTotals: unknown[];
+  rt2Latest: unknown[];
+}>;
+
+function analyticsPayload(options: AnalyticsPayloadOptions = {}) {
+  return {
+    data: {
+      viewer: {
+        accounts: [{
+          workerRequestTotals: options.workerRequestTotals ?? [
+            { sum: { requests: 11 } },
+            { sum: { requests: 20 } },
+          ],
+          doRequestTotals: options.doRequestTotals ?? [
+            { sum: { requests: 7 } },
+            { sum: { requests: 4 } },
+          ],
+          doPeriodicTotals: options.doPeriodicTotals ?? [
+            { sum: { activeTime: 4_000_000, inboundWebsocketMsgCount: 1, rowsWritten: 100 } },
+            { sum: { activeTime: 4_000_000, inboundWebsocketMsgCount: 20, rowsWritten: 20 } },
+          ],
+          rt2Latest: options.rt2Latest ?? [{
+            dimensions: { datetimeMinute: "2026-10-10T11:59:00.000Z" },
+          }],
+        }],
+      },
+    },
+    errors: null,
+  };
+}
 
 function response(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
@@ -48,37 +83,16 @@ function settingsResponse(options: {
   });
 }
 
-function metricsResponse(rows: unknown[]): Response {
-  return response({
-    data: {
-      viewer: {
-        accounts: [{ workersInvocationsAdaptive: rows }],
-      },
-    },
-    errors: null,
-  });
-}
-
-function workerRow(input: {
-  requests: number;
-  scriptName: string;
-  datetime: string;
-}) {
-  return {
-    sum: { requests: input.requests },
-    dimensions: { datetime: input.datetime, scriptName: input.scriptName },
-  };
-}
-
-function fixtureFetcher(rows: unknown[], onRequest?: (body: string) => void) {
+function fixtureFetcher(
+  body: unknown,
+  onRequest?: (body: string) => void,
+) {
   let call = 0;
-  const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
-    const body = String(init?.body ?? "");
-    onRequest?.(body);
+  return vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    onRequest?.(String(init?.body ?? ""));
     call += 1;
-    return call % 2 === 1 ? settingsResponse() : metricsResponse(rows);
+    return call % 2 === 1 ? settingsResponse() : response(body);
   });
-  return fetcher;
 }
 
 function provider(
@@ -101,66 +115,84 @@ describe("Cloudflare hub budget metrics provider", () => {
       ...ENV,
       SNOTE_CF_RT2_SCRIPT_NAME: "",
     }, { fetcher: fetch, clock: () => NOW })).toBeNull();
-    expect(provider(fixtureFetcher([]))).not.toBeNull();
+    expect(provider(fixtureFetcher(analyticsPayload()))).not.toBeNull();
   });
 
-  it("counts Workers requests account-wide and uses rt2's latest data minute", async () => {
+  it("returns ok only with all four account-wide metrics and rt2's latest minute", async () => {
     const bodies: string[] = [];
-    const rows = [
-      workerRow({
-        requests: 11,
-        scriptName: "unrelated-account-worker",
-        datetime: "2026-10-10T09:04:03.000Z",
-      }),
-      workerRow({
-        requests: 17,
-        scriptName: ENV.SNOTE_CF_RT2_SCRIPT_NAME,
-        datetime: "2026-10-10T11:58:47.000Z",
-      }),
-      workerRow({
-        requests: 3,
-        scriptName: ENV.SNOTE_CF_RT2_SCRIPT_NAME,
-        datetime: "2026-10-10T11:59:34.000Z",
-      }),
-    ];
-    const fetcher = fixtureFetcher(rows, (body) => bodies.push(body));
+    const fetcher = fixtureFetcher(analyticsPayload(), (body) => bodies.push(body));
     const result = await provider(fetcher)!.readSnapshot({ nowMs: NOW });
+    const observedThrough = Date.parse("2026-10-10T11:59:00.000Z");
 
     expect(result).toEqual({
-      status: "unavailable",
+      status: "ok",
       metrics: {
-        worker_requests: {
-          used: 31,
-          observedThrough: Date.parse("2026-10-10T11:59:00.000Z"),
-        },
+        worker_requests: { used: 31, observedThrough },
+        do_billed_requests: { used: 13, observedThrough },
+        do_gb_s: { used: 1, observedThrough },
+        do_sqlite_rows_written: { used: 120, observedThrough },
       },
     });
     expect(bodies).toHaveLength(2);
-    expect(bodies[0]).toContain("workersInvocationsAdaptive");
-    expect(bodies[1]).toContain("workersInvocationsAdaptive");
-    expect(bodies[1]).toContain("sum { requests }");
-    expect(bodies[1]).toContain("dimensions { datetime scriptName }");
-    expect(bodies[1]).toContain("datetime_geq");
-    expect(bodies[1]).toContain("datetime_leq");
-    expect(bodies[1]).not.toContain("scriptName:");
-    expect(bodies[1]).toContain("2026-10-10T00:00:00.000Z");
-    expect(bodies[1]).toContain("2026-10-10T12:00:00.000Z");
-    expect(bodies.join("\n")).not.toContain("durableObjects");
+
+    const query = JSON.parse(bodies[1]!).query as string;
+    expect(query).toContain("workerRequestTotals: workersInvocationsAdaptive");
+    expect(query).toContain("doRequestTotals: durableObjectsInvocationsAdaptiveGroups");
+    expect(query).toContain("doPeriodicTotals: durableObjectsPeriodicGroups");
+    expect(query).toContain("sum { requests }");
+    expect(query).toMatch(/sum\s*{\s*activeTime\s+inboundWebsocketMsgCount\s+rowsWritten\s*}/);
+    expect(query).toContain("date_geq: \"2026-10-10\"");
+    expect(query).toContain("date_leq: \"2026-10-10\"");
+    expect(query).toContain("datetime_geq: \"2026-10-10T00:00:00.000Z\"");
+    expect(query).toContain("datetime_leq: \"2026-10-10T12:00:00.000Z\"");
+
+    const accountWideTotals = query.slice(0, query.indexOf("rt2Latest:"));
+    expect(accountWideTotals).not.toContain("dimensions");
+    expect(accountWideTotals).not.toContain("scriptName");
+    const freshnessQuery = query.slice(query.indexOf("rt2Latest:"));
+    expect(freshnessQuery).toContain("workersInvocationsAdaptive");
+    expect(freshnessQuery).toContain("scriptName: \"fixture-rt2-script\"");
+    expect(freshnessQuery).toContain("orderBy: [datetimeMinute_DESC]");
+    expect(freshnessQuery).toContain("limit: 1");
+    expect(freshnessQuery).toContain("dimensions { datetimeMinute }");
+    expect(HUB_BUDGET_GRAPHQL_FIELD_MAPPING.doSqliteRowsWritten.sumField).toBe("rowsWritten");
+    expect(HUB_BUDGET_GRAPHQL_FIELD_MAPPING.sqliteRowsWrittenAlternatives).toEqual([
+      { dataset: "durableObjectsSqlStorageGroups", sumField: "rowsWritten" },
+      { dataset: "durableObjectsPeriodicGroups", sumField: "duration" },
+    ]);
   });
 
-  it("marks unsupported DO analytics unavailable instead of inventing GraphQL fields", async () => {
-    const result = await provider(fixtureFetcher([
-      workerRow({
-        requests: 5,
-        scriptName: ENV.SNOTE_CF_RT2_SCRIPT_NAME,
-        datetime: "2026-10-10T11:59:00.000Z",
-      }),
-    ]))!.readSnapshot({ nowMs: NOW });
+  it("marks the snapshot unavailable when any required metric is missing", async () => {
+    const missingRowsWritten = analyticsPayload({
+      doPeriodicTotals: [
+        { sum: { activeTime: 8_000_000, inboundWebsocketMsgCount: 21 } },
+      ],
+    });
+    const result = await provider(fixtureFetcher(missingRowsWritten))!
+      .readSnapshot({ nowMs: NOW });
 
     expect(result.status).toBe("unavailable");
-    expect(result.metrics).not.toHaveProperty("do_billed_requests");
-    expect(result.metrics).not.toHaveProperty("do_gb_s");
-    expect(result.metrics).not.toHaveProperty("do_sqlite_rows_written");
+    expect(result.metrics.do_sqlite_rows_written).toBeUndefined();
+    expect(result.metrics.worker_requests?.used).toBe(31);
+  });
+
+  it("returns error for a GraphQL unknown-field error", async () => {
+    const fetcher = fixtureFetcher({
+      data: null,
+      errors: [{ message: 'Cannot query field "rowsWritten" on type "DurableObjectPeriodicSum".' }],
+    });
+    await expect(provider(fetcher)!.readSnapshot({ nowMs: NOW }))
+      .resolves.toEqual({ status: "error", metrics: {} });
+  });
+
+  it("sums high-volume aggregate rows without treating traffic as a truncated page", async () => {
+    const fetcher = fixtureFetcher(analyticsPayload({
+      workerRequestTotals: [{ sum: { requests: 25_000_001 } }],
+    }));
+    const result = await provider(fetcher)!.readSnapshot({ nowMs: NOW });
+
+    expect(result.status).toBe("ok");
+    expect(result.metrics.worker_requests?.used).toBe(25_000_001);
   });
 
   it("calculates billed Durable Object requests from request and inbound-message evidence", () => {
@@ -172,27 +204,21 @@ describe("Cloudflare hub budget metrics provider", () => {
     expect(() => calculateDoBilledRequests(1, Number.POSITIVE_INFINITY)).toThrow(RangeError);
   });
 
-  it("converts active time to GB-seconds using Cloudflare's 128 MB allocation", () => {
+  it("converts active-time microseconds to GB-seconds using 128 MB per second", () => {
     expect(calculateDoGbSeconds(0)).toBe(0);
-    expect(calculateDoGbSeconds(8)).toBe(1);
-    expect(calculateDoGbSeconds(10)).toBe(1.25);
+    expect(calculateDoGbSeconds(8_000_000)).toBe(1);
+    expect(calculateDoGbSeconds(10_000_000)).toBe(1.25);
     expect(() => calculateDoGbSeconds(-1)).toThrow(RangeError);
     expect(() => calculateDoGbSeconds(Number.NaN)).toThrow(RangeError);
   });
 
-  it("preserves the latest rt2 minute so data older than five minutes evaluates stale", async () => {
+  it("preserves rt2's latest minute so data older than five minutes evaluates stale", async () => {
     const observedThrough = NOW - MAX_METRIC_AGE_MS - 1_000;
-    const result = await provider(fixtureFetcher([
-      workerRow({
-        requests: 5,
-        scriptName: ENV.SNOTE_CF_RT2_SCRIPT_NAME,
-        datetime: new Date(observedThrough).toISOString(),
-      }),
-    ]))!.readSnapshot({ nowMs: NOW });
+    const result = await provider(fixtureFetcher(analyticsPayload({
+      rt2Latest: [{ dimensions: { datetimeMinute: new Date(observedThrough).toISOString() } }],
+    })))!.readSnapshot({ nowMs: NOW });
     const workerSample = result.metrics.worker_requests;
-    expect(workerSample?.observedThrough).toBe(
-      Math.floor(observedThrough / 60_000) * 60_000,
-    );
+    expect(workerSample?.observedThrough).toBe(Math.floor(observedThrough / 60_000) * 60_000);
 
     const staleFixture: BudgetMetricsSnapshot = {
       status: "ok",
@@ -212,29 +238,28 @@ describe("Cloudflare hub budget metrics provider", () => {
     await expect(provider(httpFailure as typeof fetch)!.readSnapshot({ nowMs: NOW }))
       .resolves.toEqual({ status: "error", metrics: {} });
 
-    const graphqlFailure = vi.fn(async () => response({ errors: [{ message: "fixture" }] }));
-    await expect(provider(graphqlFailure as typeof fetch)!.readSnapshot({ nowMs: NOW }))
+    const graphqlFailure = fixtureFetcher({ errors: [{ message: "fixture" }] });
+    await expect(provider(graphqlFailure)!.readSnapshot({ nowMs: NOW }))
       .resolves.toEqual({ status: "error", metrics: {} });
   });
 
-  it("returns error for malformed JSON, negative, non-finite, or malformed metric values", async () => {
+  it("returns error for malformed JSON and invalid metric values", async () => {
     const malformedJson = {
       ok: true,
       json: async () => { throw new SyntaxError("fixture"); },
     } as unknown as Response;
-    const badJsonFetcher = vi.fn(async () => malformedJson);
-    await expect(provider(badJsonFetcher as typeof fetch)!.readSnapshot({ nowMs: NOW }))
-      .resolves.toEqual({ status: "error", metrics: {} });
+    await expect(provider(vi.fn(async () => malformedJson) as typeof fetch)!
+      .readSnapshot({ nowMs: NOW })).resolves.toEqual({ status: "error", metrics: {} });
 
     for (const requests of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
-      const fetcher = fixtureFetcher([
-        workerRow({
-          requests,
-          scriptName: ENV.SNOTE_CF_RT2_SCRIPT_NAME,
-          datetime: "2026-10-10T11:59:00.000Z",
-        }),
-      ]);
-      await expect(provider(fetcher)!.readSnapshot({ nowMs: NOW }))
+      const body = analyticsPayload({ workerRequestTotals: [{ sum: { requests } }] });
+      let call = 0;
+      const fetcher = vi.fn(async () => {
+        call += 1;
+        if (call % 2 === 1) return settingsResponse();
+        return { ok: true, json: async () => body } as unknown as Response;
+      });
+      await expect(provider(fetcher as typeof fetch)!.readSnapshot({ nowMs: NOW }))
         .resolves.toEqual({ status: "error", metrics: {} });
     }
   });
@@ -249,12 +274,7 @@ describe("Cloudflare hub budget metrics provider", () => {
 
   it("caches for 60 seconds and coalesces concurrent reads into one fetch flight", async () => {
     let clockMs = NOW;
-    const rows = [workerRow({
-      requests: 5,
-      scriptName: ENV.SNOTE_CF_RT2_SCRIPT_NAME,
-      datetime: "2026-10-10T11:59:00.000Z",
-    })];
-    const fetcher = fixtureFetcher(rows);
+    const fetcher = fixtureFetcher(analyticsPayload());
     const metricsProvider = provider(fetcher, () => clockMs)!;
 
     const firstReads = await Promise.all([

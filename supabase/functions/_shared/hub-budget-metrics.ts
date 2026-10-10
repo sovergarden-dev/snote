@@ -8,20 +8,90 @@ const MAX_QUERY_ROWS = 10_000;
 const MINUTE_MS = 60_000;
 
 /**
- * Cloudflare documentation references:
- * - Workers invocation dataset and documented requests/datetime/scriptName fields:
- *   https://developers.cloudflare.com/analytics/graphql-api/tutorials/querying-workers-metrics/
- * - Account settings node and maxPageSize/maxDuration/notOlderThan:
- *   https://developers.cloudflare.com/analytics/graphql-api/features/discovery/settings/
- * - Durable Object datasets and WebSocket analytics availability:
- *   https://developers.cloudflare.com/durable-objects/observability/metrics-and-analytics/
- * - Billing formulas, including the 20:1 inbound WebSocket ratio and 128 MB allocation:
- *   https://developers.cloudflare.com/durable-objects/platform/pricing/
- *
- * The public Durable Objects docs do not name Analytics fields for inbound
- * WebSocket messages, active duration, or SQLite rows written. Those metrics are
- * deliberately omitted rather than querying undocumented/guessed fields.
+ * Candidate GraphQL mapping for the hub budget snapshot. A public working client
+ * in Denoflare uses the same DO invocation and periodic datasets/fields for
+ * requests, activeTime and inboundWebsocketMsgCount:
+ * https://github.com/skymethod/denoflare/blob/master/common/analytics/cfgql_client.ts
+ * That file does not include SQLite rowsWritten; the primary field and fallbacks
+ * below are Syringa-authorized candidates checked by the rollout-only schema
+ * script. An unknown field intentionally surfaces as a GraphQL error and blocks rt2.
  */
+export const HUB_BUDGET_GRAPHQL_FIELD_MAPPING = {
+  workerRequests: {
+    dataset: "workersInvocationsAdaptive",
+    sumField: "requests",
+  },
+  rt2Freshness: {
+    dataset: "workersInvocationsAdaptive",
+    scriptNameFilterField: "scriptName",
+    datetimeMinuteField: "datetimeMinute",
+    orderBy: "datetimeMinute_DESC",
+  },
+  doRequests: {
+    dataset: "durableObjectsInvocationsAdaptiveGroups",
+    sumField: "requests",
+  },
+  inboundWebSocketMessages: {
+    dataset: "durableObjectsPeriodicGroups",
+    sumField: "inboundWebsocketMsgCount",
+  },
+  activeTimeMicroseconds: {
+    dataset: "durableObjectsPeriodicGroups",
+    sumField: "activeTime",
+  },
+  doSqliteRowsWritten: {
+    dataset: "durableObjectsPeriodicGroups",
+    sumField: "rowsWritten",
+  },
+  sqliteRowsWrittenAlternatives: [
+    { dataset: "durableObjectsSqlStorageGroups", sumField: "rowsWritten" },
+    { dataset: "durableObjectsPeriodicGroups", sumField: "duration" },
+  ],
+} as const;
+
+/** Schema paths checked by scripts/cf-analytics-schema-check.ts at rollout. */
+export const HUB_BUDGET_GRAPHQL_SCHEMA_CHECK_PATHS: readonly (readonly string[])[] = [
+  [
+    HUB_BUDGET_GRAPHQL_FIELD_MAPPING.workerRequests.dataset,
+    "sum",
+    HUB_BUDGET_GRAPHQL_FIELD_MAPPING.workerRequests.sumField,
+  ],
+  [
+    HUB_BUDGET_GRAPHQL_FIELD_MAPPING.workerRequests.dataset,
+    "dimensions",
+    HUB_BUDGET_GRAPHQL_FIELD_MAPPING.rt2Freshness.scriptNameFilterField,
+  ],
+  [
+    HUB_BUDGET_GRAPHQL_FIELD_MAPPING.workerRequests.dataset,
+    "dimensions",
+    HUB_BUDGET_GRAPHQL_FIELD_MAPPING.rt2Freshness.datetimeMinuteField,
+  ],
+  [
+    HUB_BUDGET_GRAPHQL_FIELD_MAPPING.doRequests.dataset,
+    "sum",
+    HUB_BUDGET_GRAPHQL_FIELD_MAPPING.doRequests.sumField,
+  ],
+  [
+    HUB_BUDGET_GRAPHQL_FIELD_MAPPING.inboundWebSocketMessages.dataset,
+    "sum",
+    HUB_BUDGET_GRAPHQL_FIELD_MAPPING.inboundWebSocketMessages.sumField,
+  ],
+  [
+    HUB_BUDGET_GRAPHQL_FIELD_MAPPING.activeTimeMicroseconds.dataset,
+    "sum",
+    HUB_BUDGET_GRAPHQL_FIELD_MAPPING.activeTimeMicroseconds.sumField,
+  ],
+  [
+    HUB_BUDGET_GRAPHQL_FIELD_MAPPING.doSqliteRowsWritten.dataset,
+    "sum",
+    HUB_BUDGET_GRAPHQL_FIELD_MAPPING.doSqliteRowsWritten.sumField,
+  ],
+  ...HUB_BUDGET_GRAPHQL_FIELD_MAPPING.sqliteRowsWrittenAlternatives.map((candidate) => [
+    candidate.dataset,
+    "sum",
+    candidate.sumField,
+  ]),
+];
 
 export interface HubBudgetMetricsEnvironment {
   SNOTE_CF_ANALYTICS_TOKEN?: string;
@@ -54,8 +124,8 @@ function errorSnapshot(): BudgetMetricsSnapshot {
   return { status: "error", metrics: {} };
 }
 
-function unavailableSnapshot(): BudgetMetricsSnapshot {
-  return { status: "unavailable", metrics: {} };
+function unavailableSnapshot(metrics: BudgetMetricsSnapshot["metrics"] = {}): BudgetMetricsSnapshot {
+  return { status: "unavailable", metrics };
 }
 
 function positiveSafeInteger(value: unknown): number | null {
@@ -140,19 +210,60 @@ function settingsQuery(accountId: string): string {
   }`;
 }
 
-function metricsQuery(accountId: string, start: string, end: string, limit: number): string {
-  return `query HubBudgetWorkerRequests {
+function metricsQuery(
+  accountId: string,
+  scriptName: string,
+  start: string,
+  end: string,
+  startDate: string,
+  endDate: string,
+  limit: number,
+): string {
+  const mapping = HUB_BUDGET_GRAPHQL_FIELD_MAPPING;
+  return `query HubBudgetMetrics {
     viewer {
       accounts(filter: { accountTag: ${JSON.stringify(accountId)} }) {
-        workersInvocationsAdaptive(
+        workerRequestTotals: ${mapping.workerRequests.dataset}(
           limit: ${limit}
           filter: {
             datetime_geq: ${JSON.stringify(start)}
             datetime_leq: ${JSON.stringify(end)}
           }
         ) {
-          sum { requests }
-          dimensions { datetime scriptName }
+          sum { ${mapping.workerRequests.sumField} }
+        }
+        doRequestTotals: ${mapping.doRequests.dataset}(
+          limit: ${limit}
+          filter: {
+            date_geq: ${JSON.stringify(startDate)}
+            date_leq: ${JSON.stringify(endDate)}
+          }
+        ) {
+          sum { ${mapping.doRequests.sumField} }
+        }
+        doPeriodicTotals: ${mapping.activeTimeMicroseconds.dataset}(
+          limit: ${limit}
+          filter: {
+            date_geq: ${JSON.stringify(startDate)}
+            date_leq: ${JSON.stringify(endDate)}
+          }
+        ) {
+          sum {
+            ${mapping.activeTimeMicroseconds.sumField}
+            ${mapping.inboundWebSocketMessages.sumField}
+            ${mapping.doSqliteRowsWritten.sumField}
+          }
+        }
+        rt2Latest: ${mapping.rt2Freshness.dataset}(
+          limit: 1
+          filter: {
+            datetime_geq: ${JSON.stringify(start)}
+            datetime_leq: ${JSON.stringify(end)}
+            ${mapping.rt2Freshness.scriptNameFilterField}: ${JSON.stringify(scriptName)}
+          }
+          orderBy: [${mapping.rt2Freshness.orderBy}]
+        ) {
+          dimensions { ${mapping.rt2Freshness.datetimeMinuteField} }
         }
       }
     }
@@ -169,53 +280,108 @@ function readSettingsWindow(
   return "ok";
 }
 
-function parseWorkerUsage(
-  envelope: Record<string, unknown>,
-  scriptName: string,
+function sumMetric(rowsValue: unknown, fieldName: string): number | null {
+  if (rowsValue === null || rowsValue === undefined) return null;
+  if (!Array.isArray(rowsValue)) throw new Error("Invalid Analytics rows");
+  if (rowsValue.length === 0) return null;
+
+  let total = 0;
+  for (const row of rowsValue) {
+    if (!isRecord(row)) throw new Error("Invalid Analytics row");
+    const sum = row.sum;
+    if (sum === null || sum === undefined || !isRecord(sum)) return null;
+    const value = sum[fieldName];
+    if (value === null || value === undefined) return null;
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+      throw new Error("Invalid Analytics metric value");
+    }
+    if (total > Number.MAX_SAFE_INTEGER - value) {
+      throw new Error("Analytics metric total is out of range");
+    }
+    total += value;
+  }
+  return total;
+}
+
+function parseLatestRt2Minute(
+  account: Record<string, unknown>,
   startMs: number,
   nowMs: number,
-  limit: number,
+): number | null {
+  const rows = account.rt2Latest;
+  if (rows === null || rows === undefined) return null;
+  if (!Array.isArray(rows)) throw new Error("Invalid Workers freshness rows");
+  if (rows.length === 0) return null;
+
+  const row = rows[0];
+  if (!isRecord(row)) throw new Error("Invalid Workers freshness row");
+  const dimensions = row.dimensions;
+  if (dimensions === null || dimensions === undefined || !isRecord(dimensions)) return null;
+  const datetimeMinute = dimensions[HUB_BUDGET_GRAPHQL_FIELD_MAPPING.rt2Freshness.datetimeMinuteField];
+  if (datetimeMinute === null || datetimeMinute === undefined) return null;
+  if (typeof datetimeMinute !== "string") throw new Error("Invalid Workers freshness timestamp");
+  const timestamp = Date.parse(datetimeMinute);
+  if (!Number.isFinite(timestamp) || timestamp < startMs || timestamp > nowMs) {
+    throw new Error("Workers freshness timestamp is out of range");
+  }
+  return Math.floor(timestamp / MINUTE_MS) * MINUTE_MS;
+}
+
+function parseMetrics(
+  envelope: Record<string, unknown>,
+  startMs: number,
+  nowMs: number,
 ): BudgetMetricsSnapshot {
   const account = accountFromEnvelope(envelope);
-  const rows = account.workersInvocationsAdaptive;
-  if (!Array.isArray(rows)) throw new Error("Invalid Workers Analytics rows");
-  // A full page may be truncated. Do not report a partial account-wide total.
-  if (rows.length >= limit) throw new Error("Workers Analytics page may be truncated");
+  const mapping = HUB_BUDGET_GRAPHQL_FIELD_MAPPING;
+  const workerRequests = sumMetric(account.workerRequestTotals, mapping.workerRequests.sumField);
+  const doRequests = sumMetric(account.doRequestTotals, mapping.doRequests.sumField);
+  const inboundWebSocketMessages = sumMetric(
+    account.doPeriodicTotals,
+    mapping.inboundWebSocketMessages.sumField,
+  );
+  const activeTimeMicroseconds = sumMetric(
+    account.doPeriodicTotals,
+    mapping.activeTimeMicroseconds.sumField,
+  );
+  const sqliteRowsWritten = sumMetric(
+    account.doPeriodicTotals,
+    mapping.doSqliteRowsWritten.sumField,
+  );
+  const observedThrough = parseLatestRt2Minute(account, startMs, nowMs);
 
-  let requests = 0;
-  let latestRt2Minute: number | null = null;
-  for (const row of rows) {
-    if (!isRecord(row) || !isRecord(row.sum) || !isRecord(row.dimensions)) {
-      throw new Error("Invalid Workers Analytics row");
+  const metrics: BudgetMetricsSnapshot["metrics"] = {};
+  if (observedThrough !== null) {
+    if (workerRequests !== null) {
+      metrics.worker_requests = { used: workerRequests, observedThrough };
     }
-    const count = row.sum.requests;
-    const datetime = row.dimensions.datetime;
-    const rowScriptName = row.dimensions.scriptName;
-    if (
-      typeof count !== "number" || !Number.isSafeInteger(count) || count < 0
-      || typeof datetime !== "string" || typeof rowScriptName !== "string"
-    ) throw new Error("Invalid Workers Analytics value");
-    const timestamp = Date.parse(datetime);
-    if (
-      !Number.isFinite(timestamp) || timestamp < startMs || timestamp > nowMs
-      || requests > Number.MAX_SAFE_INTEGER - count
-    ) throw new Error("Invalid Workers Analytics timestamp or count");
-    requests += count;
-    if (rowScriptName === scriptName) {
-      const minute = Math.floor(timestamp / MINUTE_MS) * MINUTE_MS;
-      latestRt2Minute = latestRt2Minute === null ? minute : Math.max(latestRt2Minute, minute);
+    if (doRequests !== null && inboundWebSocketMessages !== null) {
+      metrics.do_billed_requests = {
+        used: calculateDoBilledRequests(doRequests, inboundWebSocketMessages),
+        observedThrough,
+      };
+    }
+    if (activeTimeMicroseconds !== null) {
+      metrics.do_gb_s = {
+        used: calculateDoGbSeconds(activeTimeMicroseconds),
+        observedThrough,
+      };
+    }
+    if (sqliteRowsWritten !== null) {
+      metrics.do_sqlite_rows_written = { used: sqliteRowsWritten, observedThrough };
     }
   }
 
-  if (latestRt2Minute === null) return unavailableSnapshot();
-  return {
-    // Workers fields are documented, but the requested DO fields are not. Keep
-    // the useful partial sample while marking the complete budget snapshot unavailable.
-    status: "unavailable",
-    metrics: {
-      worker_requests: { used: requests, observedThrough: latestRt2Minute },
-    },
-  };
+  if (
+    observedThrough === null
+    || workerRequests === null
+    || doRequests === null
+    || inboundWebSocketMessages === null
+    || activeTimeMicroseconds === null
+    || sqliteRowsWritten === null
+  ) return unavailableSnapshot(metrics);
+
+  return { status: "ok", metrics };
 }
 
 async function fetchSnapshot(input: {
@@ -238,6 +404,8 @@ async function fetchSnapshot(input: {
   const operation = (async (): Promise<BudgetMetricsSnapshot> => {
     const start = new Date(input.startMs).toISOString();
     const end = new Date(input.nowMs).toISOString();
+    const startDate = start.slice(0, 10);
+    const endDate = end.slice(0, 10);
     const settingsEnvelope = await postGraphql(
       input.fetcher,
       input.token,
@@ -253,16 +421,18 @@ async function fetchSnapshot(input: {
     const metricsEnvelope = await postGraphql(
       input.fetcher,
       input.token,
-      metricsQuery(input.accountId, start, end, limit),
+      metricsQuery(
+        input.accountId,
+        input.rt2ScriptName,
+        start,
+        end,
+        startDate,
+        endDate,
+        limit,
+      ),
       controller.signal,
     );
-    return parseWorkerUsage(
-      metricsEnvelope,
-      input.rt2ScriptName,
-      input.startMs,
-      input.nowMs,
-      limit,
-    );
+    return parseMetrics(metricsEnvelope, input.startMs, input.nowMs);
   })();
 
   try {
@@ -274,11 +444,7 @@ async function fetchSnapshot(input: {
   }
 }
 
-/**
- * Calculate the Durable Objects request billing formula from normalized evidence.
- * The GraphQL provider does not publish the inbound-message field required to
- * populate this value, so this helper is not used to fabricate a live metric.
- */
+/** Calculate DO billed requests, including one billed request per 20 inbound WebSocket messages. */
 export function calculateDoBilledRequests(
   doRequests: number,
   inboundWebSocketMessages: number,
@@ -292,13 +458,15 @@ export function calculateDoBilledRequests(
   return billed;
 }
 
-/** Convert active time to GB-s using Cloudflare's 128 MB allocation per second. */
-export function calculateDoGbSeconds(activeTimeSeconds: number): number {
-  if (!Number.isFinite(activeTimeSeconds) || activeTimeSeconds < 0) {
-    throw new RangeError("Active time must be finite and non-negative");
+/** Convert active-time microseconds to GB-seconds using 128 MB allocated per second. */
+export function calculateDoGbSeconds(activeTimeMicroseconds: number): number {
+  if (!Number.isSafeInteger(activeTimeMicroseconds) || activeTimeMicroseconds < 0) {
+    throw new RangeError("Active time must be a non-negative safe integer in microseconds");
   }
-  const gbSeconds = activeTimeSeconds * (128 / 1_024);
-  if (!Number.isFinite(gbSeconds)) throw new RangeError("GB-s total is invalid");
+  const gbSeconds = activeTimeMicroseconds / 1_000_000 * 0.125;
+  if (!Number.isFinite(gbSeconds) || gbSeconds < 0) {
+    throw new RangeError("GB-s total is invalid");
+  }
   return gbSeconds;
 }
 
