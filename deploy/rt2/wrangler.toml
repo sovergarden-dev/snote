@@ -1,0 +1,31 @@
+name = "snote-realtime-rt2"
+main = "worker.ts"
+compatibility_date = "2026-08-06"
+workers_dev = false
+
+[observability]
+enabled = false
+
+[observability.logs]
+enabled = false
+invocation_logs = false
+
+[observability.traces]
+enabled = false
+
+[vars]
+HUB_ID = "rt2"
+TICKET_PROBE_PUBLIC_KEYS_JSON = "{}"
+SAVED_ACK_PUBLIC_KEYS_JSON = "{}"
+
+[[durable_objects.bindings]]
+name = "ROOM_HUB"
+class_name = "RealtimeHubDurableObject"
+
+[[durable_objects.bindings]]
+name = "HUB_HEALTH"
+class_name = "HubHealthDurableObject"
+
+[[migrations]]
+tag = "v1-sqlite-durable-objects"
+new_sqlite_classes = ["RealtimeHubDurableObject", "HubHealthDurableObject"]
