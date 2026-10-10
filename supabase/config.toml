@@ -39,6 +39,9 @@ verify_jwt = false
 [functions.raw]
 verify_jwt = false
 
+[functions.realtime-monitor]
+verify_jwt = false
+
 [functions.share-create]
 verify_jwt = false
 
