@@ -9,9 +9,14 @@ const CSP =
   "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://flagcdn.com " +
   "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev; font-src 'self' data:; " +
   "connect-src 'self' https://onfzjmfjldsbthchssfr.supabase.co " +
-  "wss://onfzjmfjldsbthchssfr.supabase.co https://challenges.cloudflare.com; " +
+  "wss://onfzjmfjldsbthchssfr.supabase.co wss://rt1.syrin.online " +
+  "wss://rt2.syrin.online https://challenges.cloudflare.com; " +
   "frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; " +
   "manifest-src 'self'; upgrade-insecure-requests;";
+const REALTIME_HUB_WS_ORIGINS = Object.freeze([
+  "wss://rt1.syrin.online",
+  "wss://rt2.syrin.online",
+]);
 const PRIVATE_ROBOTS = "noindex, nofollow, noarchive, nosnippet";
 const PERMISSIONS_POLICY =
   "camera=(), geolocation=(), microphone=(), payment=()";
@@ -37,6 +42,14 @@ const STAGING_ENV = {
   EDGE_SERVE_ORIGIN: STAGING_SERVE_ORIGIN,
   STAGING_SUPABASE_ORIGIN,
 };
+
+function connectSourcesFromCsp(csp: string) {
+  const directive = csp.split("; ").find((value) =>
+    value.startsWith("connect-src "),
+  );
+  expect(directive).toBeDefined();
+  return directive!.split(/\s+/).slice(1);
+}
 
 function installOriginDouble() {
   const originFetch = vi.fn(async () =>
@@ -440,6 +453,48 @@ describe("edge privacy containment", () => {
     expect(csp).toContain(STAGING_SUPABASE_WS_ORIGIN);
     expect(csp).not.toContain("onfzjmfjldsbthchssfr");
   });
+
+  it.each([
+    {
+      label: "configured Supabase origins",
+      env: STAGING_ENV,
+      supabaseSources: [STAGING_SUPABASE_ORIGIN, STAGING_SUPABASE_WS_ORIGIN],
+      expectedCsp: STAGING_CSP,
+      expectedStatus: 200,
+    },
+    {
+      label: "no valid Supabase env",
+      env: { ...STAGING_ENV, STAGING_SUPABASE_ORIGIN: undefined },
+      supabaseSources: [],
+      expectedCsp: RESTRICTIVE_CSP,
+      expectedStatus: 503,
+    },
+  ])(
+    "keeps connect-src limited to the exact allowlist with $label",
+    async ({ env, supabaseSources, expectedCsp, expectedStatus }) => {
+      const doubles = installOriginDouble();
+      const response = await worker.fetch(
+        new Request(`${STAGING_SERVE_ORIGIN}/synthetic-private-capability`),
+        env,
+        { waitUntil: doubles.waitUntil },
+      );
+      const csp = response.headers.get("content-security-policy");
+
+      expect(response.status).toBe(expectedStatus);
+      expect(csp).toBe(expectedCsp);
+      const sources = connectSourcesFromCsp(csp!);
+      expect(sources).toEqual([
+        "'self'",
+        ...supabaseSources,
+        ...REALTIME_HUB_WS_ORIGINS,
+        "https://challenges.cloudflare.com",
+      ]);
+      expect(sources.join(" ")).not.toContain("*");
+      expect(sources.join(" ")).not.toContain("ws://");
+      expect(sources).not.toContain("https://rt1.syrin.online");
+      expect(sources).not.toContain("https://rt2.syrin.online");
+    },
+  );
 
   it.each([
     undefined,
